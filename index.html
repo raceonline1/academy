@@ -1,0 +1,2280 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Race Online Shop · Economía Virtual Simracing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --asphalt: #0B0D10;
+    --panel: #14171C;
+    --panel-2: #1B1F26;
+    --hairline: #262B33;
+    --text: #E7EAEE;
+    --text-dim: #8B93A1;
+    --cyan: #f01c26;
+    --cyan-dim: #4d1a1c;
+    --amber: #FFB020;
+    --amber-dim: rgba(255,176,32,0.12);
+    --danger: #FF4757;
+    --danger-dim: rgba(255,71,87,0.12);
+    --green: #00E5C7;
+    --green-dim: rgba(0, 229, 199, 0.12);
+    --radius: 10px;
+    /* Fondo del "chip" donde se muestra el logo de marca de cada coche cuando se usa
+       el layout alternativo 'badge' (insignia superpuesta en la foto). El layout
+       'name' (el que está activo por defecto, ver LOGO_LAYOUT) usa fondo transparente
+       y ya no depende de esta variable. Si algún logo del layout 'badge' se ve mal
+       (p.ej. un logo blanco que "desaparece"), prueba a cambiar este valor por algo
+       como #111318 o un gris medio. */
+    --logo-chip-bg: #ffffff;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 10% -10%, rgba(0,229,199,0.06), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(255,176,32,0.05), transparent 55%),
+      var(--asphalt);
+    color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    min-height:100vh;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  h1,h2,h3,.display{font-family:'Teko',sans-serif;font-weight:600;letter-spacing:0.3px;}
+
+  /* Layout */
+  header.topbar{
+    position:sticky;top:0;z-index:50;
+    background:rgba(11,13,16,0.85);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--hairline);
+  }
+  .topbar-inner{
+    max-width:1600px;margin:0 auto;padding:6px 20px;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+  }
+  .brand{display:flex;align-items:center;gap:20px;}
+  .brand-logo{height:100px;width:auto;object-fit:contain;display:block;flex:none;}
+  .brand-text{margin-left:12px;}
+  .brand h1{font-size:26px;margin:0;line-height:1;}
+  .brand span{display:block;font-size:11px;color:var(--text-dim);letter-spacing:1.5px;text-transform:uppercase;font-family:'Inter',sans-serif;}
+
+  nav.tabs{display:flex;gap:4px;flex-wrap:wrap;align-items:center;}
+  nav.tabs button{
+    display:flex;align-items:center;gap:8px;
+    background:transparent;border:1px solid transparent;color:var(--text-dim);
+    padding:8px 14px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;
+    font-family:'Inter',sans-serif;transition:all .15s ease;
+  }
+  nav.tabs button .num{
+    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--asphalt);
+    background:var(--text-dim);border-radius:4px;padding:1px 5px;
+  }
+  nav.tabs button.active{color:var(--text);background:var(--panel-2);border-color:var(--hairline);}
+  nav.tabs button.active .num{background:var(--cyan);}
+  nav.tabs button:hover{color:var(--text);}
+
+  .logout-btn{
+    background:transparent;border:1px solid var(--hairline);color:var(--text-dim);
+    padding:8px 14px;border-radius:8px;font-size:12.5px;cursor:pointer;
+    font-family:'Inter',sans-serif;font-weight:500;transition:all .15s ease;white-space:nowrap;
+  }
+  .logout-btn:hover{color:var(--danger);border-color:rgba(255,71,87,0.4);}
+
+  /* Pastilla "piloto header" — estrecha, se coloca justo a la derecha de la
+     pestaña Mi garaje dentro de nav.tabs. */
+  .piloto-header-pill{
+    display:flex;align-items:center;gap:6px;flex:none;
+    background:transparent;border:1px solid rgba(255,71,87,0.4);color:var(--text);
+    padding:5px 10px;border-radius:8px;font-size:12px;font-weight:500;
+    font-family:'Inter',sans-serif;white-space:nowrap;max-width:230px;
+  }
+  .piloto-header-avatar{
+    width:22px;height:22px;border-radius:50%;background:var(--panel-2) center/cover;
+    border:1px solid var(--hairline);flex:none;
+  }
+  .piloto-header-nombre{color:var(--text);white-space:nowrap;}
+  .piloto-header-pill .badge{margin-left:0;padding:2px 6px;font-size:9px;vertical-align:middle;}
+  .piloto-header-pill .dot{width:5px;height:5px;margin-right:4px;}
+  .piloto-header-saldo{color:var(--amber);font-family:'JetBrains Mono',monospace;font-weight:700;font-size:12px;}
+
+  .brk-mobile{display:none;}
+
+  main{max-width:1600px;margin:0 auto;padding:28px 20px 80px;}
+  section.view{display:none;}
+  section.view.active{display:block;animation:fadeIn .25s ease;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+  .view-head{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;}
+  .view-head h2{font-size:34px;margin:0;}
+  .view-head p{margin:2px 0 0;color:var(--text-dim);font-size:14px;}
+
+  .filters-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+
+  .pillbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+  .pill{
+    padding:7px 14px;border-radius:999px;border:1px solid var(--hairline);
+    background:var(--panel);color:var(--text-dim);font-size:13px;cursor:pointer;
+    transition:all .15s ease;
+  }
+  .pill.active{background:var(--cyan-dim);border-color:var(--cyan);color:var(--cyan);}
+
+  .search-input, .select-input{
+    background:var(--panel);border:1px solid var(--hairline);color:var(--text);
+    padding:9px 14px;border-radius:8px;font-size:14px;font-family:'Inter',sans-serif;
+    width:100%;max-width:280px;
+  }
+  .select-input{max-width:200px;cursor:pointer;}
+  .search-input:focus, .select-input:focus{outline:none;border-color:var(--cyan);}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px;}
+  .car-card{
+    position:relative;background:var(--panel);border:1px solid var(--hairline);
+    border-radius:var(--radius);overflow:hidden;transition:border-color .15s ease,transform .15s ease;
+  }
+  .car-card:hover{border-color:#39404C;transform:translateY(-2px);}
+  .car-card .photo, .car-card-mini .photo{
+    position:relative;height:140px;background:var(--panel-2);
+    background-size:cover;background-position:center;
+  }
+  .car-card .photo::after, .car-card-mini .photo::after{
+    content:'';position:absolute;inset:0;
+    background:linear-gradient(180deg,transparent 40%, rgba(11,13,16,0.9) 100%);
+  }
+  .car-card .stripe, .car-card-mini .stripe{
+    position:absolute;top:0;left:0;width:100%;height:100%;
+    background:repeating-linear-gradient(115deg, rgba(255,255,255,0.035) 0 10px, transparent 10px 26px);
+    pointer-events:none;
+  }
+  .car-card .number, .car-card-mini .number{
+    position:absolute;top:10px;left:10px;width:34px;height:34px;border-radius:50%;
+    background:var(--asphalt);border:2px solid var(--cyan);color:var(--cyan);
+    display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;
+    font-size:12px;font-weight:700;z-index:2;
+  }
+  .car-card .cat-tag, .ficha-grande .cat-tag, .car-card-mini .cat-tag{
+    position:absolute;top:10px;right:10px;font-size:10px;letter-spacing:1px;text-transform:uppercase;
+    background:#000000;border:1px solid var(--hairline);color:var(--text-dim);
+    padding:3px 8px;border-radius:5px;z-index:2;font-weight:700;
+  }
+  /* Colores por categoría (preparado para Oro/Plata/Bronce futuros) */
+  .car-card .cat-tag.cat-bronce, .ficha-grande .cat-tag.cat-bronce, .car-card-mini .cat-tag.cat-bronce{color:#CD7F32;}
+  .car-card .cat-tag.cat-oro, .ficha-grande .cat-tag.cat-oro, .car-card-mini .cat-tag.cat-oro{color:#FFD700;}
+  .car-card .cat-tag.cat-plata, .ficha-grande .cat-tag.cat-plata, .car-card-mini .cat-tag.cat-plata{color:#C0C0C0;}
+  .car-card .body, .car-card-mini .body{padding:14px 16px 16px;}
+  .car-card .name, .car-card-mini .name{font-family:'Teko',sans-serif;font-size:22px;line-height:1.1;margin:0 0 2px;}
+  .car-card .owner, .car-card-mini .owner{font-size:12px;color:var(--text-dim);margin:0 0 12px;}
+  .car-card .owner.free, .car-card-mini .owner.free{color:var(--cyan);}
+  .car-card .owner.sold-out, .car-card-mini .owner.sold-out{color:var(--danger);}
+  /* Ficha de coche principal dentro de la tarjeta de piloto (mismo look que .car-card, sin duplicar borde) */
+  .car-card-mini{position:relative;}
+  .car-card-mini .owner{margin-bottom:0;}
+  .price-row{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;}
+  .price-row .val{font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:700;color:var(--amber);}
+  .price-row .label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;}
+
+  button.action{
+    width:100%;padding:10px;border-radius:8px;border:none;cursor:pointer;
+    font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;letter-spacing:.2px;
+    transition:filter .15s ease;
+  }
+  button.action:hover{filter:brightness(1.12);}
+  button.action:disabled{opacity:.4;cursor:not-allowed;}
+  button.buy{background:var(--cyan);color:#04211D;}
+  button.sell{background:var(--danger-dim);color:var(--danger);border:1px solid rgba(255,71,87,0.35);}
+  button.ghost{background:transparent;color:var(--text-dim);border:1px solid var(--hairline);}
+
+  .pilot-card{background:var(--panel);border:1px solid var(--hairline);border-radius:var(--radius);padding:16px;margin-bottom:14px;}
+  .pilot-head{display:flex;align-items:center;gap:12px;cursor:pointer;}
+  .pilot-avatar{
+    width:48px;height:48px;border-radius:50%;background:var(--panel-2) center/cover;
+    border:1px solid var(--hairline);flex:none;
+  }
+  .pilot-info{flex:1;min-width:0;}
+  .pilot-info .name{font-family:'Teko',sans-serif;font-size:22px;margin:0;}
+  .pilot-stats{display:flex;gap:18px;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:13px;}
+  .pilot-stats .stat b{color:var(--text);}
+  .pilot-stats .stat{color:var(--text-dim);}
+  .stat.oc b{color:var(--amber);}
+  .chevron{transition:transform .2s ease;color:var(--text-dim);}
+  .pilot-card.open .chevron{transform:rotate(90deg);}
+  .garage{display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--hairline);}
+  .pilot-card.open .garage{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
+  .garage .empty{color:var(--text-dim);font-size:13px;grid-column:1/-1;}
+  .qty-badge{
+    position:absolute;bottom:10px;right:10px;z-index:2;
+    background:rgba(0,0,0,0.6);border:1px solid var(--hairline);color:var(--text);
+    font-family:'JetBrains Mono',monospace;font-size:11px;padding:2px 7px;border-radius:5px;
+  }
+
+  /* ============================================================
+     LOGO DE MARCA DEL COCHE — dos layouts disponibles.
+     Se activa uno u otro con la constante JS LOGO_LAYOUT ('name' | 'badge').
+     Layout 'name' (activo por defecto): fondo transparente, logo a tamaño fijo
+     30x30px junto al nombre del coche, alineado a la derecha.
+     Layout 'badge' (alternativo): insignia superpuesta en la foto con fondo
+     claro --logo-chip-bg (para que se vea bien un logo oscuro sobre foto).
+     En ambos casos, si el coche tiene "Forzar logo blanco" = Sí en la pestaña
+     CochesLogos, se aplica la clase .logo-forzado-blanco (filtro CSS) para
+     pintar el logo en blanco sobre fondo transparente.
+     Esta misma clase .logo-forzado-blanco se reutiliza también en los logos de
+     "Marca" que aparecen en Clasificación (04) y en el modal de Resultados del
+     Calendario — ver marcaLogoHtml() más abajo en el <script>.
+     ============================================================ */
+
+  /* Filtro que fuerza cualquier logo (negro/color) a blanco puro, conservando
+     la transparencia del PNG original. Se activa vía CochesLogos!R = "Sí". */
+  .logo-forzado-blanco{filter:brightness(0) invert(1);}
+
+  /* OPCIÓN 1 (por defecto): logo a la derecha del nombre del coche, sin chip de fondo */
+  .name-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .name-row .name{margin:0;flex:1;min-width:0;}
+  .brand-logo-chip{
+    flex:none;display:flex;align-items:center;justify-content:flex-end;
+    background:transparent;border-radius:0;padding:0;line-height:0;margin-left:auto;
+  }
+  .brand-logo-chip img{height:30px;width:30px;object-fit:contain;display:block;}
+  .ficha-info .name-row{align-items:flex-end;}
+  .ficha-info .brand-logo-chip{padding:0;}
+  .ficha-info .brand-logo-chip img{height:40px;width:40px;}
+
+  /* OPCIÓN 2 (alternativa): logo como insignia superpuesta en la foto,
+     abajo a la izquierda (hueco libre: número arriba-izda., categoría
+     arriba-dcha., cantidad "x2" abajo-dcha.) */
+  .brand-badge{
+    position:absolute;bottom:10px;left:10px;z-index:2;
+    background:var(--logo-chip-bg);border-radius:7px;padding:4px 8px;line-height:0;
+    box-shadow:0 2px 8px rgba(0,0,0,.35);
+  }
+  .brand-badge img{height:15px;max-width:52px;object-fit:contain;display:block;}
+  .ficha-grande .brand-badge{bottom:14px;left:18px;padding:5px 10px;}
+  .ficha-grande .brand-badge img{height:19px;max-width:68px;}
+
+  /* Pilotos: rejilla de fichas rectangulares tipo car-card (~350px) */
+  .pilotos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;}
+  .pilot-card-v2{
+    position:relative;background:var(--panel);border:1px solid var(--hairline);
+    border-radius:var(--radius);overflow:hidden;cursor:pointer;
+    transition:border-color .15s ease,transform .15s ease;
+  }
+  .pilot-card-v2:hover{border-color:#39404C;transform:translateY(-2px);}
+  .pilot-topbar{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--hairline);}
+  .pilot-avatar-sm{
+  width:44px;height:44px;border-radius:50%;
+  background:var(--panel-2) center/95% no-repeat;
+  border:1px solid var(--hairline);flex:none;
+  }
+  .pilot-topbar-info{flex:1;min-width:0;}
+  .pilot-topbar-info .name{font-family:'Teko',sans-serif;font-size:20px;margin:0 0 3px;line-height:1.1;}
+  .pilot-topbar-info .flag-img{height:15px;margin-left:6px;vertical-align:middle;border-radius:2px;box-shadow:0 0 0 1px var(--hairline);}
+  .pilot-topbar-stats{display:flex;gap:14px;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-dim);}
+  .pilot-topbar-stats b{color:var(--text);}
+  .pilot-card-v2 .empty-mini{padding:20px 16px;color:var(--text-dim);font-size:13px;}
+  .pilot-card-v2 .no-car-img{width:100%;height:140px;object-fit:cover;display:block;}
+    .pilot-topbar-info .name .badge,
+  #pilotoModalNombre .badge{
+    font-size:10px;
+    padding:2px 8px;
+    vertical-align:middle;
+    position:relative;
+    top:-1px;
+  }
+    .pilot-topbar-info .name .badge,
+  #pilotoModalNombre .badge{
+    font-size:10px;
+    padding:2px 8px;
+    vertical-align:middle;
+    position:relative;
+    top:-1px;
+  }
+  .pilot-topbar-info .name .dot,
+  #pilotoModalNombre .dot{
+    width:5px;
+    height:5px;
+    margin-right:4px;
+  }
+
+  .principal-tag{
+    display:inline-block;margin-top:6px;font-size:10px;letter-spacing:1px;text-transform:uppercase;
+    background:var(--amber-dim);color:var(--amber);border:1px solid rgba(255,176,32,.35);
+    padding:3px 8px;border-radius:5px;font-weight:700;
+  }
+
+  /* Badge de "Coins" (moneda virtual secundaria, columna W de Pilotos): emoji +
+     número en rojo, alineado a la derecha del nombre/licencia. Se usa en la
+     tarjeta de la pestaña Pilotos (.name-coins-row) y en la ficha modal del
+     piloto (.pilot-modal-name-row). Para cambiar el emoji, edita el literal
+     '🪙' en la constante COIN_EMOJI del <script> — es el único sitio donde
+     hace falta tocarlo.
+  */
+  .coin-badge{
+    font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;
+    color:var(--danger);white-space:nowrap;flex:none;
+  }
+  .name-coins-row, .pilot-modal-name-row{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+  }
+
+  /* Modal ficha de piloto (pestaña Pilotos) */
+  .pilot-modal-head{display:flex;align-items:center;gap:18px;margin-bottom:14px;}
+  .pilot-avatar-lg{
+  width:78px;height:78px;border-radius:50%;
+  background:var(--panel-2) center/80% no-repeat;
+  border:2px solid var(--hairline);flex:none;
+  }
+
+    /* Mi Garaje */
+  .carnet-piloto{position:relative;display:flex;align-items:stretch;border-radius:16px;overflow:hidden;background:#121316;min-height:180px;margin-bottom:20px;}
+  .carnet-piloto .left{flex:0 0 clamp(90px, 32vw, 200px);position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .carnet-piloto .texture{position:absolute;inset:0;background-image:url('https://raw.githubusercontent.com/race-online/academy/refs/heads/main/logos/oro.jpg');background-size:cover;background-position:center;filter:var(--tex-filter, none);}
+  .carnet-piloto .darken{position:absolute;inset:0;background:rgba(0,0,0,0.38);}
+  .carnet-piloto .curve{position:absolute;top:50%;left:90%;width:170%;height:200%;border-radius:50%;background:#121316;transform:translateY(-50%);z-index:1;}
+  .carnet-piloto .halo{position:relative;z-index:2;width:clamp(64px, 22vw, 160px);height:clamp(64px, 22vw, 160px);border-radius:50%;}
+  .carnet-piloto .halo::before{content:'';position:absolute;inset:-8px;border-radius:50%;background:radial-gradient(circle, var(--light) 0%, transparent 68%);opacity:.4;}
+  .carnet-piloto .halo .inner{position:relative;width:100%;height:100%;border-radius:50%;background:var(--panel-2) center/80% no-repeat;box-shadow:0 0 0 3px var(--light), 0 3px 14px rgba(0,0,0,.55);}
+  .carnet-piloto .right{flex:1;min-width:0;position:relative;z-index:2;padding:clamp(12px,4vw,20px) clamp(14px,5vw,26px) clamp(12px,4vw,20px) clamp(14px,5vw,30px);}
+  .carnet-piloto .top-row{display:flex;align-items:center;gap:clamp(6px,2vw,10px);margin-bottom:clamp(8px,3vw,18px);flex-wrap:wrap;}
+  .carnet-piloto .driver-name{font-family:'Teko',sans-serif;font-weight:500;font-size:clamp(20px,6vw,34px);color:#fff;margin:0;letter-spacing:.3px;line-height:1.05;}
+  .carnet-piloto .flag-img{width:clamp(18px,5vw,26px);height:clamp(13px,3.5vw,18px);border-radius:4px;object-fit:cover;box-shadow:0 0 0 1px var(--hairline);}
+  .badge{display:inline-flex;align-items:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;padding:3px 10px;border-radius:6px;letter-spacing:.5px;}
+  .dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px;background:currentColor;}
+  .carnet-piloto .badge{font-size:clamp(9px,2.6vw,12px);padding:2px clamp(6px,2vw,10px);}
+  .carnet-piloto .dot{width:clamp(5px,1.4vw,7px);height:clamp(5px,1.4vw,7px);}
+  .carnet-piloto .data-grid{display:grid;grid-template-columns:max-content 1fr;gap:clamp(5px,1.6vw,9px) clamp(8px,3vw,22px);}
+  .carnet-piloto .data-grid .k{font-family:'JetBrains Mono',monospace;font-size:clamp(9px,2.4vw,11px);text-transform:uppercase;letter-spacing:.6px;color:#7E8491;font-weight:700;align-self:center;white-space:nowrap;}
+  .carnet-piloto .data-grid .v{font-family:'JetBrains Mono',monospace;font-size:clamp(11px,3.2vw,15px);font-weight:700;color:#fff;align-self:center;white-space:nowrap;}
+  .lic-SIL{background:rgba(198,205,212,0.14);color:#D7DCE2;}
+  .lic-AMA{background:rgba(201,138,74,0.16);color:#E3A468;}
+  .lic-PAM{background:rgba(232,195,60,0.16);color:#F5D34A;}
+  .lic-PRO{background:#050607;color:#F0F0F0;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.22);}
+  .lic-default{background:var(--panel-2);color:var(--text-dim);}
+  .coche-principal-bar{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    background:var(--panel);border:1px solid var(--hairline);border-radius:var(--radius);padding:16px;
+  }
+  .coche-principal-bar .lbl-principal{color:var(--text-dim);font-size:13.5px;white-space:nowrap;}
+  .coche-principal-bar select{flex:1;min-width:200px;max-width:none;}
+  .coche-principal-bar button{flex:none;width:auto;padding:10px 22px;}
+  .validacion-principal{
+    margin:10px 0 0;font-size:13.5px;font-weight:600;padding:10px 14px;
+    border-radius:8px;border:1px solid;
+  }
+  .validacion-principal.ok{color:var(--green);background:var(--green-dim);border-color:rgba(0,229,199,0.35);}
+  .validacion-principal.pendiente{color:var(--danger);background:var(--danger-dim);border-color:rgba(255,71,87,0.35);}
+
+  .estado-mercado{margin-left:10px;}
+  .estado-mercado.abierto{background:var(--green-dim);color:var(--green);}
+  .estado-mercado.cerrado{background:var(--danger-dim);color:var(--danger);}
+
+  /* Calendario: Grid 60% Desktop, 80% Mobile (2 por fila siempre) */
+  .calendario-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:22px;
+    width:80%;
+  }
+  .circuit-tile{
+    background:var(--panel);
+    border:1px solid var(--hairline);
+    border-radius:14px;
+    overflow:hidden;
+    transition:border-color .15s ease,transform .15s ease;
+    width: 100%;
+  }
+  .circuit-tile:hover{border-color:#39404C;}
+  .circuit-tile .photo-big{
+    position:relative;cursor:pointer;
+    background:var(--panel-2) center/cover no-repeat;
+    aspect-ratio: 16 / 9;
+    height: auto;
+  }
+  .circuit-tile .photo-big::after{
+    content:'';position:absolute;inset:0;
+    background:linear-gradient(180deg,transparent 30%, rgba(11,13,16,0.92) 100%);
+  }
+  /* Etiqueta solicitada */
+  .circuit-tile .photo-big .cat-tag{
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: rgba(0, 0, 0, 0.70);
+    border: 1px solid var(--hairline);
+    color: var(--text-dim);
+    padding: 3px 8px;
+    border-radius: 5px;
+    z-index: 2;
+  }
+  .circuit-tile .photo-big .info{position:absolute;left:20px;right:20px;bottom:16px;z-index:2;}
+  .circuit-tile .photo-big .info .name{font-family:'Teko',sans-serif;font-size:32px;margin:0 0 2px;line-height:1.1;}
+  .circuit-tile .photo-big .info .date{font-size:13px;color:var(--text-dim);margin:0;}
+  .circuit-tile .podio-box{padding:14px 18px 18px;border-top:1px solid var(--hairline);}
+  .circuit-tile .podio-box h4{
+    margin:0 0 10px;font-size:12px;letter-spacing:1px;text-transform:uppercase;
+    color:var(--text-dim);font-family:'Inter',sans-serif;font-weight:700;
+  }
+  .podio-row{display:flex;align-items:center;gap:10px;padding:5px 0;font-size:14.5px;}
+  .podio-row .medal{font-size:18px;width:24px;text-align:center;flex:none;}
+  .podio-row .pos-name{flex:1;color:var(--text);}
+  .podio-empty{color:var(--text-dim);font-size:13px;}
+  
+  @media (max-width:760px){ 
+    .calendario-grid{ width:100%; }
+  }
+
+  /* Pilotos: mini tabla de estadísticas antes del garaje (max 60%) */
+  .pilot-stats-mini{
+    grid-column: 1/-1; display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 10px; margin-bottom: 16px;
+    max-width: 60%;
+  }
+  @media (max-width: 640px) {
+    .pilot-stats-mini { max-width: 100%; }
+  }
+  .stat-box{
+    background:var(--panel-2);border:1px solid var(--hairline);border-radius:10px;
+    padding:12px 10px;text-align:center;
+  }
+  .stat-box .emoji{font-size:22px;display:block;margin-bottom:4px;}
+  .stat-box .val{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--amber);display:block;}
+  .stat-box .lbl{font-size:10.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;}
+
+  /* Modal de ficha de piloto: las 5 estadísticas (incl. Poles) siempre en una sola línea */
+    #pilotoModalStatBoxes{
+    max-width:100%;
+    grid-template-columns:repeat(6, minmax(0,1fr));
+    gap:8px;
+  }
+  #pilotoModalStatBoxes .stat-box{padding:10px 4px;}
+  #pilotoModalStatBoxes .stat-box .emoji{font-size:18px;}
+  #pilotoModalStatBoxes .stat-box .val{font-size:16px;}
+  #pilotoModalStatBoxes .stat-box .lbl{font-size:9px;letter-spacing:.2px;}
+
+  .checkered-divider{
+    height:10px;border-radius:4px;margin:22px 0;
+    background-image:
+      linear-gradient(45deg,#0B0D10 25%,transparent 25%,transparent 75%,#0B0D10 75%,#0B0D10),
+      linear-gradient(45deg,#0B0D10 25%,transparent 25%,transparent 75%,#0B0D10 75%,#0B0D10);
+    background-size:12px 12px;background-position:0 0,6px 6px;background-color:#3a3f47;
+    opacity:.5;
+  }
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  thead th{
+    text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);
+    padding:10px 12px;border-bottom:1px solid var(--hairline);font-weight:600;white-space:nowrap;
+  }
+  tbody td{padding:11px 12px;border-bottom:1px solid var(--hairline);white-space:nowrap;}
+  tbody tr:hover{background:var(--panel-2);}
+  .table-wrap{background:var(--panel);border:1px solid var(--hairline);border-radius:var(--radius);overflow:hidden;overflow-x:auto;}
+  .pos-badge{
+    display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;
+    font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;background:var(--panel-2);color:var(--text-dim);
+  }
+  .pos-badge.p1{background:var(--amber-dim);color:var(--amber);}
+  .pos-badge.p2{background:rgba(139,147,161,0.18);color:#C9CFD8;}
+  .pos-badge.p3{background:rgba(205,127,50,0.18);color:#CD7F32;}
+  .class-tag{
+    font-size:10.5px;padding:3px 8px;border-radius:5px;text-transform:uppercase;letter-spacing:.5px;
+    background:var(--panel-2);color:var(--text-dim);border:1px solid var(--hairline);font-weight:600;
+  }
+  .pts{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--text);}
+  .pts-white{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--text);}
+
+  .amount{font-family:'JetBrains Mono',monospace;font-weight:600;}
+  .amount.pos{color:var(--green);}
+  .amount.neg{color:var(--danger);}
+  .tag{font-size:11px;padding:3px 9px;border-radius:6px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;}
+  .tag.COMPRA{background:var(--danger-dim);color:var(--danger);}
+  .tag.VENTA{background:var(--green-dim);color:var(--green);}
+  .tag.PREMIO_CARRERA{background:var(--amber-dim);color:var(--amber);}
+  .tag.BONO{background:var(--amber-dim);color:var(--amber);}
+
+  .overlay{
+    position:fixed;inset:0;background:rgba(5,6,8,0.7);backdrop-filter:blur(3px);
+    display:none;align-items:center;justify-content:center;z-index:100;padding:20px;
+  }
+  .overlay.show{display:flex;}
+  .modal{
+    width:100%;max-width:380px;background:var(--panel);border:1px solid var(--hairline);
+    border-radius:14px;padding:24px;
+  }
+  .modal h3{margin:0 0 4px;font-size:24px;}
+  .modal p.sub{color:var(--text-dim);font-size:13px;margin:0 0 18px;}
+
+  .modal.modal-ficha{max-width:460px;max-height:90vh;overflow-y:auto;}
+  /* En desktop, las fichas de coche (concesionario y mi garaje) son más anchas
+     y las especificaciones se reparten en 2 columnas. En móvil se mantiene igual
+     (una sola columna, mismo ancho de siempre). */
+  @media (min-width:701px){
+    .modal.modal-ficha.modal-ficha-wide{max-width:660px;}
+    .specs-wrap-2col{display:grid;grid-template-columns:1fr 1fr;column-gap:28px;}
+    .carnet-piloto{max-width:530px;}
+  }
+  .ficha-grande{
+    position:relative;height:210px;border-radius:10px;overflow:hidden;
+    margin:-24px -24px 18px;background:var(--panel-2) center/cover no-repeat;
+  }
+  .ficha-grande::after{
+    content:'';position:absolute;inset:0;
+    background:linear-gradient(180deg,transparent 35%, rgba(11,13,16,0.92) 100%);
+  }
+  .ficha-grande .stripe{
+    position:absolute;inset:0;
+    background:repeating-linear-gradient(115deg, rgba(255,255,255,0.035) 0 10px, transparent 10px 26px);
+    pointer-events:none;
+  }
+  .ficha-grande .number{
+    position:absolute;top:12px;left:12px;width:38px;height:38px;border-radius:50%;
+    background:var(--asphalt);border:2px solid var(--cyan);color:var(--cyan);
+    display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;
+    font-size:13px;font-weight:700;z-index:2;
+  }
+  .ficha-grande .ficha-info{position:absolute;left:18px;right:18px;bottom:14px;z-index:2;}
+  .ficha-grande .ficha-info .name{font-family:'Teko',sans-serif;font-size:30px;margin:0;line-height:1.1;}
+
+  .specs-wrap{margin-bottom:18px;}
+  .specs-wrap-2col table{margin-bottom:0;}
+
+  /* Barra que muestra el saldo del piloto que ha iniciado sesión, sustituyendo
+     al desplegable de piloto y al PIN en las fichas de compra/venta. */
+  .saldo-piloto-bar{
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+    background:var(--panel-2);border:1px solid var(--hairline);border-radius:10px;
+    padding:12px 16px;margin-bottom:16px;
+  }
+  .saldo-piloto-bar .lbl-principal{color:var(--text-dim);font-size:13px;}
+  .saldo-piloto-bar .saldo-valor{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--amber);font-size:17px;}
+  .specs-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .specs-table td{padding:7px 4px;border-bottom:1px solid var(--hairline);}
+  .specs-table td.spec-label{color:var(--text-dim);text-transform:uppercase;font-size:10.5px;letter-spacing:.5px;width:50%;}
+  .specs-table td.spec-value{color:var(--text);font-family:'JetBrains Mono',monospace;text-align:right;}
+
+  .lic-tag{
+    display:inline-block;font-size:10px;letter-spacing:1px;text-transform:uppercase;
+    background:var(--panel-2);border:1px solid var(--hairline);color:var(--amber);
+    padding:2px 7px;border-radius:5px;margin-left:8px;vertical-align:middle;
+    font-family:'Inter',sans-serif;font-weight:700;
+  }
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;}
+  .field select, .field input{
+    width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--hairline);
+    background:var(--panel-2);color:var(--text);font-size:14px;font-family:'Inter',sans-serif;
+  }
+  .field input.mono{font-family:'JetBrains Mono',monospace;letter-spacing:4px;font-size:18px;text-align:center;}
+  .modal-actions{display:flex;gap:10px;margin-top:18px;}
+  .modal-actions button{flex:1;}
+
+  #toasts{position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:10px;max-width:320px;}
+  .toast{
+    padding:13px 16px;border-radius:10px;font-size:13.5px;border:1px solid var(--hairline);
+    background:var(--panel-2);box-shadow:0 8px 24px rgba(0,0,0,0.4);animation:slideIn .25s ease;
+  }
+  .toast.ok{border-color:rgba(0,229,199,0.4);}
+  .toast.err{border-color:rgba(255,71,87,0.4);}
+  @keyframes slideIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:none;}}
+
+  .spinner{
+    width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,0.25);
+    border-top-color:currentColor;display:inline-block;animation:spin .7s linear infinite;margin-right:8px;vertical-align:-2px;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .empty-state{padding:40px 20px;text-align:center;color:var(--text-dim);grid-column:1/-1;}
+
+  /* Pie de página: aquí vive ahora el botón de cerrar sesión */
+  .site-footer{
+    max-width:1600px;margin:0 auto;padding:10px 20px 50px;
+    display:flex;justify-content:center;
+  }
+  .site-footer .logout-btn{padding:10px 26px;font-size:13px;}
+
+  @media (max-width:640px){
+    .topbar-inner{flex-direction:column;align-items:stretch;gap:12px;}
+    nav.tabs{justify-content:space-between;}
+    nav.tabs button{padding:8px 8px;font-size:12.5px;flex:1;justify-content:center;}
+    .view-head h2{font-size:28px;}
+    .filters-bar{width:100%;}
+    .search-input, .select-input{max-width:100%;}
+  }
+
+  /* ============================================================
+     AJUSTES SOLO MÓVIL — a partir de aquí, todo queda igual en desktop
+     ============================================================ */
+  @media (max-width:760px){
+    body{overflow-x:hidden;}
+
+    /* Logo centrado, el doble de grande, con 25px de espacio arriba y abajo,
+       y el texto debajo (también centrado) */
+    .brand{flex-direction:column;align-items:center;gap:0;text-align:center;}
+    .brand-logo{height:100px;margin:10px 0;}
+    .brand-text{margin-left:0; margin-bottom: 15px;}
+
+    /* Al hacer scroll, el logo y el texto del encabezado se ocultan y solo
+       quedan fijos arriba el menú (01…06) y la pastilla del piloto conectado. */
+    header.topbar .brand{
+      max-height:260px;opacity:1;overflow:hidden;
+      transition:max-height .25s ease, opacity .2s ease, margin .25s ease;
+    }
+    header.topbar.scrolled .brand{
+      max-height:0;opacity:0;margin:0;pointer-events:none;
+    }
+
+    /* Menú: 01-03 en una línea, 04-06 Mi garaje en la siguiente */
+    nav.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%;}
+    nav.tabs button{flex:none;padding:8px 4px;font-size:11.5px;gap:5px;}
+    .piloto-header-pill{grid-column:1/-1;justify-self:center;margin-top:2px;max-width:100%;}
+
+    /* Salto de línea del subtítulo de Concesionario y del eslogan del encabezado */
+    .brk-mobile{display:inline;}
+
+        /* Ficha de piloto (modal) y Mi Garaje: las 6 estadísticas caben en una sola fila */
+    .pilot-stats-mini{grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;max-width:100%;}
+    .pilot-stats-mini .stat-box{padding:8px 2px;}
+    .pilot-stats-mini .stat-box .emoji{font-size:14px;margin-bottom:2px;}
+    .pilot-stats-mini .stat-box .val{font-size:13px;}
+    .pilot-stats-mini .stat-box .lbl{font-size:7px;letter-spacing:0;line-height:1.2;}
+
+    /* Calendario: una ficha de circuito por fila */
+    .calendario-grid{grid-template-columns:1fr;width:100%;}
+
+    /* Resultados / Clasificación / Historial: la tabla se ajusta al ancho del
+       móvil dentro de su propio contenedor (scroll horizontal manual si hace falta) */
+    #modalResultados .modal{width:96%;padding:16px;}
+    .table-wrap{max-width:100%;}
+    table{font-size:12.5px;}
+    thead th, tbody td{padding:8px 8px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <img class="brand-logo" src="https://raw.githubusercontent.com/race-online/es/refs/heads/main/logos/logopng.webp" alt="Race Online Shop">
+      <div class="brand-text">
+        <h1>Race Online Shop</h1>
+        <span>Assetto Corsa Evo Academy<br>Economía de comunidad</span>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button class="tab-btn active" data-view="concesionario"><span class="num">01</span> Concesionario</button>
+      <button class="tab-btn" data-view="pilotos"><span class="num">02</span> Pilotos</button>
+      <button class="tab-btn" data-view="calendario"><span class="num">03</span> Calendario</button>
+      <button class="tab-btn" data-view="clasificacion"><span class="num">04</span> Clasificación</button>
+      <button class="tab-btn" data-view="historial"><span class="num">05</span> Historial</button>
+      <button class="tab-btn" data-view="migaraje" id="tabMiGaraje" style="display:none;"><span class="num">06</span> Mi garaje</button>
+      <div class="piloto-header-pill" id="pilotoHeaderPill" style="display:none;">
+        <div class="piloto-header-avatar" id="pilotoHeaderAvatar"></div>
+        <span class="piloto-header-nombre" id="pilotoHeaderNombre"></span>
+        <span class="badge" id="pilotoHeaderLic"></span>
+        <span class="piloto-header-saldo" id="pilotoHeaderSaldo"></span>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <section class="view active" id="view-concesionario">
+    <div class="view-head">
+      <div>
+        <h2>Concesionario</h2>
+        <p>Catálogo de vehículos disponibles y<br class="brk-mobile"> garajes de la parrilla <span id="estadoMercado" class="tag estado-mercado"></span></p>
+      </div>
+      <div class="filters-bar">
+        <select class="select-input" id="filterCategoriaCoches">
+          <option value="todas">Todas las categorías</option>
+        </select>
+        <input class="search-input" id="searchCoches" placeholder="Buscar coche…">
+      </div>
+    </div>
+    <div class="pillbar" id="filterCoches">
+      <button class="pill active" data-filter="todos">Todos</button>
+      <button class="pill" data-filter="disponibles">En concesionario</button>
+      <button class="pill" data-filter="agotados">Agotados</button>
+    </div>
+    <div class="grid" id="gridCoches"><div class="empty-state"><span class="spinner"></span>Cargando datos, espere…</div></div>
+  </section>
+
+  <section class="view" id="view-pilotos">
+    <div class="view-head">
+      <div>
+        <h2>Pilotos & Garajes</h2>
+        <p>Saldo actual y coche principal de cada piloto de la parrilla</p>
+      </div>
+    </div>
+    <div class="pilotos-grid" id="listaPilotos"><div class="empty-state"><span class="spinner"></span>Cargando datos, espere…</div></div>
+  </section>
+
+  <section class="view" id="view-migaraje">
+    <div class="view-head">
+      <div>
+        <h2>Mi Garaje</h2>
+        <p>Tu ficha personal, tus coches y tu coche principal de campeonato</p>
+      </div>
+    </div>
+    <div id="miGarajeContenido"><div class="empty-state"><span class="spinner"></span>Cargando datos, espere…</div></div>
+  </section>
+
+  <section class="view" id="view-calendario">
+    <div class="view-head">
+      <div>
+        <h2>Calendario</h2>
+        <p>Circuitos de la temporada · pulsa una ficha para ver los resultados</p>
+      </div>
+    </div>
+    <div class="calendario-grid" id="gridCalendario"><div class="empty-state"><span class="spinner"></span>Cargando datos, espere…</div></div>
+  </section>
+
+  <section class="view" id="view-clasificacion">
+    <div class="view-head">
+      <div>
+        <h2>Clasificación</h2>
+        <p>Clasificación general del campeonato por piloto y carrera</p>
+      </div>
+    </div>
+    <div class="checkered-divider"></div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th>Equipo</th><th>Marca</th>
+            <th>Espec.</th><th>Puntos</th><th>R1</th><th>R2</th><th>R3</th><th>R4</th><th>Pen.</th>
+          </tr>
+        </thead>
+        <tbody id="tablaClasificacion"><tr><td colspan="13" style="color:var(--text-dim);text-align:center;"><span class="spinner"></span>Cargando datos, espere…</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="view-head" style="margin-top:34px;">
+      <div>
+        <h2>Clasificación por Equipos</h2>
+        <p>Clasificación general del campeonato por equipos</p>
+      </div>
+    </div>
+    <div class="checkered-divider"></div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Pos.</th><th>Pilotos</th><th>Equipo</th><th>Puntos</th>
+            <th>R1</th><th>R2</th><th>R3</th><th>R4</th><th>Pen.</th>
+          </tr>
+        </thead>
+        <tbody id="tablaClasTeam"><tr><td colspan="9" style="color:var(--text-dim);text-align:center;"><span class="spinner"></span>Cargando datos, espere…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="view" id="view-historial">
+    <div class="view-head">
+      <div>
+        <h2>Historial de Transacciones</h2>
+        <p>Registro público e inmutable de todos los movimientos de OC</p>
+      </div>
+      <input class="search-input" id="searchHistorial" placeholder="Filtrar por piloto…">
+    </div>
+    <div class="pillbar" id="filterHistorial">
+      <button class="pill active" data-filter="TODOS">Todos</button>
+      <button class="pill" data-filter="COMPRA">Compras</button>
+      <button class="pill" data-filter="VENTA">Ventas</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Fecha</th><th>Piloto</th><th>Tipo</th><th>Detalle</th><th>Monto</th></tr></thead>
+        <tbody id="tablaHistorial"><tr><td colspan="5" style="color:var(--text-dim);"><span class="spinner"></span>Cargando datos, espere…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <button class="logout-btn" id="btnCerrarSesion" style="display:none;">Cerrar sesión</button>
+</footer>
+
+<div class="overlay" id="modalComprar">
+  <div class="modal modal-ficha modal-ficha-wide">
+    <div class="ficha-grande" id="fichaComprarFoto"></div>
+    <div class="specs-wrap specs-wrap-2col">
+      <table class="specs-table"><tbody id="tablaEspecsComprarIzq"></tbody></table>
+      <table class="specs-table"><tbody id="tablaEspecsComprarDer"></tbody></table>
+    </div>
+    <h3 id="comprarTitulo">Comprar coche</h3>
+    <p class="sub" id="comprarSub"></p>
+    <div class="saldo-piloto-bar" id="compradorSaldoBar"></div>
+    <div class="modal-actions">
+      <button class="action ghost" onclick="cerrarModal('modalComprar')">Cerrar</button>
+      <button class="action buy" id="btnConfirmarCompra">Confirmar compra</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modalVender">
+  <div class="modal modal-ficha modal-ficha-wide">
+    <div class="ficha-grande" id="fichaVenderFoto"></div>
+    <div class="specs-wrap specs-wrap-2col">
+      <table class="specs-table"><tbody id="tablaEspecsVenderIzq"></tbody></table>
+      <table class="specs-table"><tbody id="tablaEspecsVenderDer"></tbody></table>
+    </div>
+    <h3 id="venderTitulo">Vender coche</h3>
+    <p class="sub" id="venderSub"></p>
+    <div class="saldo-piloto-bar" id="vendedorSaldoBar"></div>
+    <div class="modal-actions">
+      <button class="action ghost" onclick="cerrarModal('modalVender')">Cancelar</button>
+      <button class="action sell" id="btnConfirmarVenta">Confirmar venta</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modalResultados">
+  <div class="modal" style="max-width:1300px;width:95%;">
+    <h3 id="resultadosTitulo">Resultados</h3>
+    <p class="sub" id="resultadosSub"></p>
+    <div class="table-wrap" style="max-height:70vh;">
+      <table>
+        <thead>
+          <tr>
+            <th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th>Equipo</th>
+            <th>Marca</th><th>Espec.</th><th>Vueltas</th><th>Tiempo</th><th>Mejor V.</th><th>Pits</th>
+          </tr>
+        </thead>
+        <tbody id="tablaResultados"></tbody>
+      </table>
+    </div>
+    <div class="modal-actions">
+      <button class="action ghost" onclick="cerrarModal('modalResultados')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modalLogin">
+  <div class="modal" style="max-width:380px;">
+    <h3>Bienvenido a Race Online</h3>
+    <p class="sub">Identifícate para acceder a tu garaje personal</p>
+    <div class="field">
+      <label>Selecciona tu piloto</label>
+      <select id="loginPiloto"></select>
+    </div>
+    <div class="field">
+      <label>PIN de seguridad</label>
+      <input type="password" inputmode="numeric" maxlength="4" class="mono" id="loginPin" placeholder="••••">
+    </div>
+    <div class="modal-actions">
+      <button class="action buy" id="btnLoginPiloto">Entrar</button>
+    </div>
+    <button class="action ghost" id="btnLoginInvitado" style="margin-top:10px;">Entrar como invitado</button>
+  </div>
+</div>
+
+<div class="overlay" id="modalPiloto">
+  <div class="modal" style="max-width:640px;width:95%;max-height:90vh;overflow-y:auto;">
+    <div class="pilot-modal-head">
+      <div class="pilot-avatar-lg" id="pilotoModalAvatar"></div>
+      <div style="flex:1;min-width:0;">
+        <div class="pilot-modal-name-row">
+          <p class="name" id="pilotoModalNombre" style="font-family:'Teko',sans-serif;font-size:26px;margin:0 0 8px;"></p>
+          <span class="coin-badge" id="pilotoModalCoins"></span>
+        </div>
+        <div class="pilot-stats" id="pilotoModalStats"></div>
+      </div>
+    </div>
+    <div class="pilot-stats-mini" id="pilotoModalStatBoxes"></div>
+    <div class="checkered-divider"></div>
+    <h4 style="margin:0 0 12px;font-size:13px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;font-family:'Inter',sans-serif;">Garaje</h4>
+    <div class="grid" id="pilotoModalGaraje"></div>
+    <div class="modal-actions">
+      <button class="action ghost" onclick="cerrarModal('modalPiloto')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbx23LJXHV6G-sYtbe6ky9qAbPHTuo35fq8Rd9EcoXyk3-cPWEXyTMOP9Uc6e50y1FsLjA/exec';
+const STATIC_DATA_URL = 'https://cdn.jsdelivr.net/gh/race-online/academy@main/data/race-data.json';
+
+let DB = { pilotos: [], coches: [], calendario: [], clasificacion: [], clasteam: [], historial: [], r1: [], r2: [], r3: [], r4: [], logosForzarBlancoPorUrl: {}, logosForzarBlancoCarreras: {} };
+let cocheFilter = 'todos';
+let cocheCategoriaFilter = 'todas';
+let historialFilter = 'TODOS';
+let coches_query = '';
+let historial_query = '';
+let cocheSeleccionadoId = null;
+let ventaContext = null;
+let sesion = { tipo: null, idPiloto: null, pin: null }; // tipo: 'piloto' | 'invitado'
+let sesionIniciada = false;
+let mercadoBloqueado = false;
+
+function normKey_(s){
+  return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "").trim();
+}
+function getVal(obj, keyBase) {
+  if (!obj) return '';
+  const target = normKey_(keyBase);
+  const key = Object.keys(obj).find(k => normKey_(k) === target);
+  return key ? obj[key] : '';
+}
+
+async function apiGet(){
+  try{
+    const res = await fetch(STATIC_DATA_URL, { cache: 'no-store' });
+    if(res.ok){
+      const json = await res.json();
+      if(json && json.ok){
+        // Comprobación de versión EN SEGUNDO PLANO: no bloquea la carga inicial.
+        // Si la copia estática está desactualizada, la web se refresca sola en
+        // cuanto llegue la respuesta (puede tardar varios segundos), pero el
+        // login y el resto de vistas no esperan por esto.
+        comprobarVersionEnSegundoPlano_(json.data.version);
+        return json.data;
+      }
+    }
+  }catch(err){
+    // Sigue con el respaldo de abajo.
+  }
+  const res = await fetch(API_URL);
+  const json = await res.json();
+  if(!json.ok) throw new Error(json.error || 'Error al cargar datos');
+  return json.data;
+}
+
+// Comprueba en segundo plano si la copia estática está al día. Si no lo está,
+// pide los datos completos en vivo y refresca la web sin que el usuario tenga
+// que hacer nada. Si la comprobación falla, simplemente se ignora (se sigue
+// usando la copia estática, igual que se hacía antes de tener esta comprobación).
+function comprobarVersionEnSegundoPlano_(versionActual){
+  fetch(API_URL + '?action=version', { cache: 'no-store' })
+    .then(res => res.ok ? res.json() : null)
+    .then(json => {
+      if(!json || !json.ok) return;
+      if(String(json.version) === String(versionActual)) return; // ya está al día
+
+      return fetch(API_URL).then(r => r.json()).then(liveJson => {
+        if(!liveJson || !liveJson.ok) return;
+        DB = liveJson.data;
+        mercadoBloqueado = !!DB.mercadoBloqueado;
+        actualizarEstadoMercado();
+        poblarCategorias();
+        renderCoches();
+        renderPilotos();
+        renderCalendario();
+        renderClasificacion();
+        renderClasTeam();
+        renderHistorial();
+        if(sesion.tipo === 'piloto') renderMiGaraje();
+        actualizarPilotoHeaderPill();
+        if(!sesionIniciada) prepararLogin();
+      });
+    })
+    .catch(err => {
+      // Comprobación de versión fallida: no pasa nada, se sigue con la copia estática.
+    });
+}
+
+async function apiPost(payload){
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  });
+  const json = await res.json();
+  if(!json.ok) throw new Error(json.error || 'Error en la operación');
+  return json;
+}
+
+function toast(msg, type='ok'){
+  const el = document.createElement('div');
+  el.className = 'toast ' + (type === 'ok' ? 'ok' : 'err');
+  el.textContent = msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(()=>{ el.remove(); }, 4200);
+}
+
+document.getElementById('tabs').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.tab-btn');
+  if(!btn) return;
+  if(btn.dataset.view === 'migaraje' && sesion.tipo !== 'piloto') return;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('view-' + btn.dataset.view).classList.add('active');
+});
+
+// Al hacer scroll hacia abajo en móvil, el encabezado se "compacta": se oculta
+// el logo y el eslogan y solo quedan fijos arriba el menú (01…06) y la pastilla
+// del piloto conectado. En desktop no tiene ningún efecto (la regla CSS que
+// colapsa .brand solo existe dentro de la media query de móvil).
+(function(){
+  const headerEl = document.querySelector('header.topbar');
+  if(!headerEl) return;
+  const UMBRAL_SCROLL = 12;
+  let ticking = false;
+  function actualizarHeaderScroll(){
+    if(window.scrollY > UMBRAL_SCROLL){
+      headerEl.classList.add('scrolled');
+    } else {
+      headerEl.classList.remove('scrolled');
+    }
+    ticking = false;
+  }
+  window.addEventListener('scroll', ()=>{
+    if(!ticking){
+      window.requestAnimationFrame(actualizarHeaderScroll);
+      ticking = true;
+    }
+  }, { passive: true });
+})();
+
+const SESION_STORAGE_KEY = 'ros_sesion';
+
+async function cargarTodo(){
+  try{
+    DB = await apiGet();
+    mercadoBloqueado = !!DB.mercadoBloqueado;
+    actualizarEstadoMercado();
+    poblarCategorias();
+    renderCoches();
+    renderPilotos();
+    renderCalendario();
+    renderClasificacion();
+    renderClasTeam();
+    renderHistorial();
+    if(sesion.tipo === 'piloto') renderMiGaraje();
+    actualizarPilotoHeaderPill();
+    if(!sesionIniciada) prepararLogin();
+  }catch(err){
+    toast('No se pudieron cargar los datos: ' + err.message, 'err');
+  }
+}
+
+function mostrarLoginConCarga(){
+  const sel = document.getElementById('loginPiloto');
+  sel.innerHTML = '<option>Cargando pilotos…</option>';
+  document.getElementById('modalLogin').classList.add('show');
+}
+
+// Repuebla el desplegable de login con la lista completa una vez han llegado
+// todos los datos (por si prepararLoginRapido no llegó a tiempo). No hace nada
+// si el usuario ya ha iniciado sesión mientras tanto.
+function prepararLogin(){
+  if(sesionIniciada) return;
+  const sel = document.getElementById('loginPiloto');
+  if(Array.isArray(DB.pilotos) && DB.pilotos.length){
+    const valorActual = sel.value;
+    sel.innerHTML = DB.pilotos.map(p => `<option value="${p.ID_Piloto}">${p.Nombre_Piloto}</option>`).join('');
+    if(valorActual) sel.value = valorActual;
+  }
+  document.getElementById('modalLogin').classList.add('show');
+}
+
+function actualizarEstadoMercado(){
+  const el = document.getElementById('estadoMercado');
+  if(!el) return;
+  el.textContent = mercadoBloqueado ? 'Mercado cerrado' : 'Mercado abierto';
+  el.className = 'tag estado-mercado ' + (mercadoBloqueado ? 'cerrado' : 'abierto');
+}
+
+function activarModoPiloto(){
+  document.getElementById('tabMiGaraje').style.display = '';
+}
+
+function mostrarBotonCerrarSesion(){
+  document.getElementById('btnCerrarSesion').style.display = '';
+}
+
+// Abrevia el nombre de un piloto a "Inicial. Apellido(s)" para que la pastilla
+// del encabezado quede siempre estrecha y legible (ej. "Aitor Cantó" -> "A. Cantó").
+function abreviarNombre(nombre){
+  const partes = String(nombre || '').trim().split(/\s+/).filter(Boolean);
+  if(partes.length === 0) return '';
+  if(partes.length === 1) return partes[0];
+  const inicial = partes[0].charAt(0).toUpperCase();
+  const apellidos = partes.slice(1).join(' ');
+  return inicial + '. ' + apellidos;
+}
+
+// Rellena y muestra la pastilla del piloto conectado en el encabezado
+// (avatar, nombre abreviado, licencia y saldo). Se oculta para invitados
+// o si todavía no han llegado los datos del piloto.
+function actualizarPilotoHeaderPill(){
+  const pill = document.getElementById('pilotoHeaderPill');
+  if(!pill) return;
+  if(sesion.tipo !== 'piloto'){
+    pill.style.display = 'none';
+    return;
+  }
+  const p = DB.pilotos.find(pp => String(pp.ID_Piloto) === String(sesion.idPiloto));
+  if(!p){
+    pill.style.display = 'none';
+    return;
+  }
+
+  const saldo = Number(p.Saldo_OC ?? p.Saldo_EC ?? 0);
+  const licencia = getVal(p, 'Licencia') || getVal(p, 'Lic.') || getVal(p, 'Lic');
+
+  document.getElementById('pilotoHeaderAvatar').style.backgroundImage = "url('" + (p.Foto_Avatar_URL || '') + "')";
+  document.getElementById('pilotoHeaderNombre').textContent = abreviarNombre(p.Nombre_Piloto || '');
+
+  const licEl = document.getElementById('pilotoHeaderLic');
+  const licInfoHeader = licenciaInfo_(licencia);
+  licEl.innerHTML = licencia ? '<span class="dot"></span>' + licencia : '';
+  licEl.className = 'badge' + (licencia ? ' ' + licInfoHeader.badgeClass : '');
+  licEl.style.display = licencia ? '' : 'none';
+
+  document.getElementById('pilotoHeaderSaldo').textContent = saldo.toLocaleString() + ' OC';
+
+  pill.style.display = '';
+}
+
+document.getElementById('btnLoginPiloto').addEventListener('click', async ()=>{
+  const idPiloto = document.getElementById('loginPiloto').value;
+  const pin = document.getElementById('loginPin').value;
+  if(!pin){ toast('Introduce tu PIN de seguridad.', 'err'); return; }
+
+  const btn = document.getElementById('btnLoginPiloto');
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.innerHTML = '<span class="spinner"></span>Comprobando…';
+  try{
+    const res = await apiPost({ action:'loginPiloto', idPiloto, pin });
+    sesion = { tipo:'piloto', idPiloto, pin };
+    sesionIniciada = true;
+    sessionStorage.setItem(SESION_STORAGE_KEY, JSON.stringify(sesion));
+    activarModoPiloto();
+    mostrarBotonCerrarSesion();
+    document.getElementById('modalLogin').classList.remove('show');
+    toast('Bienvenido, ' + (res.piloto ? res.piloto.Nombre_Piloto : '') + '.', 'ok');
+    renderCoches();
+    renderPilotos();
+    renderMiGaraje();
+    actualizarPilotoHeaderPill();
+  }catch(err){
+    toast(err.message, 'err');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+});
+
+document.getElementById('btnLoginInvitado').addEventListener('click', ()=>{
+  sesion = { tipo:'invitado', idPiloto:null, pin:null };
+  sesionIniciada = true;
+  sessionStorage.setItem(SESION_STORAGE_KEY, JSON.stringify(sesion));
+  mostrarBotonCerrarSesion();
+  document.getElementById('modalLogin').classList.remove('show');
+  renderCoches();
+});
+
+document.getElementById('btnCerrarSesion').addEventListener('click', ()=>{
+  sessionStorage.removeItem(SESION_STORAGE_KEY);
+  sesion = { tipo:null, idPiloto:null, pin:null };
+  sesionIniciada = false;
+
+  document.getElementById('tabMiGaraje').style.display = 'none';
+  document.getElementById('btnCerrarSesion').style.display = 'none';
+  document.getElementById('pilotoHeaderPill').style.display = 'none';
+
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelector('.tab-btn[data-view="concesionario"]').classList.add('active');
+  document.getElementById('view-concesionario').classList.add('active');
+
+  renderCoches();
+  renderPilotos();
+  mostrarLoginConCarga();
+});
+
+// Arranque de la web: si hay una sesión guardada en este navegador (mientras la
+// pestaña siga abierta) se restaura sin pedir usuario/PIN de nuevo. Si no,
+// se muestra el login al instante con una lista ligera de pilotos mientras el
+// resto de los datos de la web se cargan en paralelo por detrás.
+async function iniciar(){
+  const guardada = sessionStorage.getItem(SESION_STORAGE_KEY);
+  if(guardada){
+    try{
+      const parsed = JSON.parse(guardada);
+      if(parsed && (parsed.tipo === 'piloto' || parsed.tipo === 'invitado')){
+        sesion = parsed;
+        sesionIniciada = true;
+        if(sesion.tipo === 'piloto') activarModoPiloto();
+        mostrarBotonCerrarSesion();
+      }
+    }catch(err){
+      // Sesión guardada corrupta: se ignora y se pide login de nuevo.
+    }
+  }
+
+  if(!sesionIniciada){
+    mostrarLoginConCarga();
+  }
+
+  await cargarTodo();
+}
+
+// Aplica al instante en memoria (DB) el resultado de una compra/venta, sin volver a
+// pedir todos los datos del Sheet. Antes, tras comprar o vender, se llamaba a
+// cargarTodo() — que relee TODAS las hojas del Sheet en el backend — y por eso tardaba
+// varios segundos en reflejarse el cambio. Ahora comprarCoche_/venderCoche_ devuelven
+// ya el piloto y el coche actualizados en la propia respuesta, así que basta con
+// "parchear" esos dos objetos dentro de DB y repintar solo las vistas afectadas.
+function aplicarActualizacionLocal_(res){
+  if(res.piloto){
+    const idx = DB.pilotos.findIndex(p => String(p.ID_Piloto) === String(res.piloto.ID_Piloto));
+    if(idx !== -1) DB.pilotos[idx] = Object.assign({}, DB.pilotos[idx], res.piloto);
+  }
+  if(res.coche){
+    const idx = DB.coches.findIndex(c => String(c.ID_Coche) === String(res.coche.ID_Coche));
+    if(idx !== -1) DB.coches[idx] = Object.assign({}, DB.coches[idx], res.coche);
+  }
+  if(res.historial){
+    if(!Array.isArray(DB.historial)) DB.historial = [];
+    DB.historial.push(res.historial);
+  }
+
+  renderCoches();
+  renderPilotos();
+  if(sesion.tipo === 'piloto') renderMiGaraje();
+  renderHistorial();
+  actualizarPilotoHeaderPill();
+}
+
+function poblarCategorias(){
+  const selectCat = document.getElementById('filterCategoriaCoches');
+  if (!Array.isArray(DB.coches)) return;
+  
+  const categorias = [...new Set(DB.coches.map(c => c.Categoria).filter(Boolean))].sort();
+  selectCat.innerHTML = '<option value="todas">Todas las categorías</option>' + 
+    categorias.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+}
+
+// NUEVA LÓGICA DE FILTRADO (ROBUSTA)
+function cocheDisponible(c) {
+    const stockVal = getVal(c, 'Stock');
+    const hasStock = stockVal !== undefined && stockVal !== null && String(stockVal).trim() !== '';
+    
+    const propVal = getVal(c, 'Propietario_ID') || getVal(c, 'Propietario');
+    const propID = String(propVal || '').trim().toUpperCase();
+    
+    // Si la hoja tiene control de stock
+    if (hasStock) {
+        const numStock = Number(stockVal);
+        // Si se agotó el stock numérico, está "Agotado"
+        if (isNaN(numStock) || numStock <= 0) return false;
+        return true; 
+    }
+    
+    // Si NO hay control de stock, dependemos de si hay un dueño escrito
+    if (propID !== '' && propID !== 'CONCESIONARIO' && propID !== 'LIBRE') {
+        // Está comprado
+        return false;
+    }
+    
+    return true; // Si llega aquí, está libre
+}
+
+function esCocheDeStock(c){
+  const stock = getVal(c, 'Stock');
+  return stock !== undefined && stock !== null && String(stock).trim() !== '';
+}
+
+function unidadesPropias(idPiloto, idCoche){
+  const marca = '(' + idCoche + ')';
+  let total = 0;
+  if (Array.isArray(DB.historial)) {
+    DB.historial.forEach(h=>{
+      if(String(h.ID_Piloto) !== String(idPiloto)) return;
+      if(String(h.Detalle).indexOf(marca) === -1) return;
+      if(h.Tipo_Operacion === 'COMPRA') total += 1;
+      if(h.Tipo_Operacion === 'VENTA') total -= 1;
+    });
+  }
+  return total;
+}
+
+// Clase CSS según categoría (Bronce / Plata / Oro, preparado para futuras categorías)
+function catTagClass(categoria){
+  const c = String(categoria || '').toLowerCase();
+  if(c.includes('oro')) return 'cat-oro';
+  if(c.includes('plata')) return 'cat-plata';
+  if(c.includes('bronce')) return 'cat-bronce';
+  return '';
+}
+
+// Genera un <img> con la bandera del país a partir de su código ISO 3166-1 alpha-2
+// (ej. "es", "ar", "mx"), usando flagcdn.com. A diferencia del emoji de bandera,
+// esto se ve igual en todos los sistemas operativos y navegadores (los emojis de
+// bandera no se renderizan en muchos Windows/Android/Linux y aparece el código en texto).
+// Nota: la bandera ahora SOLO se muestra en la sección "Mi Garaje" (ver renderMiGaraje).
+function banderaImgHtml(codigoPais){
+  const cc = String(codigoPais || '').trim().toLowerCase();
+  if(!/^[a-z]{2}$/.test(cc)) return '';
+  return `<img class="flag-img" src="https://flagcdn.com/w40/${cc}.png" srcset="https://flagcdn.com/w80/${cc}.png 2x" alt="${cc.toUpperCase()}" loading="lazy">`;
+}
+
+// ------------------------------------------------------------
+// COINS (moneda virtual secundaria, columna W de Pilotos, cabecera "Coins")
+// ------------------------------------------------------------
+// El backend ya garantiza que el campo "Coins" viaja siempre en el objeto piloto
+// (ver obtenerPilotosConCochePrincipal_ en code.gs), leyéndolo por cabecera o,
+// si no la encuentra, por la posición de la columna W.
+// PARA CAMBIAR EL EMOJI: sustituye el literal de esta constante por otro emoji
+// (por ejemplo '💰'). Es el único sitio donde hace falta tocarlo.
+const COIN_EMOJI = '🪙';
+
+function coinsDePiloto(piloto){
+  return Number(getVal(piloto, 'Coins')) || 0;
+}
+
+// ------------------------------------------------------------
+// LOGO DE MARCA DEL COCHE (pestaña "CochesLogos", columna A = nombre del coche,
+// columna F = URL del logo, columna R = "Forzar logo blanco")
+// ------------------------------------------------------------
+// Cambia este valor para probar las 2 opciones de layout:
+//   'name'  -> el logo se muestra a la derecha del nombre del coche (opción activa)
+//   'badge' -> el logo se muestra como una insignia superpuesta en la foto, abajo
+//              a la izquierda (opción alternativa, no compite con el nombre)
+const LOGO_LAYOUT = 'name';
+
+// El backend ya combina el logo dentro de cada coche como "Logo_Marca_URL" y el
+// flag de "forzar blanco" como "Logo_Forzar_Blanco" (boolean).
+function logoMarcaUrl(c){
+  return getVal(c, 'Logo_Marca_URL') || '';
+}
+
+// Indica si el coche tiene marcado "Sí" en CochesLogos!Forzar logo blanco (columna R).
+function logoForzarBlanco(c){
+  const val = getVal(c, 'Logo_Forzar_Blanco');
+  if(val === true) return true;
+  const s = String(val || '').trim().toLowerCase();
+  return s === 'true' || s === 'si' || s === 'sí' || s === '1';
+}
+
+// Fila de nombre del coche + logo de marca (layout 'name'). Si no hay logo o el
+// layout activo es 'badge', devuelve simplemente el <p class="name"> de siempre.
+// Si forzarBlanco es true, el logo se pinta en blanco (fondo siempre transparente).
+function nombreConLogoHtml(nombre, logoUrl, forzarBlanco, claseNombre){
+  claseNombre = claseNombre || 'name';
+  if(LOGO_LAYOUT === 'name' && logoUrl){
+    const claseImg = forzarBlanco ? 'logo-forzado-blanco' : '';
+    return `<div class="name-row"><p class="${claseNombre}">${nombre || ''}</p><span class="brand-logo-chip"><img class="${claseImg}" src="${logoUrl}" alt="Logo de marca" loading="lazy"></span></div>`;
+  }
+  return `<p class="${claseNombre}">${nombre || ''}</p>`;
+}
+
+// Insignia de marca superpuesta en la foto (layout 'badge'). Va dentro de .photo
+// o .ficha-grande, que ya tienen position:relative.
+function logoBadgeHtml(logoUrl, forzarBlanco){
+  if(LOGO_LAYOUT === 'badge' && logoUrl){
+    const claseImg = forzarBlanco ? 'logo-forzado-blanco' : '';
+    return `<div class="brand-badge"><img class="${claseImg}" src="${logoUrl}" alt="Logo de marca" loading="lazy"></div>`;
+  }
+  return '';
+}
+
+// HTML del interior de la ficha grande (foto ya se aplica como background aparte)
+function fichaGrandeHtml(c){
+  const cat = c.Categoria || '';
+  const logoUrl = logoMarcaUrl(c);
+  const forzarBlanco = logoForzarBlanco(c);
+  return `
+    <div class="stripe"></div>
+    <div class="number">${String(c.ID_Coche || '').slice(-2)}</div>
+    <div class="cat-tag ${catTagClass(cat)}">${cat}</div>
+    ${logoBadgeHtml(logoUrl, forzarBlanco)}
+    <div class="ficha-info">${nombreConLogoHtml(c.Nombre_Coche || '', logoUrl, forzarBlanco)}</div>
+  `;
+}
+
+// Especificaciones técnicas repartidas en 2 columnas (columnas I-V de la hoja Coches).
+// En desktop se muestran lado a lado; en móvil se apilan en el mismo orden (misma vista de siempre).
+function especificacionesColumnas_(c){
+  const izquierda = [
+    ['Disposición', getVal(c, 'Disposicion')],
+    ['Par Motor', getVal(c, 'Par Motor')],
+    ['Año', getVal(c, 'Año')],
+    ['Potencia', getVal(c, 'Potencia')],
+    ['Cilindrada', getVal(c, 'Cilindrada')]
+  ].filter(([, v]) => v !== '' && v !== undefined && v !== null);
+
+  const derecha = [
+    ['Cilindros', getVal(c, 'Cilindros')],
+    ['Peso', getVal(c, 'Peso')],
+    ['Velocidad Máxima', getVal(c, 'Velocidad')],
+    ['Marchas', getVal(c, 'Marchas')],
+    ['Depósito', getVal(c, 'Deposito')]
+  ].filter(([, v]) => v !== '' && v !== undefined && v !== null);
+
+  return { izquierda, derecha };
+}
+
+function filasEspecs_(rows){
+  return rows.map(([label, val]) => `<tr><td class="spec-label">${label}</td><td class="spec-value">${val}</td></tr>`).join('');
+}
+
+function especificacionesHtml2Col_(c, idIzq, idDer){
+  const { izquierda, derecha } = especificacionesColumnas_(c);
+  let izqHtml = filasEspecs_(izquierda);
+  let derHtml = filasEspecs_(derecha);
+  if(!izqHtml && !derHtml){
+    izqHtml = '<tr><td colspan="2" style="color:var(--text-dim);padding:8px 4px;">Sin especificaciones disponibles.</td></tr>';
+  }
+  document.getElementById(idIzq).innerHTML = izqHtml;
+  document.getElementById(idDer).innerHTML = derHtml;
+}
+
+function nombrePiloto(id){
+  if (!Array.isArray(DB.pilotos)) return id;
+  const p = DB.pilotos.find(p => String(p.ID_Piloto) === String(id));
+  return p ? p.Nombre_Piloto : id;
+}
+
+// ------------------------------------------------------------
+// ESTADÍSTICAS DE PILOTO E HISTORIAL DE CARRERAS (Sheet externo "Resultados")
+// ------------------------------------------------------------
+// El backend ya trae DB.estadisticasPilotos y DB.historialCarreras (ver
+// construirPayloadDatos_ en code.gs). El cruce con el piloto se hace por Steam id
+// (Pilotos!Player_id, columna S) en vez de por nombre, porque el nombre puede
+// cambiar pero el Steam id es estable.
+function steamIdDePiloto(piloto){
+  return String(getVal(piloto, 'Player_id') || '').trim();
+}
+
+// Devuelve el objeto { Carreras, Victorias, Podios, Top5, Poles, Campeonatos } del
+// piloto, o null si no hay Steam id o no se encuentra ninguna fila que coincida.
+function estadisticasDePiloto(piloto){
+  const steamId = steamIdDePiloto(piloto);
+  if(!steamId || !Array.isArray(DB.estadisticasPilotos)) return null;
+  return DB.estadisticasPilotos.find(e => String(getVal(e, 'SteamID')).trim() === steamId) || null;
+}
+
+// Devuelve las carreras del historial de resultados en las que aparece el piloto
+// (cruzando por Steam id), de más reciente a más antigua. Si se indica "limite",
+// recorta la lista a ese número de filas.
+function carrerasDePiloto(piloto, limite){
+  const steamId = steamIdDePiloto(piloto);
+  if(!steamId || !Array.isArray(DB.historialCarreras)) return [];
+  const lista = DB.historialCarreras
+    .filter(h => String(getVal(h, 'SteamID')).trim() === steamId)
+    .slice()
+    .reverse();
+  return limite ? lista.slice(0, limite) : lista;
+}
+
+function renderCoches(){
+  const grid = document.getElementById('gridCoches');
+  if (!Array.isArray(DB.coches)) return;
+  let list = DB.coches.slice();
+
+  if(cocheFilter === 'disponibles') list = list.filter(c => cocheDisponible(c));
+  if(cocheFilter === 'agotados') list = list.filter(c => !cocheDisponible(c));
+  if(cocheCategoriaFilter !== 'todas') list = list.filter(c => String(c.Categoria) === cocheCategoriaFilter);
+  if(coches_query.trim()){
+    const q = coches_query.trim().toLowerCase();
+    list = list.filter(c => String(c.Nombre_Coche).toLowerCase().includes(q) || String(c.Categoria).toLowerCase().includes(q));
+  }
+
+  if(list.length === 0){
+    grid.innerHTML = '<div class="empty-state">No hay coches que coincidan con este filtro.</div>';
+    return;
+  }
+
+  grid.innerHTML = list.map(c=>{
+    const stockCar = esCocheDeStock(c);
+    const disponible = cocheDisponible(c);
+    let ownerLine;
+    if(stockCar){
+      const stockActual = Number(getVal(c, 'Stock')) || 0;
+      ownerLine = disponible
+        ? ('Disponible en concesionario · Stock: ' + stockActual)
+        : 'Agotado en concesionario';
+    } else {
+      ownerLine = disponible ? 'Disponible en concesionario' : ('Propiedad de ' + nombrePiloto(getVal(c, 'Propietario_ID') || getVal(c, 'Propietario')));
+    }
+    const ownerClass = disponible ? 'free' : (stockCar ? 'sold-out' : '');
+    const precioCompra = Number(c.Precio_Compra_OC ?? c.Precio_Compra_EC ?? 0);
+
+    const yaLoTiene = stockCar && sesion.tipo === 'piloto' && unidadesPropias(sesion.idPiloto, c.ID_Coche) > 0;
+
+    // Determina el estado del botón de compra: mercado cerrado > sin stock/vendido > sin sesión de piloto > disponible
+    const puedeComprar = disponible && !mercadoBloqueado && sesion.tipo === 'piloto';
+    let botonCompraHtml;
+    if(mercadoBloqueado){
+      botonCompraHtml = `<button class="action ghost" disabled>Mercado cerrado</button>`;
+    } else if(!disponible){
+      botonCompraHtml = `<button class="action ghost" disabled>${stockCar ? 'Sin stock' : 'En garaje de piloto'}</button>`;
+    } else if(sesion.tipo !== 'piloto'){
+      botonCompraHtml = `<button class="action ghost" disabled>Inicia sesión</button>`;
+    } else if(yaLoTiene){
+      botonCompraHtml = `<button class="action ghost" disabled>Ya tienes este coche</button>`;
+    } else {
+      botonCompraHtml = `<button class="action buy" onclick="event.stopPropagation(); abrirModalComprar('${c.ID_Coche}')">Comprar coche</button>`;
+    }
+
+    // La ficha del coche siempre se puede abrir (aunque el mercado esté cerrado o no haya stock);
+    // solo cambia si el botón de "Comprar" dentro de la ficha está activo o no.
+    const logoUrl = logoMarcaUrl(c);
+    const forzarBlanco = logoForzarBlanco(c);
+    return `
+      <div class="car-card" onclick="abrirModalComprar('${c.ID_Coche}')" style="cursor:pointer;">
+        <div class="photo" style="background-image:url('${c.Imagen_URL || ''}')">
+          <div class="stripe"></div>
+          <div class="number">${String(c.ID_Coche || '').slice(-2)}</div>
+          <div class="cat-tag ${catTagClass(c.Categoria)}">${c.Categoria || ''}</div>
+          ${logoBadgeHtml(logoUrl, forzarBlanco)}
+        </div>
+        <div class="body">
+          ${nombreConLogoHtml(c.Nombre_Coche || '', logoUrl, forzarBlanco)}
+          <p class="owner ${ownerClass}">${ownerLine}</p>
+          <div class="price-row">
+            <span class="label">Precio</span>
+            <span class="val">${precioCompra.toLocaleString()} OC</span>
+          </div>
+          ${botonCompraHtml}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+document.getElementById('filterCoches').addEventListener('click', e=>{
+  const btn = e.target.closest('.pill');
+  if(!btn) return;
+  document.querySelectorAll('#filterCoches .pill').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  cocheFilter = btn.dataset.filter;
+  renderCoches();
+});
+document.getElementById('filterCategoriaCoches').addEventListener('change', e=>{
+  cocheCategoriaFilter = e.target.value;
+  renderCoches();
+});
+document.getElementById('searchCoches').addEventListener('input', e=>{
+  coches_query = e.target.value;
+  renderCoches();
+});
+
+function abrirModalComprar(idCoche){
+  cocheSeleccionadoId = idCoche;
+  const coche = DB.coches.find(c => String(c.ID_Coche) === String(idCoche));
+  if (!coche) return;
+  const precioCompra = Number(coche.Precio_Compra_OC ?? coche.Precio_Compra_EC ?? 0);
+  const stockCar = esCocheDeStock(coche);
+  const disponible = cocheDisponible(coche);
+
+  const fotoComprar = document.getElementById('fichaComprarFoto');
+  fotoComprar.style.backgroundImage = "url('" + (coche.Imagen_URL || '') + "')";
+  fotoComprar.innerHTML = fichaGrandeHtml(coche);
+  especificacionesHtml2Col_(coche, 'tablaEspecsComprarIzq', 'tablaEspecsComprarDer');
+
+  document.getElementById('comprarTitulo').textContent = coche.Nombre_Coche || '';
+  document.getElementById('comprarSub').textContent = 'Precio: ' + precioCompra.toLocaleString() + ' OC';
+
+  const saldoBar = document.getElementById('compradorSaldoBar');
+  const btn = document.getElementById('btnConfirmarCompra');
+
+  const yaLoTiene = stockCar && sesion.tipo === 'piloto' && unidadesPropias(sesion.idPiloto, coche.ID_Coche) > 0;
+
+  if(sesion.tipo === 'piloto'){
+    const p = DB.pilotos.find(p => String(p.ID_Piloto) === String(sesion.idPiloto));
+    const saldo = p ? Number(p.Saldo_OC ?? p.Saldo_EC ?? 0) : 0;
+    saldoBar.innerHTML = `<span class="lbl-principal">Tu saldo</span><span class="saldo-valor">${saldo.toLocaleString()} OC</span>`;
+  } else {
+    saldoBar.innerHTML = `<span class="lbl-principal">Inicia sesión como piloto para comprar</span>`;
+  }
+
+  if(mercadoBloqueado){
+    btn.disabled = true; btn.textContent = 'Mercado cerrado';
+  } else if(!disponible){
+    btn.disabled = true; btn.textContent = stockCar ? 'Sin stock' : 'En garaje de piloto';
+  } else if(sesion.tipo !== 'piloto'){
+    btn.disabled = true; btn.textContent = 'Inicia sesión para comprar';
+  } else if(yaLoTiene){
+    btn.disabled = true; btn.textContent = 'Ya tienes este coche';
+  } else {
+    btn.disabled = false; btn.textContent = 'Confirmar compra';
+  }
+
+  document.getElementById('modalComprar').classList.add('show');
+}
+
+document.getElementById('btnConfirmarCompra').addEventListener('click', async ()=>{
+  if(sesion.tipo !== 'piloto'){ toast('Inicia sesión como piloto para comprar.', 'err'); return; }
+  if(mercadoBloqueado){ toast('El mercado está cerrado. No se permiten compras.', 'err'); return; }
+
+  const btn = document.getElementById('btnConfirmarCompra');
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.innerHTML = '<span class="spinner"></span>Procesando transacción…';
+  try{
+    const res = await apiPost({ action:'comprarCoche', idPiloto: sesion.idPiloto, pin: sesion.pin, idCoche: cocheSeleccionadoId });
+    toast(res.message || '¡Compra realizada con éxito!', 'ok');
+    cerrarModal('modalComprar');
+    aplicarActualizacionLocal_(res);
+  }catch(err){
+    toast(err.message, 'err');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+});
+
+function abrirModalVender(idCoche, idPiloto){
+  ventaContext = { idCoche, idPiloto };
+  const coche = DB.coches.find(c => String(c.ID_Coche) === String(idCoche));
+  if (!coche) return;
+  const precioVenta = Number(coche.Precio_Venta_OC ?? coche.Precio_Venta_EC ?? 0);
+
+  const fotoVender = document.getElementById('fichaVenderFoto');
+  fotoVender.style.backgroundImage = "url('" + (coche.Imagen_URL || '') + "')";
+  fotoVender.innerHTML = fichaGrandeHtml(coche);
+  especificacionesHtml2Col_(coche, 'tablaEspecsVenderIzq', 'tablaEspecsVenderDer');
+
+  document.getElementById('venderTitulo').textContent = coche.Nombre_Coche || '';
+  document.getElementById('venderSub').textContent = 'Recibirás ' + precioVenta.toLocaleString() + ' OC del concesionario';
+
+  const p = DB.pilotos.find(p => String(p.ID_Piloto) === String(idPiloto));
+  const saldo = p ? Number(p.Saldo_OC ?? p.Saldo_EC ?? 0) : 0;
+  document.getElementById('vendedorSaldoBar').innerHTML =
+    `<span class="lbl-principal">Tu saldo</span><span class="saldo-valor">${saldo.toLocaleString()} OC</span>`;
+
+  document.getElementById('modalVender').classList.add('show');
+}
+
+document.getElementById('btnConfirmarVenta').addEventListener('click', async ()=>{
+  const btn = document.getElementById('btnConfirmarVenta');
+  if(!ventaContext){ toast('No se ha seleccionado ningún coche.', 'err'); return; }
+  if(mercadoBloqueado){ toast('El mercado está cerrado. No se permiten ventas.', 'err'); return; }
+
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.innerHTML = '<span class="spinner"></span>Procesando transacción…';
+  try{
+    const res = await apiPost({ action:'venderCoche', idPiloto: ventaContext.idPiloto, pin: sesion.pin, idCoche: ventaContext.idCoche });
+    toast(res.message || 'Coche vendido con éxito.', 'ok');
+    cerrarModal('modalVender');
+    aplicarActualizacionLocal_(res);
+  }catch(err){
+    toast(err.message, 'err');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+});
+
+function cerrarModal(id){
+  document.getElementById(id).classList.remove('show');
+}
+document.querySelectorAll('.overlay').forEach(ov=>{
+  if(ov.id === 'modalLogin') return; // no se puede cerrar sin elegir piloto o invitado
+  ov.addEventListener('click', e=>{ if(e.target === ov) ov.classList.remove('show'); });
+});
+
+function cochesDelPiloto(idPiloto){
+  if (!Array.isArray(DB.coches)) return [];
+  const unicos = DB.coches
+    .filter(c => !esCocheDeStock(c) && String(getVal(c, 'Propietario_ID') || getVal(c, 'Propietario')) === String(idPiloto))
+    .map(c => ({ coche: c, cantidad: 1 }));
+
+  const deStock = DB.coches
+    .filter(c => esCocheDeStock(c))
+    .map(c => ({ coche: c, cantidad: unidadesPropias(idPiloto, c.ID_Coche) }))
+    .filter(x => x.cantidad > 0);
+
+  return unicos.concat(deStock);
+}
+
+function valorGaraje(idPiloto){
+  return cochesDelPiloto(idPiloto)
+    .reduce((sum, x) => sum + (Number(x.coche.Precio_Venta_OC ?? x.coche.Precio_Venta_EC) || 0) * x.cantidad, 0);
+}
+
+// Determina el coche principal de un piloto: si solo tiene 1, ese; si tiene varios,
+// el marcado en la columna "Coche_Principal" (columna K de Pilotos), o el primero si aún no ha elegido.
+// La columna K guarda el NOMBRE del coche (Nombre_Coche), no su ID, por eso se compara por nombre.
+function principalCocheId(piloto){
+  const misCoches = cochesDelPiloto(piloto.ID_Piloto);
+  if(misCoches.length === 0) return null;
+  if(misCoches.length === 1) return misCoches[0].coche.ID_Coche;
+  const marcado = getVal(piloto, 'Coche_Principal');
+  if(marcado){
+    const encontrado = misCoches.find(x => String(x.coche.Nombre_Coche || '').trim() === String(marcado).trim());
+    if(encontrado) return encontrado.coche.ID_Coche;
+  }
+  return misCoches[0].coche.ID_Coche;
+}
+
+function renderPilotos(){
+  const cont = document.getElementById('listaPilotos');
+  if(!Array.isArray(DB.pilotos) || DB.pilotos.length === 0){
+    cont.innerHTML = '<div class="empty-state">Todavía no hay pilotos registrados.</div>';
+    return;
+  }
+  cont.innerHTML = DB.pilotos.map(p=>{
+    const misCoches = cochesDelPiloto(p.ID_Piloto);
+    const totalUnidades = misCoches.reduce((s,x)=> s + x.cantidad, 0);
+    const saldo = Number(p.Saldo_OC ?? p.Saldo_EC ?? 0);
+    const coins = coinsDePiloto(p);
+    const licencia = getVal(p, 'Licencia') || getVal(p, 'Lic.') || getVal(p, 'Lic');
+    const licInfo = licenciaInfo_(licencia);
+
+    const idPrincipal = principalCocheId(p);
+    const principal = idPrincipal ? misCoches.find(x => String(x.coche.ID_Coche) === String(idPrincipal)) : null;
+
+    const cocheHtml = principal ? (() => {
+      const c = principal.coche;
+      const precioVenta = Number(c.Precio_Venta_OC ?? c.Precio_Venta_EC ?? 0);
+      const logoUrl = logoMarcaUrl(c);
+      const forzarBlanco = logoForzarBlanco(c);
+      return `
+        <div class="car-card-mini">
+          <div class="photo" style="background-image:url('${c.Imagen_URL || ''}')">
+            <div class="stripe"></div>
+            <div class="number">${String(c.ID_Coche || '').slice(-2)}</div>
+            <div class="cat-tag ${catTagClass(c.Categoria)}">${c.Categoria || ''}</div>
+            ${logoBadgeHtml(logoUrl, forzarBlanco)}
+          </div>
+          <div class="body">
+            ${nombreConLogoHtml(c.Nombre_Coche || '', logoUrl, forzarBlanco)}
+            <p class="owner">Coche principal · Valor de venta: ${precioVenta.toLocaleString()} OC</p>
+          </div>
+        </div>`;
+    })() : `<img class="no-car-img" src="https://i.ibb.co/4wHwbNFq/sincoche.jpg" alt="Sin coche">`;
+
+    return `
+      <div class="pilot-card-v2" onclick="abrirModalPiloto('${p.ID_Piloto}')">
+        <div class="pilot-topbar">
+          <div class="pilot-avatar-sm" style="background-image:url('${p.Foto_Avatar_URL || ''}')"></div>
+          <div class="pilot-topbar-info">
+            <div class="name-coins-row">
+              <p class="name">${p.Nombre_Piloto || ''} ${licencia ? `<span class="badge ${licInfo.badgeClass}"><span class="dot"></span>${licencia}</span>` : ''}</p>
+              <span class="coin-badge">${COIN_EMOJI} ${coins.toLocaleString()}</span>
+            </div>
+            <div class="pilot-topbar-stats">
+              <span>Saldo: <b style="color:var(--amber);">${saldo.toLocaleString()} OC</b></span>
+              <span>Garaje: <b>${totalUnidades}</b> coches</span>
+            </div>
+          </div>
+        </div>
+        ${cocheHtml}
+      </div>`;
+  }).join('');
+}
+
+function abrirModalPiloto(idPiloto){
+  const p = DB.pilotos.find(p => String(p.ID_Piloto) === String(idPiloto));
+  if(!p) return;
+
+  const misCoches = cochesDelPiloto(p.ID_Piloto);
+  const totalUnidades = misCoches.reduce((s,x)=> s + x.cantidad, 0);
+  const saldo = Number(p.Saldo_OC ?? p.Saldo_EC ?? 0);
+  const coins = coinsDePiloto(p);
+  const licencia = getVal(p, 'Licencia') || getVal(p, 'Lic.') || getVal(p, 'Lic');
+  const licInfo = licenciaInfo_(licencia);
+  const idPrincipal = principalCocheId(p);
+
+  document.getElementById('pilotoModalAvatar').style.backgroundImage = "url('" + (p.Foto_Avatar_URL || '') + "')";
+  document.getElementById('pilotoModalNombre').innerHTML = `${p.Nombre_Piloto || ''} ${licencia ? `<span class="badge ${licInfo.badgeClass}"><span class="dot"></span>${licencia}</span>` : ''}`;
+  document.getElementById('pilotoModalCoins').textContent = `${COIN_EMOJI} ${coins.toLocaleString()}`;
+  document.getElementById('pilotoModalStats').innerHTML = `
+    <span class="stat oc">Saldo: <b>${saldo.toLocaleString()} OC</b></span>
+    <span class="stat">Garaje: <b>${totalUnidades}</b> coches</span>
+    <span class="stat">Valor garaje: <b>${valorGaraje(p.ID_Piloto).toLocaleString()} OC</b></span>`;
+
+    const statsModal = estadisticasDePiloto(p) || {};
+  const carrerasJugadasModal = statsModal.Carreras || 0;
+  const victorias = statsModal.Victorias || 0;
+  const podios = statsModal.Podios || 0;
+  const top5Modal = statsModal.Top5 || 0;
+  const poles = statsModal.Poles || 0;
+  const campeonatos = statsModal.Campeonatos || 0;
+  document.getElementById('pilotoModalStatBoxes').innerHTML = `
+    <div class="stat-box"><span class="emoji">🏁</span><span class="val">${carrerasJugadasModal}</span><span class="lbl">Carreras</span></div>
+    <div class="stat-box"><span class="emoji">🏆</span><span class="val">${victorias}</span><span class="lbl">Victorias</span></div>
+    <div class="stat-box"><span class="emoji">🥉</span><span class="val">${podios}</span><span class="lbl">Podios</span></div>
+    <div class="stat-box"><span class="emoji">⭐</span><span class="val">${top5Modal}</span><span class="lbl">Top5</span></div>
+    <div class="stat-box"><span class="emoji">🎯</span><span class="val">${poles}</span><span class="lbl">Poles</span></div>
+    <div class="stat-box"><span class="emoji">👑</span><span class="val">${campeonatos}</span><span class="lbl">Camp.</span></div>`;
+
+  const garajeGrid = document.getElementById('pilotoModalGaraje');
+  if(misCoches.length === 0){
+    garajeGrid.innerHTML = '<div class="empty-state">Este piloto no tiene coches en su garaje.</div>';
+  } else {
+    garajeGrid.innerHTML = misCoches.map(({coche:c, cantidad})=>{
+      const precioVenta = Number(c.Precio_Venta_OC ?? c.Precio_Venta_EC ?? 0);
+      const esPrincipal = String(c.ID_Coche) === String(idPrincipal);
+      const logoUrl = logoMarcaUrl(c);
+      const forzarBlanco = logoForzarBlanco(c);
+      return `
+        <div class="car-card">
+          <div class="photo" style="background-image:url('${c.Imagen_URL || ''}')">
+            <div class="stripe"></div>
+            <div class="number">${String(c.ID_Coche || '').slice(-2)}</div>
+            <div class="cat-tag ${catTagClass(c.Categoria)}">${c.Categoria || ''}</div>
+            ${cantidad > 1 ? `<div class="qty-badge">x${cantidad}</div>` : ''}
+            ${logoBadgeHtml(logoUrl, forzarBlanco)}
+          </div>
+          <div class="body">
+            ${nombreConLogoHtml(c.Nombre_Coche || '', logoUrl, forzarBlanco)}
+            <p class="owner">Valor de venta: ${precioVenta.toLocaleString()} OC ${cantidad > 1 ? '/ unidad' : ''}</p>
+            ${esPrincipal ? '<span class="principal-tag">Coche principal</span>' : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  document.getElementById('modalPiloto').classList.add('show');
+}
+
+function licenciaInfo_(licencia){
+  const key = String(licencia || '').trim().toUpperCase();
+  const mapa = {
+    SIL: { light: '#5f666e', filtro: 'grayscale(1) brightness(1.05) contrast(0.95)', badgeClass: 'lic-SIL' },
+    AMA: { light: '#8a5a2e', filtro: 'sepia(1) saturate(2.2) hue-rotate(-25deg) brightness(0.6)', badgeClass: 'lic-AMA' },
+    PAM: { light: '#a4842a', filtro: 'none', badgeClass: 'lic-PAM' },
+    PRO: { light: '#1a1c1f', filtro: 'grayscale(1) brightness(0.38) contrast(1.1)', badgeClass: 'lic-PRO' }
+  };
+  return mapa[key] || { light: '#4a4f57', filtro: 'grayscale(1) brightness(0.5)', badgeClass: 'lic-default' };
+}
+
+function licenciaBadgeHtml(licencia){
+  const lic = String(licencia || '').trim();
+  if(!lic) return '';
+  const info = licenciaInfo_(lic);
+  return `<span class="badge ${info.badgeClass}"><span class="dot"></span>${lic}</span>`;
+}
+
+
+function renderMiGaraje(){
+  const cont = document.getElementById('miGarajeContenido');
+  if(!cont) return;
+  if(sesion.tipo !== 'piloto'){
+    cont.innerHTML = '<div class="empty-state">Inicia sesión con tu piloto para ver tu garaje.</div>';
+    return;
+  }
+  const p = DB.pilotos.find(p => String(p.ID_Piloto) === String(sesion.idPiloto));
+  if(!p){
+    cont.innerHTML = '<div class="empty-state">No se ha podido cargar tu ficha de piloto.</div>';
+    return;
+  }
+
+  const misCoches = cochesDelPiloto(p.ID_Piloto);
+  const saldo = Number(p.Saldo_OC ?? p.Saldo_EC ?? 0);
+  const coins = coinsDePiloto(p);
+  const licencia = getVal(p, 'Licencia') || getVal(p, 'Lic.') || getVal(p, 'Lic');
+  const equipo = getVal(p, 'Equipo');
+  const bandera = banderaImgHtml(getVal(p, 'Nacionalidad')); // La bandera solo se muestra aquí, en "Mi Garaje"
+  const idPrincipal = principalCocheId(p);
+  const validado = String(getVal(p, 'Coche_Principal') || '').trim() !== '';
+
+  // Estadísticas de carrera (Sheet externo "Resultados", pestaña "Estadisticas"),
+  // cruzadas por Steam id (Pilotos!Player_id) en vez de por nombre.
+  const stats = estadisticasDePiloto(p) || {};
+  const carrerasJugadas = stats.Carreras || 0;
+  const victorias = stats.Victorias || 0;
+  const podios = stats.Podios || 0;
+  const top5 = stats.Top5 || 0;
+  const poles = stats.Poles || 0;
+  const campeonatos = stats.Campeonatos || 0;
+
+  const cochesHtml = misCoches.length ? misCoches.map(({coche:c, cantidad})=>{
+    const precioVenta = Number(c.Precio_Venta_OC ?? c.Precio_Venta_EC ?? 0);
+    const puedeVender = !mercadoBloqueado;
+    const esPrincipal = String(c.ID_Coche) === String(idPrincipal);
+    const logoUrl = logoMarcaUrl(c);
+    const forzarBlanco = logoForzarBlanco(c);
+    return `
+      <div class="car-card" ${puedeVender ? `onclick="abrirModalVender('${c.ID_Coche}', '${p.ID_Piloto}')" style="cursor:pointer;"` : ''}>
+        <div class="photo" style="background-image:url('${c.Imagen_URL || ''}')">
+          <div class="stripe"></div>
+          <div class="number">${String(c.ID_Coche || '').slice(-2)}</div>
+          <div class="cat-tag ${catTagClass(c.Categoria)}">${c.Categoria || ''}</div>
+          ${cantidad > 1 ? `<div class="qty-badge">x${cantidad}</div>` : ''}
+          ${logoBadgeHtml(logoUrl, forzarBlanco)}
+        </div>
+        <div class="body">
+          ${nombreConLogoHtml(c.Nombre_Coche || '', logoUrl, forzarBlanco)}
+          <p class="owner">Valor de venta: ${precioVenta.toLocaleString()} OC ${cantidad > 1 ? '/ unidad' : ''}</p>
+          ${esPrincipal ? '<span class="principal-tag">Coche principal</span><br>' : ''}
+          ${puedeVender
+            ? `<button class="action sell" onclick="event.stopPropagation(); abrirModalVender('${c.ID_Coche}', '${p.ID_Piloto}')" style="${esPrincipal ? 'margin-top:8px;' : ''}">Vender ${cantidad > 1 ? '1 unidad' : ''} por ${precioVenta.toLocaleString()} OC</button>`
+            : `<button class="action ghost" disabled style="${esPrincipal ? 'margin-top:8px;' : ''}">Mercado cerrado</button>`
+          }
+        </div>
+      </div>`;
+  }).join('') : '';
+
+  const selectorHtml = misCoches.length ? `
+    <div class="coche-principal-bar">
+      <span class="lbl-principal">Valida tu coche principal</span>
+      <select class="select-input" id="selectCochePrincipal">
+        ${misCoches.map(({coche:c}) => `<option value="${c.ID_Coche}">${c.Nombre_Coche}</option>`).join('')}
+      </select>
+      <button class="action buy" id="btnAceptarCochePrincipal">Aceptar</button>
+    </div>
+    <p class="validacion-principal ${validado ? 'ok' : 'pendiente'}">
+      ${validado ? '✅ Coche principal validado' : '❌ Todavía no has validado tu coche principal'}
+    </p>` : '';
+
+  // Últimas carreras del piloto (Sheet externo "Resultados", pestaña "Historial"),
+  // cruzadas por Steam id. Se muestran las 10 más recientes.
+  const ultimasCarreras = carrerasDePiloto(p, 10);
+  const ultimasCarrerasHtml = ultimasCarreras.length ? `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th><th>Fase</th><th>Ronda</th><th>Circuito</th>
+            <th>Marca</th><th>Specs</th><th>Posición</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${ultimasCarreras.map(h => {
+            const pos = getVal(h, 'Posicion');
+            const posNum = Number(pos);
+            const posBadgeClass = posNum === 1 ? 'p1' : (posNum === 2 ? 'p2' : (posNum === 3 ? 'p3' : ''));
+            return `
+            <tr>
+              <td class="mono" style="color:var(--text-dim);font-size:12.5px;">${getVal(h, 'Fecha')}</td>
+              <td>${getVal(h, 'Fase')}</td>
+              <td>${getVal(h, 'Ronda')}</td>
+              <td>${getVal(h, 'Circuito')}</td>
+              <td style="text-align:center;">${marcaLogoHtmlCarreras(getVal(h, 'Logo'))}</td>
+              <td>${getVal(h, 'Specs')}</td>
+              <td><span class="pos-badge ${posBadgeClass}">${pos || ''}</span></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>` : '<div class="empty-state">Todavía no hay carreras registradas para este piloto.</div>';
+
+    const licInfo = licenciaInfo_(licencia);
+  cont.innerHTML = `
+    <div class="carnet-piloto" style="--light:${licInfo.light};">
+      <div class="left" style="--tex-filter:${licInfo.filtro};">
+        <div class="texture"></div>
+        <div class="darken"></div>
+        <div class="curve"></div>
+        <div class="halo"><div class="inner" style="background-image:url('${p.Foto_Avatar_URL || ''}')"></div></div>
+      </div>
+      <div class="right">
+        <div class="top-row">
+          <p class="driver-name">${p.Nombre_Piloto || ''}</p>
+          ${bandera}
+          ${licencia ? `<span class="badge ${licInfo.badgeClass}"><span class="dot"></span>${licencia}</span>` : ''}
+        </div>
+        <div class="data-grid">
+          <span class="k">ID Piloto:</span><span class="v">${p.ID_Piloto || ''}</span>
+          <span class="k">Saldo:</span><span class="v" style="color:var(--amber);">${saldo.toLocaleString()} OC <span style="color:var(--danger);">+ ${coins.toLocaleString()}${COIN_EMOJI}</span></span>
+          <span class="k">Equipo:</span><span class="v">${equipo || '—'}</span>
+        </div>
+      </div>
+    </div>
+    <div class="pilot-stats-mini" id="miGarajeStatBoxes">
+      <div class="stat-box"><span class="emoji">🏁</span><span class="val">${carrerasJugadas}</span><span class="lbl">Carreras</span></div>
+      <div class="stat-box"><span class="emoji">🏆</span><span class="val">${victorias}</span><span class="lbl">Victorias</span></div>
+      <div class="stat-box"><span class="emoji">🥉</span><span class="val">${podios}</span><span class="lbl">Podios</span></div>
+      <div class="stat-box"><span class="emoji">⭐</span><span class="val">${top5}</span><span class="lbl">Top5</span></div>
+      <div class="stat-box"><span class="emoji">🎯</span><span class="val">${poles}</span><span class="lbl">Poles</span></div>
+      <div class="stat-box"><span class="emoji">👑</span><span class="val">${campeonatos}</span><span class="lbl">Camp.</span></div>
+    </div>
+    <div class="checkered-divider"></div>
+    <div class="mi-garaje-seccion">
+      <h3>Últimas carreras</h3>
+      ${ultimasCarrerasHtml}
+    </div>
+    <div class="checkered-divider"></div>
+    <div class="mi-garaje-seccion">
+      <h3>Coches en propiedad</h3>
+      ${misCoches.length ? `<div class="grid">${cochesHtml}</div>` : '<div class="empty-state">No tiene coches en propiedad.</div>'}
+    </div>
+    ${misCoches.length ? '<div class="checkered-divider"></div>' : ''}
+    ${selectorHtml}
+  `;
+
+  if(misCoches.length){
+    const sel = document.getElementById('selectCochePrincipal');
+    if(sel && idPrincipal) sel.value = idPrincipal;
+
+    document.getElementById('btnAceptarCochePrincipal').addEventListener('click', async ()=>{
+      const idCoche = document.getElementById('selectCochePrincipal').value;
+      const btn = document.getElementById('btnAceptarCochePrincipal');
+      btn.disabled = true;
+      const original = btn.textContent;
+      btn.innerHTML = '<span class="spinner"></span>Guardando…';
+      try{
+        await apiPost({ action:'elegirCochePrincipal', idPiloto: sesion.idPiloto, pin: sesion.pin, idCoche });
+        // Actualiza el dato en memoria al instante (sin esperar una recarga completa del Sheet).
+        const pil = DB.pilotos.find(pp => String(pp.ID_Piloto) === String(sesion.idPiloto));
+        const cocheElegido = DB.coches.find(cc => String(cc.ID_Coche) === String(idCoche));
+        if(pil) pil.Coche_Principal = cocheElegido ? cocheElegido.Nombre_Coche : idCoche;
+        toast('Coche principal actualizado.', 'ok');
+        renderPilotos();
+        renderMiGaraje();
+      }catch(err){
+        toast(err.message, 'err');
+      }finally{
+        btn.disabled = false;
+        btn.textContent = original;
+      }
+    });
+  }
+}
+
+function renderCalendario(){
+  const grid = document.getElementById('gridCalendario');
+  if(!Array.isArray(DB.calendario) || DB.calendario.length === 0){
+    grid.innerHTML = '<div class="empty-state">Todavía no hay carreras programadas en el calendario.</div>';
+    return;
+  }
+  grid.innerHTML = DB.calendario.map(item=>{
+    const ronda = getVal(item, 'Ronda');
+    const circuito = getVal(item, 'Circuito');
+    const fecha = getVal(item, 'Fecha');
+    const img = getVal(item, 'Img');
+    return `
+      <div class="circuit-tile">
+        <div class="photo-big" style="background-image:url('${img || ''}')" onclick="abrirModalResultados('${ronda}')">
+          <div class="cat-tag">RONDA ${ronda || ''}</div>
+          <div class="info">
+            <p class="name">${circuito || ''}</p>
+            <p class="date">${fecha ? 'Fecha: ' + fecha : ''}</p>
+          </div>
+        </div>
+        <div class="podio-box">
+          <h4>🏆 Podio</h4>
+          ${renderPodioHtml(ronda)}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderPodioHtml(ronda){
+  const key = 'r' + ronda;
+  const resultados = Array.isArray(DB[key]) ? DB[key] : [];
+  const medallas = { 1: '🥇', 2: '🥈', 3: '🥉' };
+
+  const podio = [1, 2, 3]
+    .map(pos => ({ pos, row: resultados.find(r => String(getVal(r, 'Posicion')) === String(pos)) }))
+    .filter(x => x.row);
+
+  if(podio.length === 0){
+    return '<div class="podio-empty">Todavía no hay resultados para esta carrera.</div>';
+  }
+
+  return podio.map(({ pos, row }) => `
+    <div class="podio-row">
+      <span class="medal">${medallas[pos] || ''}</span>
+      <span class="pos-name">${getVal(row, 'Piloto') || ''}</span>
+    </div>`).join('');
+}
+
+function marcaLogoHtml(valorMarca){
+  const val = String(valorMarca || '').trim();
+  if(!val) return '';
+  const esUrl = val.startsWith('http://') || val.startsWith('https://') || val.startsWith('data:image');
+  if(!esUrl) return val;
+  const forzarBlanco = !!(DB.logosForzarBlancoPorUrl && DB.logosForzarBlancoPorUrl[val]);
+  const claseImg = forzarBlanco ? 'logo-forzado-blanco' : '';
+  return `<img src="${val}" alt="Marca" class="${claseImg}" style="height:24px; max-width:60px; object-fit:contain; vertical-align:middle;">`;
+}
+
+function marcaLogoHtmlCarreras(valorMarca){
+  const val = String(valorMarca || '').trim();
+  if(!val) return '';
+  const esUrl = val.startsWith('http://') || val.startsWith('https://') || val.startsWith('data:image');
+  if(!esUrl) return val;
+  const forzarBlanco = !!(DB.logosForzarBlancoCarreras && DB.logosForzarBlancoCarreras[val]);
+  const claseImg = forzarBlanco ? 'logo-forzado-blanco' : '';
+  return `<img src="${val}" alt="Marca" class="${claseImg}" style="height:24px; max-width:60px; object-fit:contain; vertical-align:middle;">`;
+}
+
+function abrirModalResultados(ronda){
+  const item = (DB.calendario || []).find(c => String(getVal(c, 'Ronda')) === String(ronda));
+  const circuito = item ? getVal(item, 'Circuito') : '';
+  const fecha = item ? getVal(item, 'Fecha') : '';
+
+  document.getElementById('resultadosTitulo').textContent = 'Resultados · Ronda ' + ronda + (circuito ? ' — ' + circuito : '');
+  document.getElementById('resultadosSub').textContent = fecha ? ('Fecha: ' + fecha) : '';
+
+  const tbody = document.getElementById('tablaResultados');
+  const key = 'r' + ronda;
+  const resultados = Array.isArray(DB[key]) ? DB[key] : [];
+
+  // Se agrupa por "Clase" (columna B de la hoja R1/R2/R3/R4) y se reinicia la
+  // numeración de posiciones (1,2,3…) dentro de cada clase, igual que en la
+  // Clasificación general (ver agruparPorClase_).
+  const agrupado = agruparPorClase_(resultados);
+
+  if(agrupado.length === 0){
+    tbody.innerHTML = '<tr><td colspan="11" style="color:var(--text-dim);">Todavía no hay resultados para esta carrera.</td></tr>';
+  } else {
+    tbody.innerHTML = agrupado.map(({item:r, posClase}) => {
+      const posBadgeClass = posClase === 1 ? 'p1' : (posClase === 2 ? 'p2' : (posClase === 3 ? 'p3' : ''));
+
+      return `
+      <tr>
+        <td><span class="pos-badge ${posBadgeClass}">${posClase}</span></td>
+        <td><span class="class-tag">${getVal(r, 'Clase')}</span></td>
+        <td>${getVal(r, 'Piloto')}</td>
+        <td>${licenciaBadgeHtml(getVal(r, 'Lic.'))}</td>
+        <td>${getVal(r, 'Equipo')}</td>
+        <td>${marcaLogoHtml(getVal(r, 'Marca'))}</td>
+        <td>${getVal(r, 'Espec.')}</td>
+        <td>${getVal(r, 'Vueltas')}</td>
+        <td class="mono">${getVal(r, 'Tiempo')}</td>
+        <td class="mono">${getVal(r, 'Mejor V.')}</td>
+        <td>${getVal(r, 'Pits')}</td>
+      </tr>`
+    }).join('');
+  }
+
+  document.getElementById('modalResultados').classList.add('show');
+}
+
+// Agrupa una lista por el valor de "Clase" (manteniendo el orden de primera aparición)
+// y reinicia la numeración de posiciones (1,2,3…) dentro de cada clase.
+function agruparPorClase_(list){
+  const grupos = [];
+  const indice = {};
+  list.forEach(item=>{
+    const clase = String(getVal(item, 'Clase') || '').trim();
+    if(!(clase in indice)){
+      indice[clase] = grupos.length;
+      grupos.push({ clase, items: [] });
+    }
+    grupos[indice[clase]].items.push(item);
+  });
+
+  const resultado = [];
+  grupos.forEach(g=>{
+    const ordenado = g.items.slice().sort((a,b)=>{
+      const pa = Number(getVal(a, 'Posicion')), pb = Number(getVal(b, 'Posicion'));
+      if(!isNaN(pa) && !isNaN(pb) && pa !== 0 && pb !== 0) return pa - pb;
+      return (Number(getVal(b, 'Puntos')) || 0) - (Number(getVal(a, 'Puntos')) || 0);
+    });
+    ordenado.forEach((item, i) => resultado.push({ item, posClase: i + 1 }));
+  });
+  return resultado;
+}
+
+function renderClasificacion(){
+  const tbody = document.getElementById('tablaClasificacion');
+  if (!Array.isArray(DB.clasificacion)) return;
+  const agrupado = agruparPorClase_(DB.clasificacion);
+
+  if(agrupado.length === 0){
+    tbody.innerHTML = '<tr><td colspan="13" style="color:var(--text-dim); text-align:center;">Todavía no hay clasificación registrada.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = agrupado.map(({item:c, posClase})=>{
+    const posBadgeClass = posClase===1 ? 'p1' : (posClase===2 ? 'p2' : (posClase===3 ? 'p3' : ''));
+    const pen = getVal(c, 'Pen.');
+
+    const marcaHtml = marcaLogoHtml(getVal(c, 'Marca'));
+
+    return `
+    <tr>
+      <td><span class="pos-badge ${posBadgeClass}">${posClase}</span></td>
+      <td><span class="class-tag">${getVal(c, 'Clase')}</span></td>
+      <td>${getVal(c, 'Piloto')}</td>
+      <td>${licenciaBadgeHtml(getVal(c, 'Lic.'))}</td>
+      <td>${getVal(c, 'Equipo')}</td>
+      <td style="text-align:center;">${marcaHtml}</td>
+      <td>${getVal(c, 'Espec.')}</td>
+      <td class="pts">${getVal(c, 'Puntos') || 0}</td>
+      <td class="amount">${getVal(c, 'R1')}</td>
+      <td class="amount">${getVal(c, 'R2')}</td>
+      <td class="amount">${getVal(c, 'R3')}</td>
+      <td class="amount">${getVal(c, 'R4')}</td>
+      <td class="amount ${Number(pen) < 0 ? 'neg' : ''}">${pen || 0}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderClasTeam(){
+  const tbody = document.getElementById('tablaClasTeam');
+  if (!Array.isArray(DB.clasteam)) return;
+  const agrupado = agruparPorClase_(DB.clasteam);
+
+  if(agrupado.length === 0){
+    tbody.innerHTML = '<tr><td colspan="9" style="color:var(--text-dim); text-align:center;">Todavía no hay clasificación por equipos registrada.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = agrupado.map(({item:c, posClase})=>{
+    const posBadgeClass = posClase===1 ? 'p1' : (posClase===2 ? 'p2' : (posClase===3 ? 'p3' : ''));
+    const pen = getVal(c, 'Pen.');
+
+    return `
+    <tr>
+      <td><span class="pos-badge ${posBadgeClass}">${posClase}</span></td>
+      <td>${getVal(c, 'Pilotos')}</td>
+      <td>${getVal(c, 'Equipo')}</td>
+      <td class="pts-white">${getVal(c, 'Puntos') || 0}</td>
+      <td class="amount">${getVal(c, 'R1')}</td>
+      <td class="amount">${getVal(c, 'R2')}</td>
+      <td class="amount">${getVal(c, 'R3')}</td>
+      <td class="amount">${getVal(c, 'R4')}</td>
+      <td class="amount ${Number(pen) < 0 ? 'neg' : ''}">${pen || 0}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderHistorial(){
+  const tbody = document.getElementById('tablaHistorial');
+  if (!Array.isArray(DB.historial)) return;
+  let list = DB.historial.slice().reverse();
+
+  if(historialFilter !== 'TODOS') list = list.filter(h => h.Tipo_Operacion === historialFilter);
+  if(historial_query.trim()){
+    const q = historial_query.trim().toLowerCase();
+    list = list.filter(h => nombrePiloto(h.ID_Piloto).toLowerCase().includes(q));
+  }
+
+  if(list.length === 0){
+    tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-dim);">No hay movimientos que coincidan con este filtro.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(h=>{
+    const monto = Number(h.Monto_OC ?? h.Monto_EC ?? 0);
+    const cls = monto >= 0 ? 'pos' : 'neg'; // .pos -> verde, .neg -> rojo
+    const signo = monto >= 0 ? '+' : '';
+    return `
+      <tr>
+        <td class="mono" style="color:var(--text-dim);font-size:12.5px;">${h.Fecha_Hora || ''}</td>
+        <td>${nombrePiloto(h.ID_Piloto)}</td>
+        <td><span class="tag ${h.Tipo_Operacion}">${h.Tipo_Operacion || ''}</span></td>
+        <td style="color:var(--text-dim);">${h.Detalle || ''}</td>
+        <td class="amount ${cls}">${signo}${monto.toLocaleString()} OC</td>
+      </tr>`;
+  }).join('');
+}
+
+document.getElementById('filterHistorial').addEventListener('click', e=>{
+  const btn = e.target.closest('.pill');
+  if(!btn) return;
+  document.querySelectorAll('#filterHistorial .pill').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  historialFilter = btn.dataset.filter;
+  renderHistorial();
+});
+document.getElementById('searchHistorial').addEventListener('input', e=>{
+  historial_query = e.target.value;
+  renderHistorial();
+});
+
+iniciar();
+</script>
+
+</body>
+</html>
