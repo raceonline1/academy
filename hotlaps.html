@@ -35,7 +35,7 @@
        Cambia estos valores si en algún momento quieres reajustarlo.
        ============================================================ */
     --podio-num-font: 'Teko', sans-serif;
-    --podio-num-size: 445px;
+    --podio-num-size: 540px;
     --podio-num-weight: 600;
     --podio-num-opacity: 0.05;
     --podio-num-offset-y: 55px;
@@ -47,19 +47,19 @@
        (negativo = sube el casco, positivo = lo baja). El casco
        siempre queda centrado horizontalmente en la ficha.
        ============================================================ */
-    --podio-avatar-width: 140px;
+    --podio-avatar-width: 160px;
     --podio-avatar-height: 140px;
-    --podio-avatar-offset-y: -14px;
+    --podio-avatar-offset-y: 5px;
 
     /* Casco algo más grande para el 1er puesto (ficha central) */
-    --podio-avatar-width-p1: 158px;
+    --podio-avatar-width-p1: 170px;
     --podio-avatar-height-p1: 158px;
 
     /* Tamaño del casco SOLO en mobile (pantallas <=760px).
        En desktop no se usan estas variables. */
-    --podio-avatar-width-mobile: 118px;
+    --podio-avatar-width-mobile: 200px;
     --podio-avatar-height-mobile: 118px;
-    --podio-avatar-width-p1-mobile: 132px;
+    --podio-avatar-width-p1-mobile: 200px;
     --podio-avatar-height-p1-mobile: 132px;
 
     /* ============================================================
@@ -69,13 +69,13 @@
        usa --medalla-top y --medalla-left, y deja bottom/right en auto).
        ============================================================ */
     --medalla-top: auto;
-    --medalla-right: -4px;
-    --medalla-bottom: -4px;
+    --medalla-right: 13px;
+    --medalla-bottom: -0px;
     --medalla-left: auto;
 
     /* Sube (negativo) o baja (positivo) TODO el bloque de casco+textos
        dentro de la ficha, sin tocar el tamaño de nada. */
-    --podio-contenido-offset-y: 0px;
+    --podio-contenido-offset-y: -8px;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -222,13 +222,6 @@
   .podioC .tiempo-lbl{font-size:9.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
 
   @media (max-width:760px){
-    :root{
-      --medalla-top: auto;
-      --medalla-right: 13px;
-      --medalla-bottom: -0px;
-      --medalla-left: auto;
-    }
-
     .podioC .ficha{width:100%;max-width:280px;transform:none !important;height:auto !important;min-height:270px;}
 
     /* Tamaño del casco solo en mobile */
@@ -245,6 +238,13 @@
     .podioC .ficha.p1{order:1;}
     .podioC .ficha.p2{order:2;}
     .podioC .ficha.p3{order:3;}
+    
+    :root{
+    --medalla-top: auto;
+    --medalla-right: 35px;
+    --medalla-bottom: -0px;
+    --medalla-left: auto;
+    }
   }
 
   /* ============================================================
@@ -271,6 +271,12 @@
   }
   .tiempo-mejor{
     font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--cyan);
+  }
+  /* Sector más rápido de toda la clasificación (uno por columna S1/S2/S3,
+     pueden pertenecer a pilotos distintos). */
+  .sector-record{
+    color:#FFB020;
+    font-weight:700;
   }
   .empty-state{padding:40px 20px;text-align:center;color:var(--text-dim);}
   .spinner{
@@ -339,7 +345,7 @@
   // ------------------------------------------------------------
   // Mismo Web App (Apps Script) que index.html, con el nuevo endpoint ?action=hotlaps
   // añadido en code.gs, que lee el tercer Sheet (Clasificación de vueltas rápidas).
-  const API_URL = 'https://script.google.com/macros/s/AKfycbzC9GT4KokeN4vLkfQXnHpqLvmRQa4Ox7p4JLkLjgDAsZzlmYHoWQINBZJjYZe7HyN0/exec';
+  const API_URL = 'https://script.google.com/macros/s/AKfycbzB1l5Ldhcqhh2W7B55z7LgcZCmKyZKAbEvWpnpiqF2fO2bzwdS_Xx4FfbBe6CeFBlt/exec';
 
   // Cada cuántos ms se vuelve a pedir la clasificación. El backend cachea 15s,
   // así que refrescar cada 15s aquí aprovecha ese caché sin forzar lecturas
@@ -404,6 +410,38 @@
     const claseImg = forzarBlanco ? 'logo-forzado-blanco' : '';
 
     return `<img src="${val}" alt="Marca" class="${claseImg}" style="height:24px; max-width:60px; object-fit:contain; vertical-align:middle;">`;
+  }
+
+  // Convierte el texto de una celda de sector (p.ej. "28.386") en número,
+  // aceptando también coma decimal por si acaso.
+  function parsearSectorNum_(valor){
+    return parseFloat(String(valor || '').replace(',', '.'));
+  }
+
+  // Calcula el mejor (menor) tiempo de Sector 1, 2 y 3 de TODA la clasificación,
+  // comparando los pilotos entre sí. Pueden salir de pilotos distintos.
+  function calcularSectoresRecord_(lista){
+    const mejores = { s1: Infinity, s2: Infinity, s3: Infinity };
+
+    lista.forEach(fila => {
+      const s1 = parsearSectorNum_(getVal(fila, 'Sector 1'));
+      const s2 = parsearSectorNum_(getVal(fila, 'Sector 2'));
+      const s3 = parsearSectorNum_(getVal(fila, 'Sector 3'));
+
+      if(!isNaN(s1) && s1 > 0 && s1 < mejores.s1) mejores.s1 = s1;
+      if(!isNaN(s2) && s2 > 0 && s2 < mejores.s2) mejores.s2 = s2;
+      if(!isNaN(s3) && s3 > 0 && s3 < mejores.s3) mejores.s3 = s3;
+    });
+
+    return mejores;
+  }
+
+  // true/false según si el valor de esta celda coincide con el récord de ese sector.
+  // Margen de 0.5ms para absorber redondeos al convertir el string a número.
+  function esSectorRecord_(valorCelda, mejorSector){
+    const v = parsearSectorNum_(valorCelda);
+    if(isNaN(v) || mejorSector === Infinity) return false;
+    return Math.abs(v - mejorSector) < 0.0005;
   }
 
   // ------------------------------------------------------------
@@ -491,6 +529,10 @@
       return;
     }
 
+    // Récords de sector calculados una sola vez para toda la tabla:
+    // el mejor S1, mejor S2 y mejor S3 de entre TODOS los pilotos.
+    const mejoresSectores = calcularSectoresRecord_(ordenada);
+
     tbody.innerHTML = ordenada.map(fila => {
       const pos = getVal(fila, 'Pos.');
       const posNum = Number(pos);
@@ -500,6 +542,13 @@
       const lic = getVal(fila, 'Lic');
       const licInfo = licenciaInfo_(lic);
       const licHtml = lic ? `<span class="badge ${licInfo.badgeClass}"><span class="dot"></span>${lic}</span>` : '';
+
+      const s1 = getVal(fila, 'Sector 1');
+      const s2 = getVal(fila, 'Sector 2');
+      const s3 = getVal(fila, 'Sector 3');
+      const claseS1 = esSectorRecord_(s1, mejoresSectores.s1) ? 'sector-record' : '';
+      const claseS2 = esSectorRecord_(s2, mejoresSectores.s2) ? 'sector-record' : '';
+      const claseS3 = esSectorRecord_(s3, mejoresSectores.s3) ? 'sector-record' : '';
 
       return `
         <tr>
@@ -511,9 +560,9 @@
           <td>${getVal(fila, 'Specs')}</td>
           <td class="tiempo-mejor">${getVal(fila, 'Mejor V.')}</td>
           <td>${getVal(fila, 'Gap')}</td>
-          <td class="mono">${getVal(fila, 'Sector 1')}</td>
-          <td class="mono">${getVal(fila, 'Sector 2')}</td>
-          <td class="mono">${getVal(fila, 'Sector 3')}</td>
+          <td class="mono ${claseS1}">${s1}</td>
+          <td class="mono ${claseS2}">${s2}</td>
+          <td class="mono ${claseS3}">${s3}</td>
         </tr>`;
     }).join('');
   }
