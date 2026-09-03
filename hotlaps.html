@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hotlaps · Clasificación de Vueltas Rápidas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --asphalt: #0B0D10;
+    --panel: #14171C;
+    --panel-2: #1B1F26;
+    --hairline: #262B33;
+    --text: #E7EAEE;
+    --text-dim: #8B93A1;
+    --cyan: #f01c26; /* rojo de marca, igual que en index.html */
+    --cyan-dim: #4d1a1c;
+    --amber: #FFB020;
+    --amber-dim: rgba(255,176,32,0.12);
+    --green: #00E5C7;
+    --green-dim: rgba(0, 229, 199, 0.12);
+    --radius: 10px;
+
+    --oro: #FFD700;
+    --oro-glow: rgba(255,215,0,0.35);
+    --plata: #C7CCD4;
+    --plata-glow: rgba(199,204,212,0.28);
+    --bronce: #CD7F32;
+    --bronce-glow: rgba(205,127,50,0.30);
+
+    /* ============================================================
+       CONFIGURACIÓN DEL NÚMERO GIGANTE DE FONDO DEL PODIO
+       Valores acordados: Teko / 600 / opacidad 0.05 / tamaño 445px / offset +55px
+       Cambia estos valores si en algún momento quieres reajustarlo.
+       ============================================================ */
+    --podio-num-font: 'Teko', sans-serif;
+    --podio-num-size: 445px;
+    --podio-num-weight: 600;
+    --podio-num-opacity: 0.05;
+    --podio-num-offset-y: 55px;
+
+    /* ============================================================
+       CONFIGURACIÓN DEL CASCO (AVATAR) DEL PODIO
+       Ya no hay círculo alrededor: el casco se ve entero, en su
+       tamaño real. Ajusta aquí el ancho/alto y la posición vertical
+       (negativo = sube el casco, positivo = lo baja). El casco
+       siempre queda centrado horizontalmente en la ficha.
+       ============================================================ */
+    --podio-avatar-width: 140px;
+    --podio-avatar-height: 140px;
+    --podio-avatar-offset-y: -14px;
+
+    /* Casco algo más grande para el 1er puesto (ficha central) */
+    --podio-avatar-width-p1: 158px;
+    --podio-avatar-height-p1: 158px;
+
+    /* Tamaño del casco SOLO en mobile (pantallas <=760px).
+       En desktop no se usan estas variables. */
+    --podio-avatar-width-mobile: 118px;
+    --podio-avatar-height-mobile: 118px;
+    --podio-avatar-width-p1-mobile: 132px;
+    --podio-avatar-height-p1-mobile: 132px;
+
+    /* ============================================================
+       CONFIGURACIÓN DE LA MEDALLA (círculo con el emoji 🥇🥈🥉)
+       Define su posición respecto a la esquina del casco. Deja el
+       eje que no uses en "auto" (ej: para ponerla arriba-izquierda,
+       usa --medalla-top y --medalla-left, y deja bottom/right en auto).
+       ============================================================ */
+    --medalla-top: auto;
+    --medalla-right: -4px;
+    --medalla-bottom: -4px;
+    --medalla-left: auto;
+
+    /* Sube (negativo) o baja (positivo) TODO el bloque de casco+textos
+       dentro de la ficha, sin tocar el tamaño de nada. */
+    --podio-contenido-offset-y: 0px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 10% -10%, rgba(0,229,199,0.06), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(255,176,32,0.05), transparent 55%),
+      var(--asphalt);
+    color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    min-height:100vh;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  h1,h2,h3{font-family:'Teko',sans-serif;font-weight:600;letter-spacing:0.3px;}
+
+  header.topbar{
+    position:sticky;top:0;z-index:50;
+    background:rgba(11,13,16,0.85);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--hairline);
+  }
+  .topbar-inner{
+    max-width:1400px;margin:0 auto;padding:14px 20px;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  }
+  .brand h1{font-size:24px;margin:0;line-height:1;}
+  .brand span{display:block;font-size:11px;color:var(--text-dim);letter-spacing:1.5px;text-transform:uppercase;font-family:'Inter',sans-serif;margin-top:2px;}
+
+  .estado-live{
+    display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);
+    font-family:'JetBrains Mono',monospace;
+  }
+  .estado-live .pulso{
+    width:8px;height:8px;border-radius:50%;background:var(--green);
+    box-shadow:0 0 0 0 var(--green-dim);
+    animation:pulso 2s infinite;
+  }
+  @keyframes pulso{
+    0%{box-shadow:0 0 0 0 rgba(0,229,199,0.5);}
+    70%{box-shadow:0 0 0 8px rgba(0,229,199,0);}
+    100%{box-shadow:0 0 0 0 rgba(0,229,199,0);}
+  }
+  .estado-live .hora{color:var(--text);}
+
+  main{max-width:1400px;margin:0 auto;padding:32px 20px 80px;}
+
+  .view-head{margin-bottom:22px;}
+  .view-head h2{font-size:34px;margin:0;}
+  .view-head p{margin:2px 0 0;color:var(--text-dim);font-size:14px;}
+
+  .checkered-divider{
+    height:10px;border-radius:4px;margin:22px 0;
+    background-image:
+      linear-gradient(45deg,#0B0D10 25%,transparent 25%,transparent 75%,#0B0D10 75%,#0B0D10),
+      linear-gradient(45deg,#0B0D10 25%,transparent 25%,transparent 75%,#0B0D10 75%,#0B0D10);
+    background-size:12px 12px;background-position:0 0,6px 6px;background-color:#3a3f47;
+    opacity:.5;
+  }
+
+  .badge{display:inline-flex;align-items:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;padding:3px 10px;border-radius:6px;letter-spacing:.5px;}
+  .dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px;background:currentColor;}
+  .lic-SIL{background:rgba(198,205,212,0.14);color:#D7DCE2;}
+  .lic-AMA{background:rgba(201,138,74,0.16);color:#E3A468;}
+  .lic-PAM{background:rgba(232,195,60,0.16);color:#F5D34A;}
+  .lic-PRO{background:#050607;color:#F0F0F0;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.22);}
+  .lic-default{background:var(--panel-2);color:var(--text-dim);}
+  .flag-img{width:20px;height:14px;border-radius:3px;object-fit:cover;box-shadow:0 0 0 1px var(--hairline);vertical-align:middle;}
+
+  .logo-forzado-blanco{filter:brightness(0) invert(1);}
+
+  /* ============================================================
+     PODIO TOP 3 — Opción C
+     ============================================================ */
+  .podioC{display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;margin-bottom:8px;}
+  .podioC .ficha{
+    position:relative;background:var(--panel);border:1px solid var(--hairline);border-radius:14px;
+    width:230px;min-height:290px;padding:26px 18px 22px;text-align:center;
+    overflow:hidden;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+  }
+  .podioC .ficha.p1{transform:translateY(-10px);border-color:var(--oro);box-shadow:0 10px 30px -10px var(--oro-glow);min-height:310px;}
+  .podioC .ficha.p2{border-color:var(--plata);box-shadow:0 8px 24px -12px var(--plata-glow);}
+  .podioC .ficha.p3{border-color:var(--bronce);box-shadow:0 8px 24px -12px var(--bronce-glow);}
+
+  .podioC .ficha::before{
+    content:attr(data-pos);
+    position:absolute;
+    left:50%; top:50%;
+    transform:translate(-50%, calc(-50% + var(--podio-num-offset-y)));
+    font-family:var(--podio-num-font);
+    font-size:var(--podio-num-size);
+    font-weight:var(--podio-num-weight);
+    line-height:1;
+    opacity:var(--podio-num-opacity);
+    z-index:0;
+    pointer-events:none;
+    white-space:nowrap;
+  }
+  .podioC .ficha.p1::before{ color: var(--oro); }
+  .podioC .ficha.p2::before{ color: var(--plata); }
+  .podioC .ficha.p3::before{ color: var(--bronce); }
+
+  .podioC .contenido{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;width:100%;transform:translateY(var(--podio-contenido-offset-y));}
+
+  .podioC .avatar-wrap{
+    position:relative;
+    width:var(--podio-avatar-width);
+    height:var(--podio-avatar-height);
+    margin:0 auto 14px;
+    transform:translateY(var(--podio-avatar-offset-y));
+  }
+  .podioC .avatar{
+    width:100%;height:100%;
+    background-repeat:no-repeat;
+    background-position:center;
+    background-size:contain;
+  }
+  .podioC .ficha.p1 .avatar-wrap{
+    width:var(--podio-avatar-width-p1);
+    height:var(--podio-avatar-height-p1);
+  }
+
+  .podioC .medalla-badge{
+    position:absolute;
+    top:var(--medalla-top);
+    right:var(--medalla-right);
+    bottom:var(--medalla-bottom);
+    left:var(--medalla-left);
+    width:26px;height:26px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:14px;
+    background:var(--asphalt);border:2px solid var(--panel);
+  }
+  .podioC .nombre{
+    font-family:'Teko',sans-serif;font-size:25px;margin:0 0 6px;line-height:1.05;
+    max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .podioC .meta-row{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
+  .podioC .coche-pill{
+    display:inline-block;font-size:10.5px;padding:3px 10px;border-radius:5px;text-transform:uppercase;
+    letter-spacing:.5px;background:var(--panel-2);color:var(--text-dim);border:1px solid var(--hairline);
+    font-weight:600;margin-bottom:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .podioC .tiempo{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--cyan);}
+  .podioC .tiempo-lbl{font-size:9.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
+
+  @media (max-width:760px){
+    :root{
+      --medalla-top: auto;
+      --medalla-right: 13px;
+      --medalla-bottom: -0px;
+      --medalla-left: auto;
+    }
+
+    .podioC .ficha{width:100%;max-width:280px;transform:none !important;height:auto !important;min-height:270px;}
+
+    /* Tamaño del casco solo en mobile */
+    .podioC .avatar-wrap{
+      width:var(--podio-avatar-width-mobile);
+      height:var(--podio-avatar-height-mobile);
+    }
+    .podioC .ficha.p1 .avatar-wrap{
+      width:var(--podio-avatar-width-p1-mobile);
+      height:var(--podio-avatar-height-p1-mobile);
+    }
+
+    /* Orden 1º-2º-3º solo en mobile (en desktop se mantiene 2-1-3) */
+    .podioC .ficha.p1{order:1;}
+    .podioC .ficha.p2{order:2;}
+    .podioC .ficha.p3{order:3;}
+  }
+
+  /* ============================================================
+     TABLA DE CLASIFICACIÓN
+     ============================================================ */
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  thead th{
+    text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);
+    padding:10px 12px;border-bottom:1px solid var(--hairline);font-weight:600;white-space:nowrap;
+  }
+  tbody td{padding:11px 12px;border-bottom:1px solid var(--hairline);white-space:nowrap;}
+  tbody tr:hover{background:var(--panel-2);}
+  .table-wrap{background:var(--panel);border:1px solid var(--hairline);border-radius:var(--radius);overflow:hidden;overflow-x:auto;}
+  .pos-badge{
+    display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;
+    font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;background:var(--panel-2);color:var(--text-dim);
+  }
+  .pos-badge.p1{background:var(--amber-dim);color:var(--amber);}
+  .pos-badge.p2{background:rgba(139,147,161,0.18);color:#C9CFD8;}
+  .pos-badge.p3{background:rgba(205,127,50,0.18);color:#CD7F32;}
+  .class-tag{
+    font-size:10.5px;padding:3px 8px;border-radius:5px;text-transform:uppercase;letter-spacing:.5px;
+    background:var(--panel-2);color:var(--text-dim);border:1px solid var(--hairline);font-weight:600;
+  }
+  .tiempo-mejor{
+    font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--cyan);
+  }
+  .empty-state{padding:40px 20px;text-align:center;color:var(--text-dim);}
+  .spinner{
+    width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,0.25);
+    border-top-color:currentColor;display:inline-block;animation:spin .7s linear infinite;margin-right:8px;vertical-align:-2px;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  @media (max-width:640px){
+    .view-head h2{font-size:28px;}
+    table{font-size:12.5px;}
+    thead th, tbody td{padding:8px 8px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <h1>Hotlaps</h1>
+      <span>Clasificación de Vueltas Rápidas</span>
+    </div>
+    <div class="estado-live">
+      <span class="pulso"></span>
+      <span>Actualización automática · <span class="hora" id="ultimaActualizacion">—</span></span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- PODIO TOP 3 -->
+  <div class="podioC" id="podioTop3">
+    <div class="ficha p2" data-pos="2"><div class="contenido"><div class="empty-state"><span class="spinner"></span></div></div></div>
+    <div class="ficha p1" data-pos="1"><div class="contenido"><div class="empty-state"><span class="spinner"></span></div></div></div>
+    <div class="ficha p3" data-pos="3"><div class="contenido"><div class="empty-state"><span class="spinner"></span></div></div></div>
+  </div>
+
+  <div class="checkered-divider"></div>
+
+  <div class="view-head">
+    <h2 id="tituloClasificacion">Clasificación</h2>
+    <p>Mejor vuelta registrada por piloto</p>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th>Marca</th>
+          <th>Espec.</th><th>Mejor V.</th><th>Gap</th><th>Sector 1</th><th>Sector 2</th><th>Sector 3</th>
+        </tr>
+      </thead>
+      <tbody id="tablaHotlaps">
+        <tr><td colspan="11" style="color:var(--text-dim);text-align:center;"><span class="spinner"></span>Cargando datos, espere…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</main>
+
+<script>
+  // ------------------------------------------------------------
+  // CONFIGURACIÓN
+  // ------------------------------------------------------------
+  // Mismo Web App (Apps Script) que index.html, con el nuevo endpoint ?action=hotlaps
+  // añadido en code.gs, que lee el tercer Sheet (Clasificación de vueltas rápidas).
+  const API_URL = 'https://script.google.com/macros/s/AKfycbzC9GT4KokeN4vLkfQXnHpqLvmRQa4Ox7p4JLkLjgDAsZzlmYHoWQINBZJjYZe7HyN0/exec';
+
+  // Cada cuántos ms se vuelve a pedir la clasificación. El backend cachea 15s,
+  // así que refrescar cada 15s aquí aprovecha ese caché sin forzar lecturas
+  // extra del Sheet en cada petición.
+  const REFRESH_MS = 15000;
+
+  let DB = { clasificacion: [] };
+
+  // ------------------------------------------------------------
+  // UTILIDADES (mismas que index.html)
+  // ------------------------------------------------------------
+  function normKey_(s){
+    return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "").trim();
+  }
+  function getVal(obj, keyBase) {
+    if (!obj) return '';
+    const target = normKey_(keyBase);
+    const key = Object.keys(obj).find(k => normKey_(k) === target);
+    return key ? obj[key] : '';
+  }
+
+  function licenciaInfo_(licencia){
+    const key = String(licencia || '').trim().toUpperCase();
+    const mapa = {
+      SIL: { badgeClass: 'lic-SIL' },
+      AMA: { badgeClass: 'lic-AMA' },
+      PAM: { badgeClass: 'lic-PAM' },
+      PRO: { badgeClass: 'lic-PRO' }
+    };
+    return mapa[key] || { badgeClass: 'lic-default' };
+  }
+
+  function banderaImgHtml(codigoPais){
+    const cc = String(codigoPais || '').trim().toLowerCase();
+    if(!/^[a-z]{2}$/.test(cc)) return '';
+    return `<img class="flag-img" src="https://flagcdn.com/w40/${cc}.png" srcset="https://flagcdn.com/w80/${cc}.png 2x" alt="${cc.toUpperCase()}" loading="lazy">`;
+  }
+
+  // Recorta un nombre completo a "Nombre + primer apellido" (las 2 primeras
+  // palabras), descartando segundos nombres o segundos apellidos si los hay.
+  // Ej: "Juan Carlos Pérez López" -> "Juan Carlos" (2 primeras palabras).
+  // Si el dato de Piloto_2 ya viene como "Nombre Apellido" simple, no cambia nada.
+  function nombreCortoPiloto_(nombreCompleto){
+    const partes = String(nombreCompleto || '').trim().split(/\s+/).filter(Boolean);
+    if(partes.length === 0) return '';
+    if(partes.length === 1) return partes[0];
+    return partes[0] + ' ' + partes[1];
+  }
+
+  // Logo de marca (columna "Marca" = URL) con forzado a blanco según la columna
+  // "Forzar logo blanco" (Sí/No) de la MISMA fila — a diferencia del index.html
+  // principal, aquí no hace falta cruzar con ninguna pestaña de logos aparte,
+  // porque esta hoja ya trae el Sí/No fila a fila.
+  function marcaLogoHtml_(fila){
+    const val = String(getVal(fila, 'Marca') || '').trim();
+    if(!val) return '';
+    const esUrl = val.startsWith('http://') || val.startsWith('https://') || val.startsWith('data:image');
+    if(!esUrl) return val;
+
+    const forzarRaw = String(getVal(fila, 'Forzar logo blanco') || '').trim().toLowerCase();
+    const forzarBlanco = (forzarRaw === 'si' || forzarRaw === 'sí' || forzarRaw === 'true' || forzarRaw === '1');
+    const claseImg = forzarBlanco ? 'logo-forzado-blanco' : '';
+
+    return `<img src="${val}" alt="Marca" class="${claseImg}" style="height:24px; max-width:60px; object-fit:contain; vertical-align:middle;">`;
+  }
+
+  // ------------------------------------------------------------
+  // CARGA DE DATOS
+  // ------------------------------------------------------------
+  async function apiGetHotlaps(){
+    const res = await fetch(API_URL + '?action=hotlaps', { cache: 'no-store' });
+    const json = await res.json();
+    if(!json.ok) throw new Error(json.error || 'Error al cargar la clasificación');
+    return json.data;
+  }
+
+  function ordenarPorPos_(lista){
+    return lista.slice().sort((a, b) => {
+      const pa = Number(getVal(a, 'Pos.'));
+      const pb = Number(getVal(b, 'Pos.'));
+      if(isNaN(pa) && isNaN(pb)) return 0;
+      if(isNaN(pa)) return 1;
+      if(isNaN(pb)) return -1;
+      return pa - pb;
+    });
+  }
+
+  // ------------------------------------------------------------
+  // RENDER: PODIO TOP 3
+  // ------------------------------------------------------------
+  function fichaPodioHtml_(fila, posClase){
+    if(!fila){
+      return `<div class="empty-state" style="padding:0;">Sin datos</div>`;
+    }
+    const nombre = nombreCortoPiloto_(getVal(fila, 'Piloto_2'));
+    const nac = getVal(fila, 'Nac');
+    const lic = getVal(fila, 'Lic');
+    const licInfo = licenciaInfo_(lic);
+    const coche = getVal(fila, 'Specs');
+    const avatarUrl = getVal(fila, 'Casco');
+    const medallas = { 1: '🥇', 2: '🥈', 3: '🥉' };
+
+    // El 1er puesto muestra su Mejor Vuelta (no tiene gap, es la referencia).
+    // El 2º y 3er puesto muestran el Gap al líder, el mismo valor que ya
+    // aparece en la columna "Gap" de la tabla de abajo (ej. "+1.716").
+    const esPrimero = posClase === 1;
+    const valorPrincipal = esPrimero ? getVal(fila, 'Mejor V.') : getVal(fila, 'Gap');
+    const etiquetaPrincipal = esPrimero ? 'Mejor Vuelta' : 'Gap al líder';
+
+    return `
+      <div class="contenido">
+        <div class="avatar-wrap">
+          <div class="avatar" style="background-image:url('${avatarUrl || ''}')"></div>
+          <div class="medalla-badge">${medallas[posClase] || ''}</div>
+        </div>
+        <p class="nombre">${nombre}</p>
+        <div class="meta-row">
+          ${banderaImgHtml(nac)}
+          ${lic ? `<span class="badge ${licInfo.badgeClass}"><span class="dot"></span>${lic}</span>` : ''}
+        </div>
+        <span class="coche-pill">${coche || ''}</span>
+        <div class="tiempo">${valorPrincipal || '—'}</div>
+        <div class="tiempo-lbl">${etiquetaPrincipal}</div>
+      </div>`;
+  }
+
+  function renderPodio_(){
+    const ordenada = ordenarPorPos_(DB.clasificacion);
+    const porPos = {};
+    ordenada.forEach(f => {
+      const p = Number(getVal(f, 'Pos.'));
+      if(p === 1 || p === 2 || p === 3) porPos[p] = f;
+    });
+
+    document.querySelector('.podioC .ficha.p1').innerHTML = fichaPodioHtml_(porPos[1], 1);
+    document.querySelector('.podioC .ficha.p2').innerHTML = fichaPodioHtml_(porPos[2], 2);
+    document.querySelector('.podioC .ficha.p3').innerHTML = fichaPodioHtml_(porPos[3], 3);
+  }
+
+  // ------------------------------------------------------------
+  // RENDER: TABLA
+  // ------------------------------------------------------------
+  function renderTabla_(){
+    const tbody = document.getElementById('tablaHotlaps');
+    const ordenada = ordenarPorPos_(DB.clasificacion);
+
+    if(ordenada.length === 0){
+      tbody.innerHTML = '<tr><td colspan="11" style="color:var(--text-dim);text-align:center;">Todavía no hay tiempos registrados.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = ordenada.map(fila => {
+      const pos = getVal(fila, 'Pos.');
+      const posNum = Number(pos);
+      const posBadgeClass = posNum === 1 ? 'p1' : (posNum === 2 ? 'p2' : (posNum === 3 ? 'p3' : ''));
+      const nombre = nombreCortoPiloto_(getVal(fila, 'Piloto_2'));
+
+      const lic = getVal(fila, 'Lic');
+      const licInfo = licenciaInfo_(lic);
+      const licHtml = lic ? `<span class="badge ${licInfo.badgeClass}"><span class="dot"></span>${lic}</span>` : '';
+
+      return `
+        <tr>
+          <td><span class="pos-badge ${posBadgeClass}">${pos || ''}</span></td>
+          <td><span class="class-tag">${getVal(fila, 'Clase')}</span></td>
+          <td>${nombre}</td>
+          <td>${licHtml}</td>
+          <td style="text-align:center;">${marcaLogoHtml_(fila)}</td>
+          <td>${getVal(fila, 'Specs')}</td>
+          <td class="tiempo-mejor">${getVal(fila, 'Mejor V.')}</td>
+          <td>${getVal(fila, 'Gap')}</td>
+          <td class="mono">${getVal(fila, 'Sector 1')}</td>
+          <td class="mono">${getVal(fila, 'Sector 2')}</td>
+          <td class="mono">${getVal(fila, 'Sector 3')}</td>
+        </tr>`;
+    }).join('');
+  }
+
+  function actualizarHoraRefresco_(){
+    const ahora = new Date();
+    const hh = String(ahora.getHours()).padStart(2, '0');
+    const mm = String(ahora.getMinutes()).padStart(2, '0');
+    const ss = String(ahora.getSeconds()).padStart(2, '0');
+    document.getElementById('ultimaActualizacion').textContent = `${hh}:${mm}:${ss}`;
+  }
+
+  // Actualiza el <h2> "Clasificación" para que muestre, tras un espacio, el
+  // circuito devuelto por el backend (lee la celda B1 de la hoja "Clasificación").
+  function actualizarTituloClasificacion_(circuito){
+    const el = document.getElementById('tituloClasificacion');
+    if(!el) return;
+    el.textContent = circuito ? ('Clasificación ' + circuito) : 'Clasificación';
+  }
+
+  // ------------------------------------------------------------
+  // CICLO DE CARGA / AUTO-REFRESCO
+  // ------------------------------------------------------------
+  async function cargarHotlaps(){
+    try{
+      const data = await apiGetHotlaps();
+      DB.clasificacion = Array.isArray(data.clasificacion) ? data.clasificacion : [];
+      actualizarTituloClasificacion_(data.circuito);
+      renderPodio_();
+      renderTabla_();
+      actualizarHoraRefresco_();
+    }catch(err){
+      // Si falla una actualización puntual, se mantienen los datos anteriores
+      // en pantalla y se reintenta en el siguiente ciclo (REFRESH_MS).
+      console.error('Error actualizando hotlaps:', err.message);
+    }
+  }
+
+  cargarHotlaps();
+  setInterval(cargarHotlaps, REFRESH_MS);
+</script>
+
+</body>
+</html>
