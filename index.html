@@ -649,6 +649,22 @@
     .table-wrap{max-width:100%;}
     table{font-size:12.5px;}
     thead th, tbody td{padding:8px 8px;}
+
+    /* Mi Garaje: círculo del halo y del casco un poco más grandes en mobile,
+       y el bloque de datos (nombre + equipo/saldo/coins) centrado verticalmente
+       dentro de la tarjeta. En desktop nada de esto se aplica. */
+    .carnet-piloto .halo{
+      width: 130px;
+      height: 130px;
+    }
+    .carnet-piloto .halo .inner{
+      background-size: 90%;
+    }
+    .carnet-piloto .right{
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
   }
 </style>
 </head>
@@ -1971,9 +1987,9 @@ function renderMiGaraje(){
           ${licencia ? `<span class="badge ${licInfo.badgeClass}"><span class="dot"></span>${licencia}</span>` : ''}
         </div>
         <div class="data-grid">
-          <span class="k">ID Piloto:</span><span class="v">${p.ID_Piloto || ''}</span>
-          <span class="k">Saldo:</span><span class="v" style="color:var(--amber);">${saldo.toLocaleString()} OC <span style="color:var(--danger);">+ ${coins.toLocaleString()}${COIN_EMOJI}</span></span>
           <span class="k">Equipo:</span><span class="v">${equipo || '—'}</span>
+          <span class="k">Saldo:</span><span class="v" style="color:var(--amber);">${saldo.toLocaleString()} OC</span>
+          <span class="k">Coins Gan:</span><span class="v" style="color:var(--danger);">+${coins.toLocaleString()} ${COIN_EMOJI}</span>
         </div>
       </div>
     </div>
