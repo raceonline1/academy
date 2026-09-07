@@ -858,13 +858,19 @@
 <div class="overlay" id="modalResultados">
   <div class="modal" style="max-width:1300px;width:95%;">
     <h3 id="resultadosTitulo">Resultados</h3>
-    <p class="sub" id="resultadosSub"></p>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
+  <p class="sub" id="resultadosSub" style="margin:0;"></p>
+  <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-dim);cursor:pointer;user-select:none;">
+    <input type="checkbox" id="chkCombinarClases">
+    Combinar clases
+  </label>
+</div>
     <div class="table-wrap" style="max-height:70vh;">
       <table>
         <thead>
           <tr>
             <th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th>Equipo</th>
-            <th>Marca</th><th>Espec.</th><th>Vueltas</th><th>Tiempo</th><th>Mejor V.</th><th>Pits</th>
+            <th>Marca</th><th>Specs</th><th>Gap</th><th>Mejor V.</th><th>Pits</th>
           </tr>
         </thead>
         <tbody id="tablaResultados"></tbody>
@@ -944,6 +950,29 @@ function getVal(obj, keyBase) {
   const target = normKey_(keyBase);
   const key = Object.keys(obj).find(k => normKey_(k) === target);
   return key ? obj[key] : '';
+}
+
+// Convierte un tiempo de vuelta tipo "1:23.456" o "23.456" a milisegundos.
+// Devuelve Infinity si no es un tiempo válido (vacío, "-", etc.), para que
+// nunca "gane" al comparar la vuelta más rápida.
+function lapTiempoAMs_(str){
+  if(str === null || str === undefined) return Infinity;
+  const s = String(str).trim();
+  if(!s) return Infinity;
+  const partes = s.split(':');
+  let seg = 0;
+  if(partes.length === 2){
+    const min = parseFloat(partes[0].replace(',', '.'));
+    const sec = parseFloat(partes[1].replace(',', '.'));
+    if(isNaN(min) || isNaN(sec)) return Infinity;
+    seg = min * 60 + sec;
+  } else if(partes.length === 1){
+    seg = parseFloat(partes[0].replace(',', '.'));
+    if(isNaN(seg)) return Infinity;
+  } else {
+    return Infinity;
+  }
+  return Math.round(seg * 1000);
 }
 
 async function apiGet(){
@@ -2118,7 +2147,10 @@ function marcaLogoHtmlCarreras(valorMarca){
   return `<img src="${val}" alt="Marca" class="${claseImg}" style="height:24px; max-width:60px; object-fit:contain; vertical-align:middle;">`;
 }
 
+let rondaModalActual = null;
+
 function abrirModalResultados(ronda){
+  rondaModalActual = ronda;
   const item = (DB.calendario || []).find(c => String(getVal(c, 'Ronda')) === String(ronda));
   const circuito = item ? getVal(item, 'Circuito') : '';
   const fecha = item ? getVal(item, 'Fecha') : '';
@@ -2126,40 +2158,59 @@ function abrirModalResultados(ronda){
   document.getElementById('resultadosTitulo').textContent = 'Resultados · Ronda ' + ronda + (circuito ? ' — ' + circuito : '');
   document.getElementById('resultadosSub').textContent = fecha ? ('Fecha: ' + fecha) : '';
 
-  const tbody = document.getElementById('tablaResultados');
-  const key = 'r' + ronda;
-  const resultados = Array.isArray(DB[key]) ? DB[key] : [];
+  const chk = document.getElementById('chkCombinarClases');
+  if(chk) chk.checked = false; // desactivado por defecto en cada apertura
 
-  // Se agrupa por "Clase" (columna B de la hoja R1/R2/R3/R4) y se reinicia la
-  // numeración de posiciones (1,2,3…) dentro de cada clase, igual que en la
-  // Clasificación general (ver agruparPorClase_).
-  const agrupado = agruparPorClase_(resultados);
-
-  if(agrupado.length === 0){
-    tbody.innerHTML = '<tr><td colspan="11" style="color:var(--text-dim);">Todavía no hay resultados para esta carrera.</td></tr>';
-  } else {
-    tbody.innerHTML = agrupado.map(({item:r, posClase}) => {
-      const posBadgeClass = posClase === 1 ? 'p1' : (posClase === 2 ? 'p2' : (posClase === 3 ? 'p3' : ''));
-
-      return `
-      <tr>
-        <td><span class="pos-badge ${posBadgeClass}">${posClase}</span></td>
-        <td><span class="class-tag">${getVal(r, 'Clase')}</span></td>
-        <td>${getVal(r, 'Piloto')}</td>
-        <td>${licenciaBadgeHtml(getVal(r, 'Lic.'))}</td>
-        <td>${getVal(r, 'Equipo')}</td>
-        <td>${marcaLogoHtml(getVal(r, 'Marca'))}</td>
-        <td>${getVal(r, 'Espec.')}</td>
-        <td>${getVal(r, 'Vueltas')}</td>
-        <td class="mono">${getVal(r, 'Tiempo')}</td>
-        <td class="mono">${getVal(r, 'Mejor V.')}</td>
-        <td>${getVal(r, 'Pits')}</td>
-      </tr>`
-    }).join('');
-  }
-
+  renderTablaResultadosModal();
   document.getElementById('modalResultados').classList.add('show');
 }
+
+function renderTablaResultadosModal(){
+  const tbody = document.getElementById('tablaResultados');
+  const key = 'r' + rondaModalActual;
+  const resultados = Array.isArray(DB[key]) ? DB[key] : [];
+  const chk = document.getElementById('chkCombinarClases');
+  const combinar = chk ? chk.checked : false;
+
+  // Combinado: se respeta tal cual el orden de filas que trae el JSON (sin separar por clase).
+  // Separado (por defecto): comportamiento actual, agrupando y renumerando por clase.
+  const filas = combinar
+    ? resultados.map((r, i) => ({ item: r, posClase: i + 1 }))
+    : agruparPorClase_(resultados);
+
+  if(filas.length === 0){
+    tbody.innerHTML = '<tr><td colspan="10" style="color:var(--text-dim);">Todavía no hay resultados para esta carrera.</td></tr>';
+    return;
+  }
+
+  // Vuelta más rápida de TODA la carrera (independientemente de la clase o de si
+  // las clases están combinadas o separadas), para resaltar una única celda en rojo.
+  const mejorVueltaMs = resultados.reduce((min, r) => {
+    const ms = lapTiempoAMs_(getVal(r, 'Mejor V.'));
+    return ms < min ? ms : min;
+  }, Infinity);
+
+  tbody.innerHTML = filas.map(({item:r, posClase}) => {
+    const posBadgeClass = posClase === 1 ? 'p1' : (posClase === 2 ? 'p2' : (posClase === 3 ? 'p3' : ''));
+    const mejorVueltaTxt = getVal(r, 'Mejor V.');
+    const esVueltaRapida = isFinite(mejorVueltaMs) && lapTiempoAMs_(mejorVueltaTxt) === mejorVueltaMs;
+    return `
+    <tr>
+      <td><span class="pos-badge ${posBadgeClass}">${posClase}</span></td>
+      <td><span class="class-tag">${getVal(r, 'Clase')}</span></td>
+      <td>${getVal(r, 'Piloto')}</td>
+      <td>${licenciaBadgeHtml(getVal(r, 'Lic.'))}</td>
+      <td>${getVal(r, 'Equipo')}</td>
+      <td style="text-align:center;">${marcaLogoHtml(getVal(r, 'Marca'))}</td>
+      <td>${getVal(r, 'Espec.')}</td>
+      <td class="mono">${getVal(r, 'Tiempo')}</td>
+      <td class="mono"${esVueltaRapida ? ' style="color:#f01c26;font-weight:700;"' : ''}>${mejorVueltaTxt}</td>
+      <td>${getVal(r, 'Pits')}</td>
+    </tr>`;
+  }).join('');
+}
+
+document.getElementById('chkCombinarClases').addEventListener('change', renderTablaResultadosModal);
 
 // Agrupa una lista por el valor de "Clase" (manteniendo el orden de primera aparición)
 // y reinicia la numeración de posiciones (1,2,3…) dentro de cada clase.
