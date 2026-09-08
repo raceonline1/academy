@@ -757,9 +757,13 @@
   <section class="view" id="view-clasificacion">
     <div class="view-head">
       <div>
-        <h2>Clasificación</h2>
+        <h2>Clasificación de pilotos</h2>
         <p>Clasificación general del campeonato por piloto y carrera</p>
       </div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-dim);cursor:pointer;user-select:none;">
+        <input type="checkbox" id="chkCombinarClasesPilotos">
+        Combinar clases
+      </label>
     </div>
     <div class="checkered-divider"></div>
     <div class="table-wrap">
@@ -2241,14 +2245,22 @@ function agruparPorClase_(list){
 function renderClasificacion(){
   const tbody = document.getElementById('tablaClasificacion');
   if (!Array.isArray(DB.clasificacion)) return;
-  const agrupado = agruparPorClase_(DB.clasificacion);
+  const chk = document.getElementById('chkCombinarClasesPilotos');
+  const combinar = chk ? chk.checked : false;
 
-  if(agrupado.length === 0){
+  // Combinado: se respeta tal cual el orden de filas que trae el JSON (sin separar por clase),
+  // igual que en el modal de Resultados del calendario.
+  // Separado (por defecto): comportamiento actual, agrupando y renumerando por clase.
+  const filas = combinar
+    ? DB.clasificacion.map((c, i) => ({ item: c, posClase: i + 1 }))
+    : agruparPorClase_(DB.clasificacion);
+
+  if(filas.length === 0){
     tbody.innerHTML = '<tr><td colspan="13" style="color:var(--text-dim); text-align:center;">Todavía no hay clasificación registrada.</td></tr>';
     return;
   }
 
-  tbody.innerHTML = agrupado.map(({item:c, posClase})=>{
+  tbody.innerHTML = filas.map(({item:c, posClase})=>{
     const posBadgeClass = posClase===1 ? 'p1' : (posClase===2 ? 'p2' : (posClase===3 ? 'p3' : ''));
     const pen = getVal(c, 'Pen.');
 
@@ -2272,6 +2284,8 @@ function renderClasificacion(){
     </tr>`;
   }).join('');
 }
+
+document.getElementById('chkCombinarClasesPilotos').addEventListener('change', renderClasificacion);
 
 function renderClasTeam(){
   const tbody = document.getElementById('tablaClasTeam');
