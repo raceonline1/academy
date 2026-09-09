@@ -945,6 +945,7 @@ let ventaContext = null;
 let sesion = { tipo: null, idPiloto: null, pin: null }; // tipo: 'piloto' | 'invitado'
 let sesionIniciada = false;
 let mercadoBloqueado = false;
+let datosCargados = false; // true en cuanto ha llegado el JSON completo (no solo el login rápido)
 
 function normKey_(s){
   return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "").trim();
@@ -1027,6 +1028,7 @@ function comprobarVersionEnSegundoPlano_(versionActual){
         renderHistorial();
         if(sesion.tipo === 'piloto') renderMiGaraje();
         actualizarPilotoHeaderPill();
+        datosCargados = true;
         if(!sesionIniciada) prepararLogin();
       });
     })
@@ -1105,21 +1107,37 @@ async function cargarTodo(){
     renderHistorial();
     if(sesion.tipo === 'piloto') renderMiGaraje();
     actualizarPilotoHeaderPill();
+    datosCargados = true;
     if(!sesionIniciada) prepararLogin();
   }catch(err){
     toast('No se pudieron cargar los datos: ' + err.message, 'err');
   }
 }
 
-function mostrarLoginConCarga(){
+// Pinta el login al instante con una llamada ligera a "pilotosLogin" (solo
+// ID_Piloto + Nombre_Piloto, con caché de 2 min en el servidor), sin esperar
+// al JSON completo de la web. cargarTodo() se lanza en paralelo por detrás y,
+// cuando termine, prepararLogin() refresca esta misma lista con los datos
+// completos (por si esta llamada rápida hubiera fallado).
+async function mostrarLoginRapido(){
+  document.getElementById('modalLogin').classList.add('show');
   const sel = document.getElementById('loginPiloto');
   sel.innerHTML = '<option>Cargando pilotos…</option>';
-  document.getElementById('modalLogin').classList.add('show');
+  try{
+    const res = await fetch(API_URL + '?action=pilotosLogin', { cache: 'no-store' });
+    const json = await res.json();
+    if(sesionIniciada) return; // el usuario ya entró mientras llegaba esta respuesta
+    if(json && json.ok && Array.isArray(json.pilotos) && json.pilotos.length){
+      sel.innerHTML = json.pilotos.map(p => `<option value="${p.ID_Piloto}">${p.Nombre_Piloto}</option>`).join('');
+    }
+  }catch(err){
+    // Si falla, prepararLogin() rellenará la lista en cuanto lleguen los datos completos.
+  }
 }
 
 // Repuebla el desplegable de login con la lista completa una vez han llegado
-// todos los datos (por si prepararLoginRapido no llegó a tiempo). No hace nada
-// si el usuario ya ha iniciado sesión mientras tanto.
+// todos los datos (por si mostrarLoginRapido no llegó a tiempo o falló). No
+// hace nada si el usuario ya ha iniciado sesión mientras tanto.
 function prepararLogin(){
   if(sesionIniciada) return;
   const sel = document.getElementById('loginPiloto');
@@ -1208,9 +1226,13 @@ document.getElementById('btnLoginPiloto').addEventListener('click', async ()=>{
     mostrarBotonCerrarSesion();
     document.getElementById('modalLogin').classList.remove('show');
     toast('Bienvenido, ' + (res.piloto ? res.piloto.Nombre_Piloto : '') + '.', 'ok');
-    renderCoches();
-    renderPilotos();
-    renderMiGaraje();
+    // Si el resto de la web (DB completa) ya cargó, repintamos ya mismo. Si no,
+    // se deja el spinner: cargarTodo() hará estos mismos renders en cuanto termine.
+    if(datosCargados){
+      renderCoches();
+      renderPilotos();
+      renderMiGaraje();
+    }
     actualizarPilotoHeaderPill();
   }catch(err){
     toast(err.message, 'err');
@@ -1245,7 +1267,7 @@ document.getElementById('btnCerrarSesion').addEventListener('click', ()=>{
 
   renderCoches();
   renderPilotos();
-  mostrarLoginConCarga();
+  mostrarLoginRapido();
 });
 
 // Arranque de la web: si hay una sesión guardada en este navegador (mientras la
@@ -1269,10 +1291,10 @@ async function iniciar(){
   }
 
   if(!sesionIniciada){
-    mostrarLoginConCarga();
+    mostrarLoginRapido(); // pinta el login al instante, sin esperar al resto de la web
   }
 
-  await cargarTodo();
+  cargarTodo(); // el resto de la web (empezando por Concesionario) se carga en paralelo
 }
 
 // Aplica al instante en memoria (DB) el resultado de una compra/venta, sin volver a
