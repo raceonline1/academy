@@ -250,6 +250,27 @@
   /* ============================================================
      TABLA DE CLASIFICACIÓN
      ============================================================ */
+    /* Interruptor "Combinar clases" (mismo componente que en index.html) */
+  .switch-row{
+    display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-dim);
+    cursor:pointer;user-select:none;
+  }
+  .switch{position:relative;width:46px;height:26px;flex:none;}
+  .switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:2;}
+  .switch .track{
+    position:absolute;inset:0;border-radius:999px;
+    background:#2A2F38;border:1px solid var(--hairline);
+    transition:background .2s ease, border-color .2s ease;
+  }
+  .switch .knob{
+    position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4);
+    transition:transform .2s ease, background .2s ease;
+  }
+  .switch input:checked ~ .track{background:var(--cyan-dim);border-color:var(--cyan);}
+  .switch input:checked ~ .knob{transform:translateX(20px);background:var(--cyan);}
+  
+  
   table{width:100%;border-collapse:collapse;font-size:14px;}
   thead th{
     text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);
@@ -318,9 +339,19 @@
 
   <div class="checkered-divider"></div>
 
-  <div class="view-head">
-    <h2 id="tituloClasificacion">Clasificación</h2>
-    <p>Mejor vuelta registrada por piloto</p>
+    <div class="view-head" style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+      <h2 id="tituloClasificacion">Clasificación</h2>
+      <p>Mejor vuelta registrada por piloto</p>
+    </div>
+    <label class="switch-row" for="chkCombinarClasesHotlaps">
+      <span class="switch">
+        <input type="checkbox" id="chkCombinarClasesHotlaps">
+        <span class="track"></span>
+        <span class="knob"></span>
+      </span>
+      Combinar clases
+    </label>
   </div>
 
   <div class="table-wrap">
@@ -465,6 +496,26 @@
     });
   }
 
+    // Agrupa la clasificación por "Clase" (respeta el orden de aparición, que ya
+  // viene ordenado globalmente por Pos.) y renumera la posición dentro de cada clase.
+  function agruparPorClase_(lista){
+    const grupos = [];
+    const indice = {};
+    lista.forEach(fila => {
+      const clase = String(getVal(fila, 'Clase') || '').trim();
+      if(!(clase in indice)){
+        indice[clase] = grupos.length;
+        grupos.push([]);
+      }
+      grupos[indice[clase]].push(fila);
+    });
+    const resultado = [];
+    grupos.forEach(grupo => {
+      grupo.forEach((fila, i) => resultado.push({ fila, posClase: i + 1 }));
+    });
+    return resultado;
+  }
+
   // ------------------------------------------------------------
   // RENDER: PODIO TOP 3
   // ------------------------------------------------------------
@@ -520,7 +571,7 @@
   // ------------------------------------------------------------
   // RENDER: TABLA
   // ------------------------------------------------------------
-  function renderTabla_(){
+    function renderTabla_(){
     const tbody = document.getElementById('tablaHotlaps');
     const ordenada = ordenarPorPos_(DB.clasificacion);
 
@@ -529,14 +580,18 @@
       return;
     }
 
-    // Récords de sector calculados una sola vez para toda la tabla:
-    // el mejor S1, mejor S2 y mejor S3 de entre TODOS los pilotos.
+    const chk = document.getElementById('chkCombinarClasesHotlaps');
+    const combinar = chk ? chk.checked : false;
+    const filas = combinar
+      ? ordenada.map((fila, i) => ({ fila, posClase: i + 1 }))
+      : agruparPorClase_(ordenada);
+
+    // Récords de sector calculados una sola vez sobre TODA la clasificación
+    // (combinada o no), igual que antes.
     const mejoresSectores = calcularSectoresRecord_(ordenada);
 
-    tbody.innerHTML = ordenada.map(fila => {
-      const pos = getVal(fila, 'Pos.');
-      const posNum = Number(pos);
-      const posBadgeClass = posNum === 1 ? 'p1' : (posNum === 2 ? 'p2' : (posNum === 3 ? 'p3' : ''));
+    tbody.innerHTML = filas.map(({fila, posClase}) => {
+      const posBadgeClass = posClase === 1 ? 'p1' : (posClase === 2 ? 'p2' : (posClase === 3 ? 'p3' : ''));
       const nombre = nombreCortoPiloto_(getVal(fila, 'Piloto_2'));
 
       const lic = getVal(fila, 'Lic');
@@ -552,7 +607,7 @@
 
       return `
         <tr>
-          <td><span class="pos-badge ${posBadgeClass}">${pos || ''}</span></td>
+          <td><span class="pos-badge ${posBadgeClass}">${posClase}</span></td>
           <td><span class="class-tag">${getVal(fila, 'Clase')}</span></td>
           <td>${nombre}</td>
           <td>${licHtml}</td>
@@ -601,8 +656,10 @@
     }
   }
 
-  cargarHotlaps();
-  setInterval(cargarHotlaps, REFRESH_MS);
+  document.getElementById('chkCombinarClasesHotlaps').addEventListener('change', renderTabla_);
+
+cargarHotlaps();
+setInterval(cargarHotlaps, REFRESH_MS);
 </script>
 
 </body>
