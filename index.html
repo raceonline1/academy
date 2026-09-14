@@ -85,6 +85,33 @@
   }
   .logout-btn:hover{color:var(--danger);border-color:rgba(255,71,87,0.4);}
 
+  .login-header-btn{
+    background:var(--cyan-dim);border:1px solid var(--cyan);color:var(--cyan);
+    padding:8px 16px;border-radius:8px;font-size:12.5px;cursor:pointer;
+    font-family:'Inter',sans-serif;font-weight:600;transition:all .15s ease;white-space:nowrap;
+  }
+  .login-header-btn:hover{filter:brightness(1.15);}
+
+    /* Botón "Iniciar sesión" del menú principal, situado junto a la pestaña
+     Historial. Se muestra solo mientras se navega como invitado; en cuanto
+     hay una sesión de piloto activa se oculta (ver actualizarBotonesSesion).
+     Usa selectores más específicos que "nav.tabs button" para que gane el
+     estilo rojo de .login-header-btn en vez del gris/transparente de las
+     pestañas normales. Tamaño igual al resto de pestañas del menú. */
+    nav.tabs button.login-nav-btn{
+    margin-left:4px;
+    padding:8px 14px;
+    font-size:14px;
+    background:transparent;
+    border:1px solid var(--cyan);
+    color:var(--cyan);
+  }
+  
+  nav.tabs button.login-nav-btn:hover{
+    color:var(--cyan);
+    filter:brightness(1.15);
+  }
+
   /* Pastilla "piloto header" — estrecha, se coloca justo a la derecha de la
      pestaña Mi garaje dentro de nav.tabs. */
   .piloto-header-pill{
@@ -572,6 +599,15 @@
   .modal-actions{display:flex;gap:10px;margin-top:18px;}
   .modal-actions button{flex:1;}
 
+  .modal-close-x{
+    position:absolute;top:14px;right:14px;width:28px;height:28px;border-radius:50%;
+    background:var(--panel-2);border:1px solid var(--hairline);color:var(--text-dim);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;
+    line-height:1;z-index:5;
+  }
+  .modal-close-x:hover{color:var(--text);border-color:#39404C;}
+  .modal-header-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+
   .login-disclaimer{
     margin-top:12px;font-size:11px;line-height:1.5;color:var(--text-dim);text-align:center;
   }
@@ -592,12 +628,13 @@
   @keyframes spin{to{transform:rotate(360deg);}}
   .empty-state{padding:40px 20px;text-align:center;color:var(--text-dim);grid-column:1/-1;}
 
-  /* Pie de página: aquí vive ahora el botón de cerrar sesión */
+  /* Pie de página: solo el botón de cerrar sesión vive aquí. El botón de
+     iniciar sesión se muestra en el menú superior, junto a Historial. */
   .site-footer{
     max-width:1600px;margin:0 auto;padding:10px 20px 50px;
-    display:flex;justify-content:center;
+    display:flex;justify-content:center;gap:10px;
   }
-  .site-footer .logout-btn{padding:10px 26px;font-size:13px;}
+  .site-footer .logout-btn, .site-footer .login-header-btn{padding:10px 26px;font-size:13px;}
 
   @media (max-width:640px){
     .topbar-inner{flex-direction:column;align-items:stretch;gap:12px;}
@@ -634,6 +671,10 @@
     nav.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%;}
     nav.tabs button{flex:none;padding:8px 4px;font-size:11.5px;gap:5px;}
     .piloto-header-pill{grid-column:1/-1;justify-self:center;margin-top:2px;max-width:100%;}
+    /* El botón de "Iniciar sesión" del menú ocupa su propia fila completa en
+       móvil, igual que la pastilla del piloto conectado, para no romper la
+       rejilla de 3 columnas de las pestañas 01-06. */
+    .login-nav-btn{grid-column:1/-1;justify-self:center;margin-top:2px;margin-left:0;}
 
     /* Salto de línea del subtítulo de Concesionario y del eslogan del encabezado */
     .brk-mobile{display:inline;}
@@ -690,6 +731,7 @@
       <button class="tab-btn" data-view="calendario"><span class="num">03</span> Calendario</button>
       <button class="tab-btn" data-view="clasificacion"><span class="num">04</span> Clasificación</button>
       <button class="tab-btn" data-view="historial"><span class="num">05</span> Historial</button>
+      <button class="login-header-btn login-nav-btn" id="btnIrLoginNav">Iniciar sesión</button>
       <button class="tab-btn" data-view="migaraje" id="tabMiGaraje" style="display:none;"><span class="num">06</span> Mi garaje</button>
       <div class="piloto-header-pill" id="pilotoHeaderPill" style="display:none;">
         <div class="piloto-header-avatar" id="pilotoHeaderAvatar"></div>
@@ -822,6 +864,7 @@
 </main>
 
 <footer class="site-footer">
+  <button class="login-header-btn" id="btnIrLogin" style="display:none;">Iniciar sesión</button>
   <button class="logout-btn" id="btnCerrarSesion" style="display:none;">Cerrar sesión</button>
 </footer>
 
@@ -887,22 +930,23 @@
 </div>
 
 <div class="overlay" id="modalLogin">
-  <div class="modal" style="max-width:380px;">
-    <h3>Bienvenido a Race Online</h3>
-    <p class="sub">Identifícate para acceder a tu garaje personal</p>
+  <div class="modal" style="max-width:380px;position:relative;">
+    <button type="button" class="modal-close-x" id="btnCerrarModalLogin" aria-label="Cerrar">✕</button>
+    <h3>Identifícate como piloto</h3>
+    <p class="sub">Puedes seguir navegando como invitado, o identificarte para acceder a tu garaje personal</p>
     <div class="field">
       <label>Selecciona tu piloto</label>
       <select id="loginPiloto"></select>
     </div>
     <div class="field">
-      <label>Clave de piloto</label>
-      <input type="password" inputmode="numeric" maxlength="4" class="mono" id="loginPin" placeholder="••••">
+      <label>Código de piloto</label>
+      <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="mono" id="loginPin" placeholder="0000" autocomplete="off">
     </div>
     <div class="modal-actions">
       <button class="action buy" id="btnLoginPiloto">Entrar</button>
     </div>
-    <button class="action ghost" id="btnLoginInvitado" style="margin-top:10px;">Entrar como invitado</button>
-    <p class="login-disclaimer">Este código es solo para identificarte en Race Online Academy, no una contraseña real. Nunca introduzcas contraseñas reales ni datos bancarios.</p>
+    <button class="action ghost" id="btnLoginInvitado" style="margin-top:10px;">Seguir sin identificarme</button>
+    <p class="login-disclaimer">Este código es solo un identificador interno de juego para reconocerte en Race Online Academy. No es una contraseña de ninguna cuenta real: nunca introduzcas contraseñas reales ni datos bancarios aquí.</p>
   </div>
 </div>
 
@@ -942,10 +986,30 @@ let coches_query = '';
 let historial_query = '';
 let cocheSeleccionadoId = null;
 let ventaContext = null;
-let sesion = { tipo: null, idPiloto: null, pin: null }; // tipo: 'piloto' | 'invitado'
-let sesionIniciada = false;
+let sesion = { tipo: 'invitado', idPiloto: null, pin: null }; // tipo: 'piloto' | 'invitado'
+let sesionIniciada = true;
 let mercadoBloqueado = false;
 let datosCargados = false; // true en cuanto ha llegado el JSON completo (no solo el login rápido)
+
+// ------------------------------------------------------------
+// ESCAPADO DE HTML (seguridad)
+// ------------------------------------------------------------
+// Toda la web se construye insertando datos que vienen de un Google Sheet
+// editable por varias personas (nombres de coche/piloto, detalles del
+// historial, circuitos, etc.) directamente como innerHTML. Si esas celdas
+// llegasen a contener HTML/JS (por error o de forma maliciosa), se ejecutaría
+// tal cual en la página. esc() convierte cualquier valor a texto plano seguro
+// antes de insertarlo en una plantilla HTML. Se usa en TODOS los sitios donde
+// se vuelca un dato que viene del Sheet (nombres, detalles, marcas, URLs de
+// imagen dentro de url('...'), etc.).
+function esc(valor){
+  return String(valor === null || valor === undefined ? '' : valor)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 function normKey_(s){
   return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "").trim();
@@ -1029,7 +1093,7 @@ function comprobarVersionEnSegundoPlano_(versionActual){
         if(sesion.tipo === 'piloto') renderMiGaraje();
         actualizarPilotoHeaderPill();
         datosCargados = true;
-        if(!sesionIniciada) prepararLogin();
+        if(sesion.tipo !== 'piloto') refrescarListaLoginSiAbierta_();
       });
     })
     .catch(err => {
@@ -1108,46 +1172,64 @@ async function cargarTodo(){
     if(sesion.tipo === 'piloto') renderMiGaraje();
     actualizarPilotoHeaderPill();
     datosCargados = true;
-    if(!sesionIniciada) prepararLogin();
+    if(sesion.tipo !== 'piloto') refrescarListaLoginSiAbierta_();
   }catch(err){
     toast('No se pudieron cargar los datos: ' + err.message, 'err');
   }
 }
 
-// Pinta el login al instante con una llamada ligera a "pilotosLogin" (solo
+// Rellena el desplegable de login con una lista ligera de pilotos (solo
 // ID_Piloto + Nombre_Piloto, con caché de 2 min en el servidor), sin esperar
-// al JSON completo de la web. cargarTodo() se lanza en paralelo por detrás y,
-// cuando termine, prepararLogin() refresca esta misma lista con los datos
-// completos (por si esta llamada rápida hubiera fallado).
-async function mostrarLoginRapido(){
-  document.getElementById('modalLogin').classList.add('show');
+// al JSON completo de la web. Se llama solo cuando el usuario pulsa
+// "Iniciar sesión" (el modal ya NO se muestra automáticamente al cargar la
+// página, para no bloquear la navegación como invitado).
+async function rellenarListaLogin_(){
   const sel = document.getElementById('loginPiloto');
   sel.innerHTML = '<option>Cargando pilotos…</option>';
   try{
     const res = await fetch(API_URL + '?action=pilotosLogin', { cache: 'no-store' });
     const json = await res.json();
-    if(sesionIniciada) return; // el usuario ya entró mientras llegaba esta respuesta
+    if(sesion.tipo === 'piloto') return; // el usuario ya entró mientras llegaba esta respuesta
     if(json && json.ok && Array.isArray(json.pilotos) && json.pilotos.length){
-      sel.innerHTML = json.pilotos.map(p => `<option value="${p.ID_Piloto}">${p.Nombre_Piloto}</option>`).join('');
+      sel.innerHTML = json.pilotos.map(p => `<option value="${esc(p.ID_Piloto)}">${esc(p.Nombre_Piloto)}</option>`).join('');
+    } else if(Array.isArray(DB.pilotos) && DB.pilotos.length){
+      sel.innerHTML = DB.pilotos.map(p => `<option value="${esc(p.ID_Piloto)}">${esc(p.Nombre_Piloto)}</option>`).join('');
     }
   }catch(err){
-    // Si falla, prepararLogin() rellenará la lista en cuanto lleguen los datos completos.
+    if(Array.isArray(DB.pilotos) && DB.pilotos.length){
+      sel.innerHTML = DB.pilotos.map(p => `<option value="${esc(p.ID_Piloto)}">${esc(p.Nombre_Piloto)}</option>`).join('');
+    }
   }
 }
 
-// Repuebla el desplegable de login con la lista completa una vez han llegado
-// todos los datos (por si mostrarLoginRapido no llegó a tiempo o falló). No
-// hace nada si el usuario ya ha iniciado sesión mientras tanto.
-function prepararLogin(){
-  if(sesionIniciada) return;
+// Si el modal de login está abierto y ya han llegado los datos completos,
+// repuebla el desplegable con la lista completa (por si la llamada ligera
+// hubiera fallado). No hace nada si el modal no está abierto o si el usuario
+// ya inició sesión como piloto.
+function refrescarListaLoginSiAbierta_(){
+  if(sesion.tipo === 'piloto') return;
+  const modal = document.getElementById('modalLogin');
+  if(!modal.classList.contains('show')) return;
   const sel = document.getElementById('loginPiloto');
-  if(Array.isArray(DB.pilotos) && DB.pilotos.length){
+  if(Array.isArray(DB.pilotos) && DB.pilotos.length && sel.options.length <= 1){
     const valorActual = sel.value;
-    sel.innerHTML = DB.pilotos.map(p => `<option value="${p.ID_Piloto}">${p.Nombre_Piloto}</option>`).join('');
+    sel.innerHTML = DB.pilotos.map(p => `<option value="${esc(p.ID_Piloto)}">${esc(p.Nombre_Piloto)}</option>`).join('');
     if(valorActual) sel.value = valorActual;
   }
-  document.getElementById('modalLogin').classList.add('show');
 }
+
+// Abre el modal de identificación de piloto. Ya NO se llama automáticamente al
+// cargar la web: solo cuando el usuario pulsa el botón "Iniciar sesión" del
+// menú superior, para que la navegación como invitado nunca quede bloqueada
+// por una pantalla de "introduce tu código" nada más entrar.
+function abrirModalLogin(){
+  document.getElementById('modalLogin').classList.add('show');
+  rellenarListaLogin_();
+}
+
+document.getElementById('btnIrLoginNav').addEventListener('click', abrirModalLogin);
+document.getElementById('btnIrLogin').addEventListener('click', abrirModalLogin);
+document.getElementById('btnCerrarModalLogin').addEventListener('click', ()=> cerrarModal('modalLogin'));
 
 function actualizarEstadoMercado(){
   const el = document.getElementById('estadoMercado');
@@ -1160,8 +1242,15 @@ function activarModoPiloto(){
   document.getElementById('tabMiGaraje').style.display = '';
 }
 
-function mostrarBotonCerrarSesion(){
-  document.getElementById('btnCerrarSesion').style.display = '';
+// Muestra el botón adecuado según si hay una sesión de piloto activa o se
+// navega como invitado: "Iniciar sesión" (en el menú superior, junto a
+// Historial) para invitados, "Cerrar sesión" (en el pie de página) para
+// pilotos identificados. El cierre de sesión SOLO puede hacerse desde el
+// botón del pie de página.
+function actualizarBotonesSesion(){
+  document.getElementById('btnCerrarSesion').style.display = sesion.tipo === 'piloto' ? '' : 'none';
+  document.getElementById('btnIrLoginNav').style.display = sesion.tipo === 'piloto' ? 'none' : '';
+  document.getElementById('btnIrLogin').style.display = sesion.tipo === 'piloto' ? 'none' : '';
 }
 
 // Abrevia el nombre de un piloto a "Inicial. Apellido(s)" para que la pastilla
@@ -1194,12 +1283,12 @@ function actualizarPilotoHeaderPill(){
   const saldo = Number(p.Saldo_OC ?? p.Saldo_EC ?? 0);
   const licencia = getVal(p, 'Licencia') || getVal(p, 'Lic.') || getVal(p, 'Lic');
 
-  document.getElementById('pilotoHeaderAvatar').style.backgroundImage = "url('" + (p.Foto_Avatar_URL || '') + "')";
+  document.getElementById('pilotoHeaderAvatar').style.backgroundImage = "url('" + esc(p.Foto_Avatar_URL || '') + "')";
   document.getElementById('pilotoHeaderNombre').textContent = abreviarNombre(p.Nombre_Piloto || '');
 
   const licEl = document.getElementById('pilotoHeaderLic');
   const licInfoHeader = licenciaInfo_(licencia);
-  licEl.innerHTML = licencia ? '<span class="dot"></span>' + licencia : '';
+  licEl.innerHTML = licencia ? '<span class="dot"></span>' + esc(licencia) : '';
   licEl.className = 'badge' + (licencia ? ' ' + licInfoHeader.badgeClass : '');
   licEl.style.display = licencia ? '' : 'none';
 
@@ -1211,7 +1300,7 @@ function actualizarPilotoHeaderPill(){
 document.getElementById('btnLoginPiloto').addEventListener('click', async ()=>{
   const idPiloto = document.getElementById('loginPiloto').value;
   const pin = document.getElementById('loginPin').value;
-  if(!pin){ toast('Introduce tu clave de piloto.', 'err'); return; }
+  if(!pin){ toast('Introduce tu código de piloto.', 'err'); return; }
 
   const btn = document.getElementById('btnLoginPiloto');
   btn.disabled = true;
@@ -1223,7 +1312,7 @@ document.getElementById('btnLoginPiloto').addEventListener('click', async ()=>{
     sesionIniciada = true;
     sessionStorage.setItem(SESION_STORAGE_KEY, JSON.stringify(sesion));
     activarModoPiloto();
-    mostrarBotonCerrarSesion();
+    actualizarBotonesSesion();
     document.getElementById('modalLogin').classList.remove('show');
     toast('Bienvenido, ' + (res.piloto ? res.piloto.Nombre_Piloto : '') + '.', 'ok');
     // Si el resto de la web (DB completa) ya cargó, repintamos ya mismo. Si no,
@@ -1243,22 +1332,16 @@ document.getElementById('btnLoginPiloto').addEventListener('click', async ()=>{
 });
 
 document.getElementById('btnLoginInvitado').addEventListener('click', ()=>{
-  sesion = { tipo:'invitado', idPiloto:null, pin:null };
-  sesionIniciada = true;
-  sessionStorage.setItem(SESION_STORAGE_KEY, JSON.stringify(sesion));
-  mostrarBotonCerrarSesion();
-  document.getElementById('modalLogin').classList.remove('show');
-  renderCoches();
+  cerrarModal('modalLogin');
 });
 
 document.getElementById('btnCerrarSesion').addEventListener('click', ()=>{
   sessionStorage.removeItem(SESION_STORAGE_KEY);
-  sesion = { tipo:null, idPiloto:null, pin:null };
-  sesionIniciada = false;
+  sesion = { tipo:'invitado', idPiloto:null, pin:null };
 
   document.getElementById('tabMiGaraje').style.display = 'none';
-  document.getElementById('btnCerrarSesion').style.display = 'none';
   document.getElementById('pilotoHeaderPill').style.display = 'none';
+  actualizarBotonesSesion();
 
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -1267,32 +1350,30 @@ document.getElementById('btnCerrarSesion').addEventListener('click', ()=>{
 
   renderCoches();
   renderPilotos();
-  mostrarLoginRapido();
+  toast('Sesión cerrada. Sigues navegando como invitado.', 'ok');
 });
 
-// Arranque de la web: si hay una sesión guardada en este navegador (mientras la
-// pestaña siga abierta) se restaura sin pedir usuario/PIN de nuevo. Si no,
-// se muestra el login al instante con una lista ligera de pilotos mientras el
-// resto de los datos de la web se cargan en paralelo por detrás.
+// Arranque de la web: si hay una sesión de piloto guardada en este navegador
+// (mientras la pestaña siga abierta) se restaura sin pedir código de nuevo.
+// Si no, se navega directamente como invitado — el catálogo, calendario,
+// clasificación e historial son públicos y NO requieren identificarse. El
+// login solo se ofrece a través del botón "Iniciar sesión" del menú superior,
+// nunca como una pantalla obligatoria al entrar.
 async function iniciar(){
   const guardada = sessionStorage.getItem(SESION_STORAGE_KEY);
   if(guardada){
     try{
       const parsed = JSON.parse(guardada);
-      if(parsed && (parsed.tipo === 'piloto' || parsed.tipo === 'invitado')){
+      if(parsed && parsed.tipo === 'piloto' && parsed.idPiloto){
         sesion = parsed;
-        sesionIniciada = true;
-        if(sesion.tipo === 'piloto') activarModoPiloto();
-        mostrarBotonCerrarSesion();
+        activarModoPiloto();
       }
     }catch(err){
-      // Sesión guardada corrupta: se ignora y se pide login de nuevo.
+      // Sesión guardada corrupta: se ignora y se sigue como invitado.
     }
   }
-
-  if(!sesionIniciada){
-    mostrarLoginRapido(); // pinta el login al instante, sin esperar al resto de la web
-  }
+  sesionIniciada = true;
+  actualizarBotonesSesion();
 
   cargarTodo(); // el resto de la web (empezando por Concesionario) se carga en paralelo
 }
@@ -1330,7 +1411,7 @@ function poblarCategorias(){
   
   const categorias = [...new Set(DB.coches.map(c => c.Categoria).filter(Boolean))].sort();
   selectCat.innerHTML = '<option value="todas">Todas las categorías</option>' + 
-    categorias.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+    categorias.map(cat => `<option value="${esc(cat)}">${esc(cat)}</option>`).join('');
 }
 
 // NUEVA LÓGICA DE FILTRADO (ROBUSTA)
@@ -1442,9 +1523,9 @@ function nombreConLogoHtml(nombre, logoUrl, forzarBlanco, claseNombre){
   claseNombre = claseNombre || 'name';
   if(LOGO_LAYOUT === 'name' && logoUrl){
     const claseImg = forzarBlanco ? 'logo-forzado-blanco' : '';
-    return `<div class="name-row"><p class="${claseNombre}">${nombre || ''}</p><span class="brand-logo-chip"><img class="${claseImg}" src="${logoUrl}" alt="Logo de marca" loading="lazy"></span></div>`;
+    return `<div class="name-row"><p class="${claseNombre}">${esc(nombre || '')}</p><span class="brand-logo-chip"><img class="${claseImg}" src="${esc(logoUrl)}" alt="Logo de marca" loading="lazy"></span></div>`;
   }
-  return `<p class="${claseNombre}">${nombre || ''}</p>`;
+  return `<p class="${claseNombre}">${esc(nombre || '')}</p>`;
 }
 
 // Insignia de marca superpuesta en la foto (layout 'badge'). Va dentro de .photo
@@ -1452,7 +1533,7 @@ function nombreConLogoHtml(nombre, logoUrl, forzarBlanco, claseNombre){
 function logoBadgeHtml(logoUrl, forzarBlanco){
   if(LOGO_LAYOUT === 'badge' && logoUrl){
     const claseImg = forzarBlanco ? 'logo-forzado-blanco' : '';
-    return `<div class="brand-badge"><img class="${claseImg}" src="${logoUrl}" alt="Logo de marca" loading="lazy"></div>`;
+    return `<div class="brand-badge"><img class="${claseImg}" src="${esc(logoUrl)}" alt="Logo de marca" loading="lazy"></div>`;
   }
   return '';
 }
@@ -1464,8 +1545,8 @@ function fichaGrandeHtml(c){
   const forzarBlanco = logoForzarBlanco(c);
   return `
     <div class="stripe"></div>
-    <div class="number">${String(c.ID_Coche || '').slice(-2)}</div>
-    <div class="cat-tag ${catTagClass(cat)}">${cat}</div>
+    <div class="number">${esc(String(c.ID_Coche || '').slice(-2))}</div>
+    <div class="cat-tag ${catTagClass(cat)}">${esc(cat)}</div>
     ${logoBadgeHtml(logoUrl, forzarBlanco)}
     <div class="ficha-info">${nombreConLogoHtml(c.Nombre_Coche || '', logoUrl, forzarBlanco)}</div>
   `;
@@ -1494,7 +1575,7 @@ function especificacionesColumnas_(c){
 }
 
 function filasEspecs_(rows){
-  return rows.map(([label, val]) => `<tr><td class="spec-label">${label}</td><td class="spec-value">${val}</td></tr>`).join('');
+  return rows.map(([label, val]) => `<tr><td class="spec-label">${esc(label)}</td><td class="spec-value">${esc(val)}</td></tr>`).join('');
 }
 
 function especificacionesHtml2Col_(c, idIzq, idDer){
@@ -1574,7 +1655,7 @@ function renderCoches(){
         ? ('Disponible en concesionario · Stock: ' + stockActual)
         : 'Agotado en concesionario';
     } else {
-      ownerLine = disponible ? 'Disponible en concesionario' : ('Propiedad de ' + nombrePiloto(getVal(c, 'Propietario_ID') || getVal(c, 'Propietario')));
+      ownerLine = disponible ? 'Disponible en concesionario' : ('Propiedad de ' + esc(nombrePiloto(getVal(c, 'Propietario_ID') || getVal(c, 'Propietario'))));
     }
     const ownerClass = disponible ? 'free' : (stockCar ? 'sold-out' : '');
     const precioCompra = Number(c.Precio_Compra_OC ?? c.Precio_Compra_EC ?? 0);
@@ -1593,7 +1674,7 @@ function renderCoches(){
     } else if(yaLoTiene){
       botonCompraHtml = `<button class="action ghost" disabled>Ya tienes este coche</button>`;
     } else {
-      botonCompraHtml = `<button class="action buy" onclick="event.stopPropagation(); abrirModalComprar('${c.ID_Coche}')">Comprar coche</button>`;
+      botonCompraHtml = `<button class="action buy" onclick="event.stopPropagation(); abrirModalComprar('${esc(c.ID_Coche)}')">Comprar coche</button>`;
     }
 
     // La ficha del coche siempre se puede abrir (aunque el mercado esté cerrado o no haya stock);
@@ -1601,11 +1682,11 @@ function renderCoches(){
     const logoUrl = logoMarcaUrl(c);
     const forzarBlanco = logoForzarBlanco(c);
     return `
-      <div class="car-card" onclick="abrirModalComprar('${c.ID_Coche}')" style="cursor:pointer;">
-        <div class="photo" style="background-image:url('${c.Imagen_URL || ''}')">
+      <div class="car-card" onclick="abrirModalComprar('${esc(c.ID_Coche)}')" style="cursor:pointer;">
+        <div class="photo" style="background-image:url('${esc(c.Imagen_URL || '')}')">
           <div class="stripe"></div>
-          <div class="number">${String(c.ID_Coche || '').slice(-2)}</div>
-          <div class="cat-tag ${catTagClass(c.Categoria)}">${c.Categoria || ''}</div>
+          <div class="number">${esc(String(c.ID_Coche || '').slice(-2))}</div>
+          <div class="cat-tag ${catTagClass(c.Categoria)}">${esc(c.Categoria || '')}</div>
           ${logoBadgeHtml(logoUrl, forzarBlanco)}
         </div>
         <div class="body">
@@ -1647,7 +1728,7 @@ function abrirModalComprar(idCoche){
   const disponible = cocheDisponible(coche);
 
   const fotoComprar = document.getElementById('fichaComprarFoto');
-  fotoComprar.style.backgroundImage = "url('" + (coche.Imagen_URL || '') + "')";
+  fotoComprar.style.backgroundImage = "url('" + esc(coche.Imagen_URL || '') + "')";
   fotoComprar.innerHTML = fichaGrandeHtml(coche);
   especificacionesHtml2Col_(coche, 'tablaEspecsComprarIzq', 'tablaEspecsComprarDer');
 
@@ -1710,7 +1791,7 @@ function abrirModalVender(idCoche, idPiloto){
   const precioVenta = Number(coche.Precio_Venta_OC ?? coche.Precio_Venta_EC ?? 0);
 
   const fotoVender = document.getElementById('fichaVenderFoto');
-  fotoVender.style.backgroundImage = "url('" + (coche.Imagen_URL || '') + "')";
+  fotoVender.style.backgroundImage = "url('" + esc(coche.Imagen_URL || '') + "')";
   fotoVender.innerHTML = fichaGrandeHtml(coche);
   especificacionesHtml2Col_(coche, 'tablaEspecsVenderIzq', 'tablaEspecsVenderDer');
 
@@ -1750,7 +1831,6 @@ function cerrarModal(id){
   document.getElementById(id).classList.remove('show');
 }
 document.querySelectorAll('.overlay').forEach(ov=>{
-  if(ov.id === 'modalLogin') return; // no se puede cerrar sin elegir piloto o invitado
   ov.addEventListener('click', e=>{ if(e.target === ov) ov.classList.remove('show'); });
 });
 
@@ -1812,10 +1892,10 @@ function renderPilotos(){
       const forzarBlanco = logoForzarBlanco(c);
       return `
         <div class="car-card-mini">
-          <div class="photo" style="background-image:url('${c.Imagen_URL || ''}')">
+          <div class="photo" style="background-image:url('${esc(c.Imagen_URL || '')}')">
             <div class="stripe"></div>
-            <div class="number">${String(c.ID_Coche || '').slice(-2)}</div>
-            <div class="cat-tag ${catTagClass(c.Categoria)}">${c.Categoria || ''}</div>
+            <div class="number">${esc(String(c.ID_Coche || '').slice(-2))}</div>
+            <div class="cat-tag ${catTagClass(c.Categoria)}">${esc(c.Categoria || '')}</div>
             ${logoBadgeHtml(logoUrl, forzarBlanco)}
           </div>
           <div class="body">
@@ -1826,12 +1906,12 @@ function renderPilotos(){
     })() : `<img class="no-car-img" src="https://i.ibb.co/4wHwbNFq/sincoche.jpg" alt="Sin coche">`;
 
     return `
-      <div class="pilot-card-v2" onclick="abrirModalPiloto('${p.ID_Piloto}')">
+      <div class="pilot-card-v2" onclick="abrirModalPiloto('${esc(p.ID_Piloto)}')">
         <div class="pilot-topbar">
-          <div class="pilot-avatar-sm" style="background-image:url('${p.Foto_Avatar_URL || ''}')"></div>
+          <div class="pilot-avatar-sm" style="background-image:url('${esc(p.Foto_Avatar_URL || '')}')"></div>
           <div class="pilot-topbar-info">
             <div class="name-coins-row">
-              <p class="name">${p.Nombre_Piloto || ''} ${licencia ? `<span class="badge ${licInfo.badgeClass}"><span class="dot"></span>${licencia}</span>` : ''}</p>
+              <p class="name">${esc(p.Nombre_Piloto || '')} ${licencia ? `<span class="badge ${licInfo.badgeClass}"><span class="dot"></span>${esc(licencia)}</span>` : ''}</p>
               <span class="coin-badge">${COIN_EMOJI} ${coins.toLocaleString()}</span>
             </div>
             <div class="pilot-topbar-stats">
@@ -1857,8 +1937,8 @@ function abrirModalPiloto(idPiloto){
   const licInfo = licenciaInfo_(licencia);
   const idPrincipal = principalCocheId(p);
 
-  document.getElementById('pilotoModalAvatar').style.backgroundImage = "url('" + (p.Foto_Avatar_URL || '') + "')";
-  document.getElementById('pilotoModalNombre').innerHTML = `${p.Nombre_Piloto || ''} ${licencia ? `<span class="badge ${licInfo.badgeClass}"><span class="dot"></span>${licencia}</span>` : ''}`;
+  document.getElementById('pilotoModalAvatar').style.backgroundImage = "url('" + esc(p.Foto_Avatar_URL || '') + "')";
+  document.getElementById('pilotoModalNombre').innerHTML = `${esc(p.Nombre_Piloto || '')} ${licencia ? `<span class="badge ${licInfo.badgeClass}"><span class="dot"></span>${esc(licencia)}</span>` : ''}`;
   document.getElementById('pilotoModalCoins').textContent = `${COIN_EMOJI} ${coins.toLocaleString()}`;
   document.getElementById('pilotoModalStats').innerHTML = `
     <span class="stat oc">Saldo: <b>${saldo.toLocaleString()} OC</b></span>
@@ -1891,10 +1971,10 @@ function abrirModalPiloto(idPiloto){
       const forzarBlanco = logoForzarBlanco(c);
       return `
         <div class="car-card">
-          <div class="photo" style="background-image:url('${c.Imagen_URL || ''}')">
+          <div class="photo" style="background-image:url('${esc(c.Imagen_URL || '')}')">
             <div class="stripe"></div>
-            <div class="number">${String(c.ID_Coche || '').slice(-2)}</div>
-            <div class="cat-tag ${catTagClass(c.Categoria)}">${c.Categoria || ''}</div>
+            <div class="number">${esc(String(c.ID_Coche || '').slice(-2))}</div>
+            <div class="cat-tag ${catTagClass(c.Categoria)}">${esc(c.Categoria || '')}</div>
             ${cantidad > 1 ? `<div class="qty-badge">x${cantidad}</div>` : ''}
             ${logoBadgeHtml(logoUrl, forzarBlanco)}
           </div>
@@ -1925,7 +2005,7 @@ function licenciaBadgeHtml(licencia){
   const lic = String(licencia || '').trim();
   if(!lic) return '';
   const info = licenciaInfo_(lic);
-  return `<span class="badge ${info.badgeClass}"><span class="dot"></span>${lic}</span>`;
+  return `<span class="badge ${info.badgeClass}"><span class="dot"></span>${esc(lic)}</span>`;
 }
 
 
@@ -1968,11 +2048,11 @@ function renderMiGaraje(){
     const logoUrl = logoMarcaUrl(c);
     const forzarBlanco = logoForzarBlanco(c);
     return `
-      <div class="car-card" ${puedeVender ? `onclick="abrirModalVender('${c.ID_Coche}', '${p.ID_Piloto}')" style="cursor:pointer;"` : ''}>
-        <div class="photo" style="background-image:url('${c.Imagen_URL || ''}')">
+      <div class="car-card" ${puedeVender ? `onclick="abrirModalVender('${esc(c.ID_Coche)}', '${esc(p.ID_Piloto)}')" style="cursor:pointer;"` : ''}>
+        <div class="photo" style="background-image:url('${esc(c.Imagen_URL || '')}')">
           <div class="stripe"></div>
-          <div class="number">${String(c.ID_Coche || '').slice(-2)}</div>
-          <div class="cat-tag ${catTagClass(c.Categoria)}">${c.Categoria || ''}</div>
+          <div class="number">${esc(String(c.ID_Coche || '').slice(-2))}</div>
+          <div class="cat-tag ${catTagClass(c.Categoria)}">${esc(c.Categoria || '')}</div>
           ${cantidad > 1 ? `<div class="qty-badge">x${cantidad}</div>` : ''}
           ${logoBadgeHtml(logoUrl, forzarBlanco)}
         </div>
@@ -1981,7 +2061,7 @@ function renderMiGaraje(){
           <p class="owner">Valor de venta: ${precioVenta.toLocaleString()} OC ${cantidad > 1 ? '/ unidad' : ''}</p>
           ${esPrincipal ? '<span class="principal-tag">Coche principal</span><br>' : ''}
           ${puedeVender
-            ? `<button class="action sell" onclick="event.stopPropagation(); abrirModalVender('${c.ID_Coche}', '${p.ID_Piloto}')" style="${esPrincipal ? 'margin-top:8px;' : ''}">Vender ${cantidad > 1 ? '1 unidad' : ''} por ${precioVenta.toLocaleString()} OC</button>`
+            ? `<button class="action sell" onclick="event.stopPropagation(); abrirModalVender('${esc(c.ID_Coche)}', '${esc(p.ID_Piloto)}')" style="${esPrincipal ? 'margin-top:8px;' : ''}">Vender ${cantidad > 1 ? '1 unidad' : ''} por ${precioVenta.toLocaleString()} OC</button>`
             : `<button class="action ghost" disabled style="${esPrincipal ? 'margin-top:8px;' : ''}">Mercado cerrado</button>`
           }
         </div>
@@ -1992,7 +2072,7 @@ function renderMiGaraje(){
     <div class="coche-principal-bar">
       <span class="lbl-principal">Valida tu coche principal</span>
       <select class="select-input" id="selectCochePrincipal">
-        ${misCoches.map(({coche:c}) => `<option value="${c.ID_Coche}">${c.Nombre_Coche}</option>`).join('')}
+        ${misCoches.map(({coche:c}) => `<option value="${esc(c.ID_Coche)}">${esc(c.Nombre_Coche)}</option>`).join('')}
       </select>
       <button class="action buy" id="btnAceptarCochePrincipal">Aceptar</button>
     </div>
@@ -2019,13 +2099,13 @@ function renderMiGaraje(){
             const posBadgeClass = posNum === 1 ? 'p1' : (posNum === 2 ? 'p2' : (posNum === 3 ? 'p3' : ''));
             return `
             <tr>
-              <td class="mono" style="color:var(--text-dim);font-size:12.5px;">${getVal(h, 'Fecha')}</td>
-              <td>${getVal(h, 'Fase')}</td>
-              <td>${getVal(h, 'Ronda')}</td>
-              <td>${getVal(h, 'Circuito')}</td>
+              <td class="mono" style="color:var(--text-dim);font-size:12.5px;">${esc(getVal(h, 'Fecha'))}</td>
+              <td>${esc(getVal(h, 'Fase'))}</td>
+              <td>${esc(getVal(h, 'Ronda'))}</td>
+              <td>${esc(getVal(h, 'Circuito'))}</td>
               <td style="text-align:center;">${marcaLogoHtmlCarreras(getVal(h, 'Logo'))}</td>
-              <td>${getVal(h, 'Specs')}</td>
-              <td><span class="pos-badge ${posBadgeClass}">${pos || ''}</span></td>
+              <td>${esc(getVal(h, 'Specs'))}</td>
+              <td><span class="pos-badge ${posBadgeClass}">${esc(pos || '')}</span></td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -2039,16 +2119,16 @@ function renderMiGaraje(){
         <div class="texture"></div>
         <div class="darken"></div>
         <div class="curve"></div>
-        <div class="halo"><div class="inner" style="background-image:url('${p.Foto_Avatar_URL || ''}')"></div></div>
+        <div class="halo"><div class="inner" style="background-image:url('${esc(p.Foto_Avatar_URL || '')}')"></div></div>
       </div>
       <div class="right">
         <div class="top-row">
-          <p class="driver-name">${p.Nombre_Piloto || ''}</p>
+          <p class="driver-name">${esc(p.Nombre_Piloto || '')}</p>
           ${bandera}
-          ${licencia ? `<span class="badge ${licInfo.badgeClass}"><span class="dot"></span>${licencia}</span>` : ''}
+          ${licencia ? `<span class="badge ${licInfo.badgeClass}"><span class="dot"></span>${esc(licencia)}</span>` : ''}
         </div>
         <div class="data-grid">
-          <span class="k">Equipo:</span><span class="v">${equipo || '—'}</span>
+          <span class="k">Equipo:</span><span class="v">${esc(equipo || '—')}</span>
           <span class="k">Saldo:</span><span class="v" style="color:var(--amber);">${saldo.toLocaleString()} OC</span>
           <span class="k">Coins Gan:</span><span class="v" style="color:var(--danger);">+${coins.toLocaleString()} ${COIN_EMOJI}</span>
         </div>
@@ -2118,11 +2198,11 @@ function renderCalendario(){
     const img = getVal(item, 'Img');
     return `
       <div class="circuit-tile">
-        <div class="photo-big" style="background-image:url('${img || ''}')" onclick="abrirModalResultados('${ronda}')">
-          <div class="cat-tag">RONDA ${ronda || ''}</div>
+        <div class="photo-big" style="background-image:url('${esc(img || '')}')" onclick="abrirModalResultados('${esc(ronda)}')">
+          <div class="cat-tag">RONDA ${esc(ronda || '')}</div>
           <div class="info">
-            <p class="name">${circuito || ''}</p>
-            <p class="date">${fecha ? 'Fecha: ' + fecha : ''}</p>
+            <p class="name">${esc(circuito || '')}</p>
+            <p class="date">${fecha ? 'Fecha: ' + esc(fecha) : ''}</p>
           </div>
         </div>
         <div class="podio-box">
@@ -2149,7 +2229,7 @@ function renderPodioHtml(ronda){
   return podio.map(({ pos, row }) => `
     <div class="podio-row">
       <span class="medal">${medallas[pos] || ''}</span>
-      <span class="pos-name">${getVal(row, 'Piloto') || ''}</span>
+      <span class="pos-name">${esc(getVal(row, 'Piloto') || '')}</span>
     </div>`).join('');
 }
 
@@ -2157,20 +2237,20 @@ function marcaLogoHtml(valorMarca){
   const val = String(valorMarca || '').trim();
   if(!val) return '';
   const esUrl = val.startsWith('http://') || val.startsWith('https://') || val.startsWith('data:image');
-  if(!esUrl) return val;
+  if(!esUrl) return esc(val);
   const forzarBlanco = !!(DB.logosForzarBlancoPorUrl && DB.logosForzarBlancoPorUrl[val]);
   const claseImg = forzarBlanco ? 'logo-forzado-blanco' : '';
-  return `<img src="${val}" alt="Marca" class="${claseImg}" style="height:24px; max-width:60px; object-fit:contain; vertical-align:middle;">`;
+  return `<img src="${esc(val)}" alt="Marca" class="${claseImg}" style="height:24px; max-width:60px; object-fit:contain; vertical-align:middle;">`;
 }
 
 function marcaLogoHtmlCarreras(valorMarca){
   const val = String(valorMarca || '').trim();
   if(!val) return '';
   const esUrl = val.startsWith('http://') || val.startsWith('https://') || val.startsWith('data:image');
-  if(!esUrl) return val;
+  if(!esUrl) return esc(val);
   const forzarBlanco = !!(DB.logosForzarBlancoCarreras && DB.logosForzarBlancoCarreras[val]);
   const claseImg = forzarBlanco ? 'logo-forzado-blanco' : '';
-  return `<img src="${val}" alt="Marca" class="${claseImg}" style="height:24px; max-width:60px; object-fit:contain; vertical-align:middle;">`;
+  return `<img src="${esc(val)}" alt="Marca" class="${claseImg}" style="height:24px; max-width:60px; object-fit:contain; vertical-align:middle;">`;
 }
 
 let rondaModalActual = null;
@@ -2223,15 +2303,15 @@ function renderTablaResultadosModal(){
     return `
     <tr>
       <td><span class="pos-badge ${posBadgeClass}">${posClase}</span></td>
-      <td><span class="class-tag">${getVal(r, 'Clase')}</span></td>
-      <td>${getVal(r, 'Piloto')}</td>
+      <td><span class="class-tag">${esc(getVal(r, 'Clase'))}</span></td>
+      <td>${esc(getVal(r, 'Piloto'))}</td>
       <td>${licenciaBadgeHtml(getVal(r, 'Lic.'))}</td>
-      <td>${getVal(r, 'Equipo')}</td>
+      <td>${esc(getVal(r, 'Equipo'))}</td>
       <td style="text-align:center;">${marcaLogoHtml(getVal(r, 'Marca'))}</td>
-      <td>${getVal(r, 'Espec.')}</td>
-      <td class="mono">${getVal(r, 'Tiempo')}</td>
-      <td class="mono"${esVueltaRapida ? ' style="color:#f01c26;font-weight:700;"' : ''}>${mejorVueltaTxt}</td>
-      <td>${getVal(r, 'Pits')}</td>
+      <td>${esc(getVal(r, 'Espec.'))}</td>
+      <td class="mono">${esc(getVal(r, 'Tiempo'))}</td>
+      <td class="mono"${esVueltaRapida ? ' style="color:#f01c26;font-weight:700;"' : ''}>${esc(mejorVueltaTxt)}</td>
+      <td>${esc(getVal(r, 'Pits'))}</td>
     </tr>`;
   }).join('');
 }
@@ -2291,18 +2371,18 @@ function renderClasificacion(){
     return `
     <tr>
       <td><span class="pos-badge ${posBadgeClass}">${posClase}</span></td>
-      <td><span class="class-tag">${getVal(c, 'Clase')}</span></td>
-      <td>${getVal(c, 'Piloto')}</td>
+      <td><span class="class-tag">${esc(getVal(c, 'Clase'))}</span></td>
+      <td>${esc(getVal(c, 'Piloto'))}</td>
       <td>${licenciaBadgeHtml(getVal(c, 'Lic.'))}</td>
-      <td>${getVal(c, 'Equipo')}</td>
+      <td>${esc(getVal(c, 'Equipo'))}</td>
       <td style="text-align:center;">${marcaHtml}</td>
-      <td>${getVal(c, 'Espec.')}</td>
-      <td class="pts">${getVal(c, 'Puntos') || 0}</td>
-      <td class="amount">${getVal(c, 'R1')}</td>
-      <td class="amount">${getVal(c, 'R2')}</td>
-      <td class="amount">${getVal(c, 'R3')}</td>
-      <td class="amount">${getVal(c, 'R4')}</td>
-      <td class="amount ${Number(pen) < 0 ? 'neg' : ''}">${pen || 0}</td>
+      <td>${esc(getVal(c, 'Espec.'))}</td>
+      <td class="pts">${esc(getVal(c, 'Puntos') || 0)}</td>
+      <td class="amount">${esc(getVal(c, 'R1'))}</td>
+      <td class="amount">${esc(getVal(c, 'R2'))}</td>
+      <td class="amount">${esc(getVal(c, 'R3'))}</td>
+      <td class="amount">${esc(getVal(c, 'R4'))}</td>
+      <td class="amount ${Number(pen) < 0 ? 'neg' : ''}">${esc(pen || 0)}</td>
     </tr>`;
   }).join('');
 }
@@ -2326,14 +2406,14 @@ function renderClasTeam(){
     return `
     <tr>
       <td><span class="pos-badge ${posBadgeClass}">${posClase}</span></td>
-      <td>${getVal(c, 'Pilotos')}</td>
-      <td>${getVal(c, 'Equipo')}</td>
-      <td class="pts-white">${getVal(c, 'Puntos') || 0}</td>
-      <td class="amount">${getVal(c, 'R1')}</td>
-      <td class="amount">${getVal(c, 'R2')}</td>
-      <td class="amount">${getVal(c, 'R3')}</td>
-      <td class="amount">${getVal(c, 'R4')}</td>
-      <td class="amount ${Number(pen) < 0 ? 'neg' : ''}">${pen || 0}</td>
+      <td>${esc(getVal(c, 'Pilotos'))}</td>
+      <td>${esc(getVal(c, 'Equipo'))}</td>
+      <td class="pts-white">${esc(getVal(c, 'Puntos') || 0)}</td>
+      <td class="amount">${esc(getVal(c, 'R1'))}</td>
+      <td class="amount">${esc(getVal(c, 'R2'))}</td>
+      <td class="amount">${esc(getVal(c, 'R3'))}</td>
+      <td class="amount">${esc(getVal(c, 'R4'))}</td>
+      <td class="amount ${Number(pen) < 0 ? 'neg' : ''}">${esc(pen || 0)}</td>
     </tr>`;
   }).join('');
 }
@@ -2354,16 +2434,18 @@ function renderHistorial(){
     return;
   }
 
+  const TIPOS_VALIDOS = ['COMPRA','VENTA','PREMIO_CARRERA','BONO'];
   tbody.innerHTML = list.map(h=>{
     const monto = Number(h.Monto_OC ?? h.Monto_EC ?? 0);
     const cls = monto >= 0 ? 'pos' : 'neg'; // .pos -> verde, .neg -> rojo
     const signo = monto >= 0 ? '+' : '';
+    const tipoClase = TIPOS_VALIDOS.includes(h.Tipo_Operacion) ? h.Tipo_Operacion : '';
     return `
       <tr>
-        <td class="mono" style="color:var(--text-dim);font-size:12.5px;">${h.Fecha_Hora || ''}</td>
-        <td>${nombrePiloto(h.ID_Piloto)}</td>
-        <td><span class="tag ${h.Tipo_Operacion}">${h.Tipo_Operacion || ''}</span></td>
-        <td style="color:var(--text-dim);">${h.Detalle || ''}</td>
+        <td class="mono" style="color:var(--text-dim);font-size:12.5px;">${esc(h.Fecha_Hora || '')}</td>
+        <td>${esc(nombrePiloto(h.ID_Piloto))}</td>
+        <td><span class="tag ${tipoClase}">${esc(h.Tipo_Operacion || '')}</span></td>
+        <td style="color:var(--text-dim);">${esc(h.Detalle || '')}</td>
         <td class="amount ${cls}">${signo}${monto.toLocaleString()} OC</td>
       </tr>`;
   }).join('');
