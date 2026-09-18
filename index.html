@@ -634,6 +634,33 @@
     margin-top:12px;font-size:11px;line-height:1.5;color:var(--text-dim);text-align:center;
   }
 
+/* ============================================================
+   MODAL DE BIENVENIDA (tras iniciar sesión)
+   ============================================================ */
+.modal-welcome{
+  position:relative;width:380px;max-width:92vw;
+  border:1px solid #262B33;border-radius:14px;overflow:hidden;
+  background:#14171C;opacity:0;transform:scale(0.97);
+  transition:opacity .5s ease, transform .5s ease;
+}
+.modal-welcome.show{opacity:1;transform:scale(1);}
+.bienvenida-foto-box{position:relative;width:100%;height:480px;overflow:hidden;background:var(--panel-2);}
+.bienvenida-foto-box img{width:100%;height:100%;object-fit:cover;object-position:center 11%;display:block;}
+.bienvenida-degradado{
+  position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(to top, rgba(0,0,0,0.70) 0%, rgba(0,0,0,0) 55%);
+}
+.bienvenida-txt{
+  font-family:'Teko',sans-serif;font-weight:300;font-size:20px;letter-spacing:4px;
+  color:#fff;text-transform:uppercase;text-align:center;margin:0;
+  position:absolute;left:0;right:0;bottom:92px;text-shadow:0 2px 10px rgba(0,0,0,.5);
+}
+.bienvenida-nombre{
+  font-family:'Teko',sans-serif;font-weight:600;font-size:54px;line-height:1;
+  color:#fff;text-align:center;margin:0;padding:0 16px;
+  position:absolute;left:0;right:0;bottom:27px;text-shadow:0 3px 14px rgba(0,0,0,.6);
+}
+
   #toasts{position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:10px;max-width:320px;}
   .toast{
     padding:13px 16px;border-radius:10px;font-size:13.5px;border:1px solid var(--hairline);
@@ -980,6 +1007,17 @@
   </div>
 </div>
 
+<div class="overlay" id="modalBienvenida">
+  <div class="modal-welcome" id="modalWelcomeBox">
+    <div class="bienvenida-foto-box">
+      <img id="bienvenidaFoto" src="" alt="Piloto">
+      <div class="bienvenida-degradado"></div>
+      <p class="bienvenida-txt">Bienvenido</p>
+      <p class="bienvenida-nombre" id="bienvenidaNombre"></p>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="modalPiloto">
   <div class="modal" style="max-width:640px;width:95%;max-height:90vh;overflow-y:auto;">
     <div class="pilot-modal-head">
@@ -1005,7 +1043,7 @@
 <div id="toasts"></div>
 
 <script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbx23LJXHV6G-sYtbe6ky9qAbPHTuo35fq8Rd9EcoXyk3-cPWEXyTMOP9Uc6e50y1FsLjA/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyx6ZAwyUsdFsrKBsvvBlnpwvtQLn-9du5Hznap_CeFk_Fy7H-JAQkCuaaQ3LOpdPZtaQ/exec';
 const STATIC_DATA_URL = 'https://cdn.jsdelivr.net/gh/race-online/academy@main/data/race-data.json';
 
 let DB = { pilotos: [], coches: [], calendario: [], clasificacion: [], clasteam: [], historial: [], r1: [], r2: [], r3: [], r4: [], logosForzarBlancoPorUrl: {}, logosForzarBlancoCarreras: {} };
@@ -1294,6 +1332,48 @@ function abreviarNombre(nombre){
   return inicial + '. ' + apellidos;
 }
 
+// Convierte un texto a "Title Case" respetando acentos (ej. "AITOR CANTÓ" -> "Aitor Cantó").
+function tituloCase_(str){
+  return String(str || '')
+    .toLowerCase()
+    .replace(/(^|[\s-])([a-zà-ÿ])/g, (m, sep, letra) => sep + letra.toUpperCase());
+}
+
+let bienvenidaTimeoutId = null;
+
+// Abre el modal de bienvenida con los datos indicados (fundido 0 -> 100% en 0.5s).
+// No programa el cierre — eso lo hace cerrarModalBienvenida_() por separado.
+function abrirModalBienvenida_(piloto){
+  const foto = getVal(piloto, 'Foto_Piloto') || piloto.Foto_Avatar_URL || '';
+  const nombre = tituloCase_(getVal(piloto, 'Nombre_Piloto') || '');
+
+  document.getElementById('bienvenidaFoto').src = foto;
+  document.getElementById('bienvenidaNombre').textContent = nombre;
+
+  const overlay = document.getElementById('modalBienvenida');
+  const box = document.getElementById('modalWelcomeBox');
+
+  clearTimeout(bienvenidaTimeoutId);
+  box.classList.remove('show');
+  overlay.classList.add('show');
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => { box.classList.add('show'); });
+  });
+}
+
+// Programa el cierre del modal de bienvenida dentro de "retrasoMs" (fundido de
+// salida de 0.5s). Con retrasoMs=0 se cierra ya mismo (uso: PIN incorrecto).
+function cerrarModalBienvenida_(retrasoMs){
+  clearTimeout(bienvenidaTimeoutId);
+  bienvenidaTimeoutId = setTimeout(() => {
+    const overlay = document.getElementById('modalBienvenida');
+    const box = document.getElementById('modalWelcomeBox');
+    box.classList.remove('show');
+    setTimeout(() => { overlay.classList.remove('show'); }, 500);
+  }, retrasoMs || 0);
+}
+
 // Rellena y muestra la pastilla del piloto conectado en el encabezado
 // (avatar, nombre abreviado, licencia y saldo). Se oculta para invitados
 // o si todavía no han llegado los datos del piloto.
@@ -1332,10 +1412,34 @@ document.getElementById('btnLoginPiloto').addEventListener('click', async ()=>{
   const pin = document.getElementById('loginPin').value;
   if(!pin){ toast('Introduce tu código de piloto.', 'err'); return; }
 
+  const DURACION_MINIMA_MS = 2000;
+  let tAperturaBienvenida = null;
+
+  // Si ya tenemos este piloto en memoria, mostramos la bienvenida al instante con su
+  // foto y nombre, y la dejamos abierta MIENTRAS se comprueba el PIN en segundo plano.
+  const pilotoLocal = Array.isArray(DB.pilotos) ? DB.pilotos.find(p => String(p.ID_Piloto) === String(idPiloto)) : null;
+
   const btn = document.getElementById('btnLoginPiloto');
   btn.disabled = true;
   const original = btn.textContent;
-  btn.innerHTML = '<span class="spinner"></span>Comprobando…';
+
+  if(pilotoLocal){
+    document.getElementById('modalLogin').classList.remove('show');
+    abrirModalBienvenida_(pilotoLocal);
+    tAperturaBienvenida = Date.now();
+  } else {
+    // Respaldo: si todavía no tenemos la lista de pilotos en memoria, mantenemos
+    // el spinner de "Comprobando…" hasta tener respuesta.
+    btn.innerHTML = '<span class="spinner"></span>Comprobando…';
+  }
+
+  // Calcula cuánto falta para completar los 2s mínimos desde que se abrió la foto.
+  // Si la foto aún no se ha abierto (caso de respaldo), no hay que esperar nada extra.
+  function tiempoRestanteMinimo_(){
+    if(tAperturaBienvenida === null) return 0;
+    return Math.max(0, DURACION_MINIMA_MS - (Date.now() - tAperturaBienvenida));
+  }
+
   try{
     const res = await apiPost({ action:'loginPiloto', idPiloto, pin });
     sesion = { tipo:'piloto', idPiloto, pin };
@@ -1343,17 +1447,33 @@ document.getElementById('btnLoginPiloto').addEventListener('click', async ()=>{
     sessionStorage.setItem(SESION_STORAGE_KEY, JSON.stringify(sesion));
     activarModoPiloto();
     actualizarBotonesSesion();
-    document.getElementById('modalLogin').classList.remove('show');
-    toast('Bienvenido, ' + (res.piloto ? res.piloto.Nombre_Piloto : '') + '.', 'ok');
-    // Si el resto de la web (DB completa) ya cargó, repintamos ya mismo. Si no,
-    // se deja el spinner: cargarTodo() hará estos mismos renders en cuanto termine.
+
+    if(!pilotoLocal){
+      // No se llegó a mostrar la bienvenida antes (no teníamos los datos): se
+      // muestra ahora ya con el PIN confirmado, y arranca su propio cronómetro de 2s.
+      document.getElementById('modalLogin').classList.remove('show');
+      abrirModalBienvenida_(res.piloto);
+      tAperturaBienvenida = Date.now();
+    }
+
     if(datosCargados){
       renderCoches();
       renderPilotos();
       renderMiGaraje();
     }
     actualizarPilotoHeaderPill();
+
+    // PIN confirmado: se cierra en cuanto se cumplan los 2s mínimos desde la apertura
+    // (si ya han pasado, se cierra al instante).
+    cerrarModalBienvenida_(tiempoRestanteMinimo_());
   }catch(err){
+    // PIN incorrecto u otro error: se respeta igualmente el mínimo de 2s antes de
+    // cerrar la bienvenida y volver a mostrar el login con el mensaje de error.
+    const restante = tiempoRestanteMinimo_();
+    setTimeout(() => {
+      document.getElementById('modalLogin').classList.add('show');
+    }, restante + 500); // +500 = tiempo del fundido de salida del modal de bienvenida
+    cerrarModalBienvenida_(restante);
     toast(err.message, 'err');
   }finally{
     btn.disabled = false;
