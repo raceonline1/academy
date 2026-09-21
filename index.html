@@ -551,8 +551,10 @@
   }
   .overlay.show{display:flex;}
   .modal{
-    width:100%;max-width:380px;background:var(--panel);border:1px solid var(--hairline);
-    border-radius:14px;padding:24px;
+  width:100%;max-width:380px;background:var(--panel);border:1px solid var(--hairline);
+  border-radius:14px;padding:24px;
+  max-height:90vh;
+  overflow-y:auto;
   }
   .modal h3{margin:0 0 4px;font-size:24px;}
   .modal p.sub{color:var(--text-dim);font-size:13px;margin:0 0 18px;}
@@ -969,7 +971,7 @@
     Combinar clases
   </label>
 </div>
-    <div class="table-wrap" style="max-height:70vh;">
+    <div class="table-wrap">
       <table>
         <thead>
           <tr>
@@ -1043,7 +1045,7 @@
 <div id="toasts"></div>
 
 <script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbyx6ZAwyUsdFsrKBsvvBlnpwvtQLn-9du5Hznap_CeFk_Fy7H-JAQkCuaaQ3LOpdPZtaQ/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbz_7z6-qjk876brlQjH2gE-UhtySZi6daLpHJdbgTgWCeCaujPdswaGSpeUpfYybK2QeA/exec';
 const STATIC_DATA_URL = 'https://cdn.jsdelivr.net/gh/race-online/academy@main/data/race-data.json';
 
 let DB = { pilotos: [], coches: [], calendario: [], clasificacion: [], clasteam: [], historial: [], r1: [], r2: [], r3: [], r4: [], logosForzarBlancoPorUrl: {}, logosForzarBlancoCarreras: {} };
@@ -2613,6 +2615,18 @@ document.getElementById('searchHistorial').addEventListener('input', e=>{
   historial_query = e.target.value;
   renderHistorial();
 });
+
+// Bloquea el scroll del body mientras haya cualquier .overlay abierto, para
+// que la rueda del ratón / el gesto táctil se queden dentro del modal y no
+// se cuelen hacia la web de detrás.
+(function(){
+  function actualizarBloqueoScroll(){
+    document.body.style.overflow = document.querySelector('.overlay.show') ? 'hidden' : '';
+  }
+  document.querySelectorAll('.overlay').forEach(ov=>{
+    new MutationObserver(actualizarBloqueoScroll).observe(ov, { attributes:true, attributeFilter:['class'] });
+  });
+})();
 
 iniciar();
 </script>
