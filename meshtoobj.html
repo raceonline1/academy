@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mesh → OBJ (lote) — Assetto Corsa EVO</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --panel: #ffffff;
+    --text: #1c1e21;
+    --muted: #6b7280;
+    --border: #e2e4e9;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --mono-bg: #0f1115;
+    --mono-text: #d7dbe0;
+    --ok: #16833e;
+    --ok-hover: #14732f;
+    --err: #c0392b;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15171b; --panel: #1d2026; --text: #e7e9ec; --muted: #9aa1ab;
+      --border: #2c2f36; --accent: #4d8dff; --accent-hover: #6ea0ff;
+      --mono-bg: #0a0b0d; --mono-text: #c7ccd3;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15171b; --panel: #1d2026; --text: #e7e9ec; --muted: #9aa1ab;
+    --border: #2c2f36; --accent: #4d8dff; --accent-hover: #6ea0ff;
+    --mono-bg: #0a0b0d; --mono-text: #c7ccd3;
+  }
+  html, body { height: 100%; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 32px 20px 60px; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  .subtitle { color: var(--muted); font-size: 0.92rem; margin: 0 0 24px; line-height: 1.5; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 18px; }
+  #dropzone {
+    border: 2px dashed var(--border); border-radius: 10px; padding: 34px 20px;
+    text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  }
+  #dropzone.drag { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+  #dropzone .main { font-weight: 600; margin: 0 0 4px; }
+  #dropzone .hint { color: var(--muted); font-size: 0.85rem; margin: 0; }
+  input[type=file] { display: none; }
+  select, button { font-family: inherit; font-size: 0.92rem; }
+  button {
+    background: var(--accent); color: white; border: none; padding: 11px 18px;
+    border-radius: 8px; cursor: pointer; font-weight: 600;
+  }
+  button:hover { background: var(--accent-hover); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  #downloadZipBtn { background: var(--ok); display: none; }
+  #downloadZipBtn:hover { background: var(--ok-hover); }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 16px; }
+  #fileList { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .file-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem;
+  }
+  .file-item .name { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; flex: 1; word-break: break-all; }
+  .file-item .status { color: var(--muted); white-space: nowrap; font-size: 0.8rem; }
+  .file-item.ok .status { color: var(--ok); }
+  .file-item.err .status { color: var(--err); }
+  .spinner {
+    width: 13px; height: 13px; border-radius: 50%;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    animation: spin 0.7s linear infinite; flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #log {
+    background: var(--mono-bg); color: var(--mono-text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.78rem;
+    padding: 14px; border-radius: 8px; white-space: pre-wrap; overflow-x: auto;
+    max-height: 300px; overflow-y: auto; display: none; line-height: 1.5;
+  }
+  .badge {
+    display: inline-block; font-size: 0.72rem; padding: 2px 8px; border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent);
+    font-weight: 600; margin-left: 8px;
+  }
+  footer { color: var(--muted); font-size: 0.78rem; text-align: center; margin-top: 26px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🔧 Mesh → OBJ <span class="badge">lote, hasta 10 archivos</span></h1>
+  <p class="subtitle">
+    Convierte varios archivos <code>.mesh</code> de Assetto Corsa EVO a <code>.obj</code> + <code>.mtl</code> (con materiales),
+    todo en tu navegador — nada se sube a ningún servidor. Al terminar, descarga todo junto en un único ZIP.
+  </p>
+
+  <div class="panel">
+    <div id="dropzone">
+      <p class="main">Arrastra aquí tus archivos .mesh (hasta 10)</p>
+      <p class="hint">o haz clic para elegirlos</p>
+    </div>
+    <input type="file" id="fileInput" accept=".mesh" multiple>
+
+    <div id="fileList"></div>
+
+    <div class="row">
+      <button id="convertBtn" disabled>Convertir todo</button>
+      <button id="downloadZipBtn">⬇ Descargar ZIP (obj + mtl)</button>
+    </div>
+  </div>
+
+  <div class="panel" id="logPanel" style="display:none">
+    <div id="log"></div>
+  </div>
+
+  <footer>
+    Decodifica la estructura interna tipo Protocol Buffers del .mesh (posiciones, normales, UVs, índices de
+    triángulos y rangos de material) directamente en JavaScript, sin subir nada a ningún servidor.
+    El ZIP se genera también en tu navegador con JSZip.
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const MAX_FILES = 10;
+
+  // ---------------------------------------------------------------------
+  // Decodificador genérico "protobuf a mano" (tag/wiretype + varint/bytes)
+  // ---------------------------------------------------------------------
+
+  function readVarint(bytes, pos) {
+    let result = 0, shift = 0, start = pos;
+    while (true) {
+      if (pos >= bytes.length) throw new Error("varint truncado");
+      const b = bytes[pos]; pos++;
+      result |= (b & 0x7f) << shift;
+      if (!(b & 0x80)) break;
+      shift += 7;
+      if (pos - start > 10) throw new Error("varint demasiado largo");
+    }
+    return [result >>> 0, pos];
+  }
+
+  function decode(bytes, pos, end, maxFields) {
+    const fields = [];
+    let count = 0;
+    while (pos < end) {
+      if (maxFields && count >= maxFields) break;
+      const startTagPos = pos;
+      let tag;
+      try { [tag, pos] = readVarint(bytes, pos); }
+      catch (e) { break; }
+      const fieldNo = tag >>> 3;
+      const wireType = tag & 0x7;
+      if (fieldNo === 0 || wireType > 5) { pos = startTagPos; break; }
+      try {
+        if (wireType === 0) {
+          const [val, newPos] = readVarint(bytes, pos);
+          pos = newPos;
+          fields.push({ fn: fieldNo, wt: 'varint', val });
+        } else if (wireType === 1) {
+          const val = bytes.subarray(pos, pos + 8); pos += 8;
+          fields.push({ fn: fieldNo, wt: 'fixed64', val });
+        } else if (wireType === 2) {
+          const [length, newPos] = readVarint(bytes, pos);
+          pos = newPos;
+          if (pos + length > end) { pos = startTagPos; break; }
+          const val = bytes.subarray(pos, pos + length); pos += length;
+          fields.push({ fn: fieldNo, wt: 'bytes', val });
+        } else if (wireType === 5) {
+          const val = bytes.subarray(pos, pos + 4); pos += 4;
+          fields.push({ fn: fieldNo, wt: 'fixed32', val });
+        } else {
+          pos = startTagPos; break;
+        }
+      } catch (e) { pos = startTagPos; break; }
+      count++;
+    }
+    return { fields, pos };
+  }
+
+  function unpackFloats(bytes) {
+    const n = Math.floor(bytes.length / 4);
+    const copy = new Uint8Array(n * 4);
+    copy.set(bytes.subarray(0, n * 4));
+    return new Float32Array(copy.buffer);
+  }
+
+  function decodePackedVarints(bytes) {
+    const vals = [];
+    let p = 0;
+    while (p < bytes.length) {
+      const [v, newPos] = readVarint(bytes, p);
+      vals.push(v);
+      p = newPos;
+    }
+    return vals;
+  }
+
+  // ---------------------------------------------------------------------
+  // Conversión de un .mesh (ArrayBuffer) -> { objBlob, mtlBlob, stats }
+  // ---------------------------------------------------------------------
+
+  function convertMeshBytes(bytes, baseName, lodIndex) {
+    const { fields } = decode(bytes, 0, bytes.length, 50);
+    const lodGroups = fields.filter(f => f.fn === 5 && f.wt === 'bytes').map(f => f.val);
+    if (lodGroups.length === 0) throw new Error('No se encontraron datos de malla (campo 5).');
+    if (lodIndex === undefined || lodIndex >= lodGroups.length) lodIndex = 0;
+    const group = lodGroups[lodIndex];
+
+    const { fields: subfields } = decode(group, 0, group.length, 2000);
+
+    let positions = null, normals = null, uvs = null, indicesRaw = null;
+    const materialsRaw = [];
+    for (const f of subfields) {
+      if (f.wt !== 'bytes') continue;
+      if (f.fn === 5) positions = unpackFloats(f.val);
+      else if (f.fn === 6) normals = unpackFloats(f.val);
+      else if (f.fn === 7) uvs = unpackFloats(f.val);
+      else if (f.fn === 11) indicesRaw = f.val;
+      else if (f.fn === 4) materialsRaw.push(f.val);
+    }
+    if (!positions) throw new Error('No se encontraron posiciones de vértice en este LOD.');
+
+    const materials = [];
+    for (const m of materialsRaw) {
+      const { fields: mf } = decode(m, 0, m.length, 20);
+      let name = null, start = null, count = null;
+      for (const f2 of mf) {
+        if (f2.fn === 1 && f2.wt === 'bytes') name = new TextDecoder('utf-8').decode(f2.val);
+        else if (f2.fn === 2 && f2.wt === 'varint') start = f2.val;
+        else if (f2.fn === 3 && f2.wt === 'varint') count = f2.val;
+      }
+      if (name === null) continue;
+      materials.push({ name, start: start || 0, count: count || 0 });
+    }
+    materials.sort((a, b) => a.start - b.start);
+
+    const nverts = Math.floor(positions.length / 3);
+    const indices = indicesRaw ? decodePackedVarints(indicesRaw) : [];
+    const hasVt = uvs && uvs.length === nverts * 2;
+    const hasVn = normals && normals.length === nverts * 3;
+    const ntris = Math.floor(indices.length / 3);
+
+    const mtlFileName = baseName + '_LOD' + lodIndex + '.mtl';
+    const parts = [];
+    parts.push('# convertido en el navegador desde ' + baseName + '.mesh (LOD' + lodIndex + ')\n');
+    parts.push('# vertices: ' + nverts + ', triangulos: ' + ntris + '\n');
+    if (materials.length) parts.push('mtllib ' + mtlFileName + '\n');
+
+    for (let i = 0; i < nverts; i++) {
+      parts.push('v ' + positions[3*i].toFixed(6) + ' ' + positions[3*i+1].toFixed(6) + ' ' + positions[3*i+2].toFixed(6) + '\n');
+    }
+    if (hasVt) {
+      for (let i = 0; i < nverts; i++) {
+        parts.push('vt ' + uvs[2*i].toFixed(6) + ' ' + (1.0 - uvs[2*i+1]).toFixed(6) + '\n');
+      }
+    }
+    if (hasVn) {
+      for (let i = 0; i < nverts; i++) {
+        parts.push('vn ' + normals[3*i].toFixed(6) + ' ' + normals[3*i+1].toFixed(6) + ' ' + normals[3*i+2].toFixed(6) + '\n');
+      }
+    }
+
+    function pushFace(ia, ib, ic) {
+      const a = ia+1, b = ib+1, c = ic+1;
+      if (hasVt && hasVn) parts.push('f ' + a+'/'+a+'/'+a + ' ' + b+'/'+b+'/'+b + ' ' + c+'/'+c+'/'+c + '\n');
+      else if (hasVn) parts.push('f ' + a+'//'+a + ' ' + b+'//'+b + ' ' + c+'//'+c + '\n');
+      else if (hasVt) parts.push('f ' + a+'/'+a + ' ' + b+'/'+b + ' ' + c+'/'+c + '\n');
+      else parts.push('f ' + a + ' ' + b + ' ' + c + '\n');
+    }
+
+    if (ntris > 0 && materials.length) {
+      let coveredEnd = 0;
+      for (const m of materials) {
+        parts.push('g ' + m.name + '\n');
+        parts.push('usemtl ' + m.name + '\n');
+        for (let t = m.start; t < m.start + m.count - 2; t += 3) pushFace(indices[t], indices[t+1], indices[t+2]);
+        coveredEnd = Math.max(coveredEnd, m.start + m.count);
+      }
+      if (coveredEnd < indices.length) {
+        parts.push('g SIN_MATERIAL\n');
+        for (let t = coveredEnd; t < indices.length - 2; t += 3) pushFace(indices[t], indices[t+1], indices[t+2]);
+      }
+    } else if (ntris > 0) {
+      for (let t = 0; t < indices.length - 2; t += 3) pushFace(indices[t], indices[t+1], indices[t+2]);
+    }
+
+    const objBlob = new Blob(parts, { type: 'text/plain' });
+
+    let mtlBlob = null;
+    if (materials.length) {
+      const mtlParts = [];
+      for (const m of materials) {
+        mtlParts.push('newmtl ' + m.name + '\n');
+        mtlParts.push('Ka 1.000 1.000 1.000\n');
+        mtlParts.push('Kd 0.800 0.800 0.800\n');
+        mtlParts.push('Ks 0.100 0.100 0.100\n');
+        mtlParts.push('d 1.0\n');
+        mtlParts.push('illum 2\n\n');
+      }
+      mtlBlob = new Blob(mtlParts, { type: 'text/plain' });
+    }
+
+    return {
+      objBlob, mtlBlob, mtlFileName,
+      stats: { nverts, ntris, hasVt, hasVn, nmats: materials.length, lodCount: lodGroups.length, lodIndex }
+    };
+  }
+
+  // ---------------------------------------------------------------------
+  // UI
+  // ---------------------------------------------------------------------
+
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const fileListEl = document.getElementById('fileList');
+  const convertBtn = document.getElementById('convertBtn');
+  const downloadZipBtn = document.getElementById('downloadZipBtn');
+  const logPanel = document.getElementById('logPanel');
+  const logEl = document.getElementById('log');
+
+  let queue = []; // { file, rowEl, statusEl, result: {objBlob, mtlBlob, mtlFileName} | null, error }
+
+  function log(msg) {
+    logPanel.style.display = 'block';
+    logEl.textContent += msg + "\n";
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  dropzone.addEventListener('click', () => fileInput.click());
+  ['dragenter', 'dragover'].forEach(evt =>
+    dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add('drag'); })
+  );
+  ['dragleave', 'drop'].forEach(evt =>
+    dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.remove('drag'); })
+  );
+  dropzone.addEventListener('drop', e => {
+    handleFiles(Array.from(e.dataTransfer.files).filter(f => f.name.toLowerCase().endsWith('.mesh')));
+  });
+  fileInput.addEventListener('change', e => {
+    handleFiles(Array.from(e.target.files));
+  });
+
+  function handleFiles(files) {
+    if (files.length === 0) return;
+    logEl.textContent = '';
+    logPanel.style.display = 'none';
+    downloadZipBtn.style.display = 'none';
+
+    let capped = false;
+    if (files.length > MAX_FILES) {
+      files = files.slice(0, MAX_FILES);
+      capped = true;
+    }
+
+    fileListEl.innerHTML = '';
+    queue = files.map(file => {
+      const row = document.createElement('div');
+      row.className = 'file-item';
+      row.innerHTML = '<span class="name"></span><span class="status">pendiente</span>';
+      row.querySelector('.name').textContent = file.name + '  (' + (file.size/1024/1024).toFixed(2) + ' MB)';
+      fileListEl.appendChild(row);
+      return { file, rowEl: row, statusEl: row.querySelector('.status'), result: null, error: null };
+    });
+
+    convertBtn.disabled = false;
+    if (capped) log('Se soltaron más de ' + MAX_FILES + ' archivos; solo se usarán los primeros ' + MAX_FILES + '.');
+  }
+
+  convertBtn.addEventListener('click', () => {
+    convertBtn.disabled = true;
+    downloadZipBtn.style.display = 'none';
+    setTimeout(runAll, 30);
+  });
+
+  async function runAll() {
+    for (const item of queue) {
+      item.statusEl.innerHTML = '<span class="spinner"></span> convirtiendo…';
+      item.rowEl.classList.remove('ok', 'err');
+      // ceder el hilo para que la UI pinte el spinner antes de bloquear con el parseo
+      await new Promise(r => setTimeout(r, 20));
+      try {
+        const buf = await item.file.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        const baseName = item.file.name.replace(/\.mesh$/i, '');
+        const result = convertMeshBytes(bytes, baseName, 0);
+        item.result = result;
+        item.baseName = baseName;
+        item.rowEl.classList.add('ok');
+        item.statusEl.textContent = 'OK — ' + result.stats.nverts.toLocaleString('es') + ' v, ' +
+          result.stats.ntris.toLocaleString('es') + ' tri, ' + result.stats.nmats + ' mat.';
+        log(item.file.name + ': ' + result.stats.nverts + ' vertices, ' + result.stats.ntris +
+          ' triangulos, ' + result.stats.nmats + ' materiales (LOD0 de ' + result.stats.lodCount + ')');
+      } catch (err) {
+        item.error = err;
+        item.rowEl.classList.add('err');
+        item.statusEl.textContent = 'ERROR';
+        log(item.file.name + ': ERROR — ' + (err && err.message ? err.message : err));
+      }
+    }
+
+    const okCount = queue.filter(q => q.result).length;
+    if (okCount > 0) {
+      downloadZipBtn.style.display = 'inline-block';
+      log('Listo: ' + okCount + '/' + queue.length + ' archivos convertidos. Pulsa "Descargar ZIP".');
+    }
+    convertBtn.disabled = false;
+  }
+
+  downloadZipBtn.addEventListener('click', async () => {
+    downloadZipBtn.disabled = true;
+    downloadZipBtn.textContent = 'Generando ZIP…';
+    try {
+      const zip = new JSZip();
+      for (const item of queue) {
+        if (!item.result) continue;
+        const objName = item.baseName + '_LOD' + item.result.stats.lodIndex + '.obj';
+        zip.file(objName, item.result.objBlob);
+        if (item.result.mtlBlob) {
+          zip.file(item.result.mtlFileName, item.result.mtlBlob);
+        }
+      }
+      const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 3 } });
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'coches_obj.zip';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (err) {
+      log('ERROR generando el ZIP: ' + (err && err.message ? err.message : err));
+    }
+    downloadZipBtn.disabled = false;
+    downloadZipBtn.textContent = '⬇ Descargar ZIP (obj + mtl)';
+  });
+})();
+</script>
+</body>
+</html>
