@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resultados · Ronda 1 · Race Online Shop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --asphalt:#0B0D10; --panel:#14171C; --panel-2:#1B1F26; --hairline:#262B33;
+    --text:#E7EAEE; --text-dim:#8B93A1; --cyan:#f01c26; --cyan-dim:#4d1a1c;
+    --amber:#FFB020; --amber-dim:rgba(255,176,32,0.12); --danger:#FF4757; --danger-dim:rgba(255,71,87,0.12);
+    --green:#00E5C7; --green-dim:rgba(0,229,199,0.12); --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:radial-gradient(1200px 600px at 10% -10%, rgba(0,229,199,0.06), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(255,176,32,0.05), transparent 55%), var(--asphalt);
+    color:var(--text); font-family:'Inter',system-ui,sans-serif; min-height:100vh;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  h1,h2,h3,.display{font-family:'Teko',sans-serif;font-weight:600;letter-spacing:.3px;}
+
+  header.topbar{position:sticky;top:0;z-index:50;background:rgba(11,13,16,0.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--hairline);}
+  .topbar-inner{max-width:1400px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+  .brand{display:flex;align-items:center;gap:14px;}
+  .brand h1{font-size:24px;margin:0;line-height:1;}
+  .brand span{display:block;font-size:11px;color:var(--text-dim);letter-spacing:1.5px;text-transform:uppercase;font-family:'Inter',sans-serif;}
+  .back-link{color:var(--text-dim);text-decoration:none;font-size:13px;border:1px solid var(--hairline);padding:8px 14px;border-radius:8px;white-space:nowrap;}
+  .back-link:hover{color:var(--text);border-color:#39404C;}
+
+  main{max-width:1400px;margin:0 auto;padding:28px 20px 80px;}
+
+  .info-card{background:var(--panel);border:1px solid var(--hairline);border-radius:var(--radius);padding:20px 24px;margin-bottom:26px;}
+  .info-row{display:flex;align-items:baseline;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--hairline);gap:16px;}
+  .info-row:last-child{border-bottom:none;}
+  .info-row .k{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);font-weight:700;white-space:nowrap;}
+  .info-row .v{font-family:'JetBrains Mono',monospace;font-size:15px;color:var(--text);text-align:right;}
+
+  .pillbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+  .pill{padding:8px 16px;border-radius:999px;border:1px solid var(--hairline);background:var(--panel);color:var(--text-dim);font-size:13.5px;cursor:pointer;transition:all .15s ease;font-family:'Inter',sans-serif;font-weight:500;}
+  .pill.active{background:var(--cyan-dim);border-color:var(--cyan);color:var(--cyan);}
+  .pill:hover{color:var(--text);}
+
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;animation:fadeIn .2s ease;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+  .checkered-divider{height:8px;border-radius:4px;margin:18px 0;
+    background-image:linear-gradient(45deg,#0B0D10 25%,transparent 25%,transparent 75%,#0B0D10 75%,#0B0D10),
+      linear-gradient(45deg,#0B0D10 25%,transparent 25%,transparent 75%,#0B0D10 75%,#0B0D10);
+    background-size:12px 12px;background-position:0 0,6px 6px;background-color:#3a3f47;opacity:.5;}
+
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  thead th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);padding:10px 12px;border-bottom:1px solid var(--hairline);font-weight:600;white-space:nowrap;}
+  tbody td{padding:11px 12px;border-bottom:1px solid var(--hairline);white-space:nowrap;}
+  tbody tr:hover{background:var(--panel-2);}
+  .table-wrap{background:var(--panel);border:1px solid var(--hairline);border-radius:var(--radius);overflow:hidden;overflow-x:auto;}
+  .clickable-row{cursor:pointer;}
+
+  .pos-badge{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;background:var(--panel-2);color:var(--text-dim);}
+  .pos-badge.p1{background:var(--amber-dim);color:var(--amber);}
+  .pos-badge.p2{background:rgba(139,147,161,0.18);color:#C9CFD8;}
+  .pos-badge.p3{background:rgba(205,127,50,0.18);color:#CD7F32;}
+
+  .class-tag{font-size:10.5px;padding:3px 8px;border-radius:5px;text-transform:uppercase;letter-spacing:.5px;background:var(--panel-2);color:var(--text-dim);border:1px solid var(--hairline);font-weight:600;}
+  .badge{display:inline-flex;align-items:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;padding:3px 10px;border-radius:6px;letter-spacing:.5px;}
+  .dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px;background:currentColor;}
+  .lic-SIL{background:rgba(198,205,212,0.14);color:#D7DCE2;}
+  .lic-AMA{background:rgba(201,138,74,0.16);color:#E3A468;}
+  .lic-PAM{background:rgba(232,195,60,0.16);color:#F5D34A;}
+  .lic-PRO{background:#050607;color:#F0F0F0;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.22);}
+  .lic-default{background:var(--panel-2);color:var(--text-dim);}
+
+  .lap-invalida{color:var(--danger);}
+  .lap-mejor{color:var(--amber);font-weight:700;}
+  .lap-personal{font-weight:700;}
+
+  .overlay{position:fixed;inset:0;background:rgba(5,6,8,0.7);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+  .overlay.show{display:flex;}
+  .modal{width:100%;max-width:820px;background:var(--panel);border:1px solid var(--hairline);border-radius:14px;padding:22px;max-height:88vh;overflow-y:auto;position:relative;}
+  .modal h3{margin:0 0 4px;font-size:22px;}
+  .modal-close-x{position:absolute;top:14px;right:14px;width:28px;height:28px;border-radius:50%;background:var(--panel-2);border:1px solid var(--hairline);color:var(--text-dim);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;line-height:1;}
+  .modal-close-x:hover{color:var(--text);border-color:#39404C;}
+  .modal-actions{display:flex;gap:10px;margin-top:18px;}
+  button.action{width:100%;padding:10px;border-radius:8px;border:none;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;}
+  button.ghost{background:transparent;color:var(--text-dim);border:1px solid var(--hairline);}
+  button.ghost:hover{color:var(--text);}
+
+  .spinner{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,0.25);border-top-color:currentColor;display:inline-block;animation:spin .7s linear infinite;margin-right:8px;vertical-align:-2px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .empty-state{padding:40px 20px;text-align:center;color:var(--text-dim);}
+
+  .chart-tooltip{position:absolute;display:none;background:var(--panel-2);border:1px solid var(--hairline);border-radius:8px;padding:8px 11px;font-size:12px;line-height:1.5;color:var(--text);pointer-events:none;z-index:20;box-shadow:0 8px 20px rgba(0,0,0,0.35);white-space:nowrap;}
+
+  .pen-rojo{color:var(--danger);font-family:'JetBrains Mono',monospace;font-weight:700;}
+  .tiempos-controls{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+  .tiempos-controls select{background:var(--panel-2);color:var(--text);border:1px solid var(--hairline);border-left-width:5px;border-radius:8px;padding:9px 12px;font-size:13.5px;font-family:'Inter',sans-serif;min-width:220px;cursor:pointer;}
+  .tiempos-legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;font-size:12.5px;color:var(--text-dim);}
+  .tiempos-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;}
+  .sub-title{font-family:'Teko',sans-serif;font-size:22px;font-weight:600;margin:22px 0 10px;letter-spacing:.3px;}
+  .sub-title:first-child{margin-top:0;}
+  #toasts{position:fixed;bottom:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:10px;max-width:320px;}
+  .toast{padding:13px 16px;border-radius:10px;font-size:13.5px;border:1px solid var(--hairline);background:var(--panel-2);box-shadow:0 8px 24px rgba(0,0,0,0.4);}
+  .toast.err{border-color:rgba(255,71,87,0.4);}
+
+  @media (max-width:640px){
+    .info-row{flex-direction:column;align-items:flex-start;gap:2px;}
+    .info-row .v{text-align:left;}
+    table{font-size:12.5px;}
+    thead th, tbody td{padding:8px 8px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div>
+        <h1>Resultados de carrera</h1>
+        <span>Race Online Shop · Assetto Corsa Evo Academy</span>
+      </div>
+    </div>
+    <a class="back-link" href="index.html">← Volver al concesionario</a>
+  </div>
+</header>
+
+<main>
+  <div class="info-card" id="infoSesion">
+    <div class="empty-state"><span class="spinner"></span>Cargando datos de la carrera, espere…</div>
+  </div>
+
+  <div class="pillbar" id="raceTabs">
+    <button class="pill active" data-tab="clasificacion">Clasificación</button>
+    <button class="pill" data-tab="mejoresvueltas">Mejores vueltas</button>
+    <button class="pill" data-tab="consistencia">Consistencia</button>
+    <button class="pill" data-tab="lideradas">Lideradas</button>
+    <button class="pill" data-tab="sectores">Sectores</button>
+    <button class="pill" data-tab="posiciones">Posiciones</button>
+    <button class="pill" data-tab="tiempos">Tiempos</button>
+    <button class="pill" data-tab="penalizaciones">Penalizaciones</button>
+  </div>
+  <div class="checkered-divider"></div>
+
+  <div class="tab-panel active" id="panel-clasificacion">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th>Equipo</th><th>Marca</th><th>Espec.</th><th>Tiempo</th><th>Gap</th><th>Pen.</th><th>Mejor V.</th><th>Pits</th></tr>
+        </thead>
+        <tbody id="tablaClasificacion"><tr><td colspan="12" style="color:var(--text-dim);"><span class="spinner"></span>Cargando…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-mejoresvueltas">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th>Marca</th><th>Vehículo</th><th>Tiempo</th><th>Gap</th></tr></thead>
+        <tbody id="tablaMejoresVueltas"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-consistencia">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th>Marca</th><th>Vehículo</th><th>Consistencia</th></tr></thead>
+        <tbody id="tablaConsistencia"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-lideradas">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th>Marca</th><th>Vehículo</th><th>Vueltas lideradas</th></tr></thead>
+        <tbody id="tablaLideradas"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-sectores">
+    <div class="pillbar" id="sectorTabs"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th>Marca</th><th>Vehículo</th><th>Tiempo</th><th>Gap</th></tr></thead>
+        <tbody id="tablaSectores"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-posiciones"></div>
+  <div class="tab-panel" id="panel-tiempos"></div>
+  <div class="tab-panel" id="panel-penalizaciones"></div>
+</main>
+
+<div class="overlay" id="modalVueltas">
+  <div class="modal">
+    <button type="button" class="modal-close-x" id="btnCerrarModalVueltas">✕</button>
+    <h3 id="modalVueltasTitulo">Vueltas del piloto</h3>
+    <p class="sub" style="color:var(--text-dim);font-size:13px;margin:0 0 16px;">
+      <span style="color:var(--danger);">●</span> vuelta inválida &nbsp;&nbsp;
+      <span style="color:var(--amber);">●</span> vuelta rápida de la carrera
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead id="modalVueltasThead"></thead>
+        <tbody id="modalVueltasBody"></tbody>
+      </table>
+    </div>
+    <div class="modal-actions"><button class="action ghost" id="btnCerrarModalVueltas2">Cerrar</button></div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+// ------------------------------------------------------------
+// CONFIGURACIÓN
+// ------------------------------------------------------------
+// Mismo backend/CDN que usa index.html, para reutilizar la lista de Pilotos
+// (Nombre, Licencia, Equipo, Clase, Marca...) y cruzarla por Player_id (Steam id)
+// con el JSON de resultados del juego.
+const API_URL = 'https://script.google.com/macros/s/AKfycbwO9vraqdENCW_UKLmlNZCGm8b1s5H_4Xyj6SumvOGQ2yLlbJITU2yu-K3KrIwW9xlZyA/exec';
+const STATIC_DATA_URL = 'https://cdn.jsdelivr.net/gh/race-online/academy@main/data/race-data.json';
+
+// Número de ronda de ESTE archivo. En R2.html/R3.html/R4.html cambia solo esta línea.
+const RONDA_NUMERO = 2;
+
+// URL de ejemplo (la que nos diste) — se usa SOLO como último recurso si la
+// celda de la columna G de "Calendario" para esta Ronda está vacía (para la
+// Ronda 1 es la celda G2).
+const JSON_MUESTRA_FALLBACK = 'https://es3.assettohosting.com:50845/results/results_20260920_203601_race.json/download';
+
+let PILOTOS = [];
+let CALENDARIO = [];
+let LOGOS_FORZAR_BLANCO = {};
+let RACE = null;
+let DRIVERS_MAP = {}, CARS_MAP = {}, LAPS_BY_DRIVER = {}, RESULTS = [];
+let SECTOR_COUNT = 2;
+let GLOBAL_BEST = { time: Infinity, key: null };
+let POSICIONES_POR_VUELTA = [];
+let PENALIZACIONES_POR_COCHE = {};
+let PILOTOS_POR_STEAM = {};
+let sectorActivo = 1;
+
+// ------------------------------------------------------------
+// UTILIDADES (mismas que index.html)
+// ------------------------------------------------------------
+function esc(v){
+  return String(v === null || v === undefined ? '' : v)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function normKey_(s){
+  return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]/g,"").trim();
+}
+function getVal(obj, keyBase){
+  if(!obj) return '';
+  const target = normKey_(keyBase);
+  const key = Object.keys(obj).find(k => normKey_(k) === target);
+  return key ? obj[key] : '';
+}
+function pad2(n){ return (n<10?'0':'')+n; }
+function pad3(n){ return (n<10?'00':(n<100?'0':''))+n; }
+
+function fmtLap(ms){
+  if(ms===null||ms===undefined||isNaN(ms)) return '—';
+  const t=Math.round(ms), min=Math.floor(t/60000), sec=Math.floor((t%60000)/1000), mil=t%1000;
+  return min+':'+pad2(sec)+'.'+pad3(mil);
+}
+function fmtTotal(ms){
+  if(ms===null||ms===undefined||isNaN(ms)) return '—';
+  const t=Math.round(ms), h=Math.floor(t/3600000), rem=t%3600000;
+  const min=Math.floor(rem/60000), sec=Math.floor((rem%60000)/1000), mil=rem%1000;
+  if(h>0) return h+':'+pad2(min)+':'+pad2(sec)+'.'+pad3(mil);
+  return min+':'+pad2(sec)+'.'+pad3(mil);
+}
+function fmtGapPuro_(ms){
+  const t=Math.round(ms), min=Math.floor(t/60000), sec=Math.floor((t%60000)/1000), mil=t%1000;
+  if(min>0) return min+':'+pad2(sec)+'.'+pad3(mil);
+  return sec+'.'+pad3(mil);
+}
+function gk(o){ return o ? String(o.a)+'|'+String(o.b) : ''; }
+
+// Devuelve el valor de la columna E (5ª columna) de una fila de "Calendario",
+// leyendo por POSICIÓN y no por nombre de cabecera (igual que hace code.gs con
+// Coche_Principal/Player_id/Coins), para no depender de cómo se llame la
+// cabecera en E1. Para la Ronda 1 esto es la celda E2, para la Ronda 2 sería
+// E3, etc. (la fila de datos que corresponda a esa Ronda en la hoja).
+function columnaG_(obj){
+  if(!obj) return '';
+  const keys = Object.keys(obj);
+  return keys.length>=5 ? obj[keys[4]] : '';
+}
+
+// Bit 1 (valor 2) = vuelta válida; bit 0 (valor 1) = vuelta con corte/inválida.
+// Los bits 4 y 128 son modificadores (última vuelta, colisión…) que no afectan
+// a la validez del tiempo. Deducido y contrastado con tu ejemplo: la vuelta
+// rápida real de la carrera (135630 ms, Alvaro Rico) tiene flags=2.
+function esLapValida(flags){ return (flags & 2) === 2; }
+
+function licenciaInfo_(lic){
+  const key = String(lic||'').trim().toUpperCase();
+  const mapa = { SIL:{badgeClass:'lic-SIL'}, AMA:{badgeClass:'lic-AMA'}, PAM:{badgeClass:'lic-PAM'}, PRO:{badgeClass:'lic-PRO'} };
+  return mapa[key] || { badgeClass:'lic-default' };
+}
+function licenciaBadgeHtml(lic){
+  const l = String(lic||'').trim();
+  if(!l) return '';
+  return `<span class="badge ${licenciaInfo_(l).badgeClass}"><span class="dot"></span>${esc(l)}</span>`;
+}
+function marcaHtml(valor){
+  const val = String(valor||'').trim();
+  if(!val) return '';
+  const esUrl = val.startsWith('http://')||val.startsWith('https://')||val.startsWith('data:image');
+  if(!esUrl) return esc(val);
+  // Respeta el "Forzar logo blanco" de la pestaña CochesLogos (columna R), igual
+  // que hace index.html: se pinta el logo en blanco sobre fondo transparente.
+  const forzarBlanco = LOGOS_FORZAR_BLANCO[val] === true;
+  const filtro = forzarBlanco ? 'filter:brightness(0) invert(1);' : '';
+  return `<img src="${esc(val)}" alt="Marca" style="height:22px;max-width:56px;object-fit:contain;vertical-align:middle;${filtro}">`;
+}
+function claseTagHtml_(clase){
+  const c = String(clase||'').trim();
+  return c ? `<span class="class-tag">${esc(c)}</span>` : '';
+}
+function posBadgeHtml_(n){
+  const c = n===1?'p1':(n===2?'p2':(n===3?'p3':''));
+  return `<span class="pos-badge ${c}">${n}</span>`;
+}
+// Columnas comunes: Pos. | Clase | Piloto | Lic. | Marca
+function celdasIdent_(r, pos){
+  return `<td>${posBadgeHtml_(pos)}</td><td>${claseTagHtml_(r.clase)}</td><td>${esc(r.nombre)}</td>`
+       + `<td>${licenciaBadgeHtml(r.licencia)}</td><td style="text-align:center;">${marcaHtml(r.marca)}</td>`;
+}
+function fmtPenSeg_(ms){
+  const seg = ms/1000;
+  return '+' + (Number.isInteger(seg) ? seg : seg.toFixed(1)) + ' seg';
+}
+function penHtml_(ms){
+  return ms>0 ? `<span class="pen-rojo">${fmtPenSeg_(ms)}</span>` : '';
+}
+function toast(msg, type){
+  const el=document.createElement('div');
+  el.className='toast '+(type==='err'?'err':'');
+  el.textContent=msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(()=>el.remove(),4200);
+}
+
+// ------------------------------------------------------------
+// CARGA DE DATOS
+// ------------------------------------------------------------
+async function cargarPilotos_(){
+  try{
+    const res = await fetch(STATIC_DATA_URL,{cache:'no-store'});
+    if(res.ok){ const j = await res.json(); if(j && j.ok) return j.data; }
+  }catch(err){}
+  const res = await fetch(API_URL);
+  const j = await res.json();
+  if(!j.ok) throw new Error(j.error || 'Error al cargar los pilotos');
+  return j.data;
+}
+
+// El JSON del juego lo descarga el propio backend de Apps Script (UrlFetchApp),
+// que no tiene restricciones CORS, y nos lo devuelve tal cual. Hace falta añadir
+// la acción "raceJson" a code.gs — ver fragmento adjunto.
+async function cargarRaceJson_(url){
+  const proxyUrl = API_URL + '?action=raceJson&url=' + encodeURIComponent(url);
+  const res = await fetch(proxyUrl, {cache:'no-store'});
+  const j = await res.json();
+  if(!j.ok) throw new Error(j.error || 'No se pudo descargar el JSON de la carrera');
+  if(!j.race || !Array.isArray(j.race.driver_standings)){
+    // El backend respondió ok:true pero sin el campo "race": lo más probable
+    // es que la acción "raceJson" todavía no esté activa en code.gs (o que el
+    // Web App no se haya vuelto a desplegar tras añadirla).
+    throw new Error('El backend no devolvió el JSON de la carrera (acción "raceJson"). ' +
+      'Revisa que hayas: 1) pegado el bloque "if (action === \'raceJson\')" DENTRO de doGet(e), sin comentar; ' +
+      '2) vuelto a desplegar el Web App como nueva versión (Implementar → Administrar implementaciones → Editar → Nueva versión).');
+  }
+  return j.race;
+}
+
+async function iniciar(){
+  try{
+    const dataPilotos = await cargarPilotos_();
+    PILOTOS = dataPilotos.pilotos || [];
+    CALENDARIO = dataPilotos.calendario || [];
+    // Se combinan los dos mapas de "forzar logo blanco" (el de la tienda y el
+    // del Sheet externo de Resultados), por si la Marca viene de uno u otro.
+    LOGOS_FORZAR_BLANCO = Object.assign({}, dataPilotos.logosForzarBlancoPorUrl||{}, dataPilotos.logosForzarBlancoCarreras||{});
+  }catch(err){
+    toast('No se pudieron cargar los pilotos: ' + err.message, 'err');
+  }
+
+  const rondaInfo = CALENDARIO.find(c => String(getVal(c,'Ronda')) === String(RONDA_NUMERO));
+  const jsonUrl = rondaInfo ? columnaG_(rondaInfo) : '';
+
+  if(!jsonUrl){
+    document.getElementById('infoSesion').innerHTML = '<div class="empty-state">Todavía no hay resultados para esta ronda.</div>';
+    return;
+  }
+
+  try{
+    RACE = await cargarRaceJson_(jsonUrl);
+    procesarCarrera_();
+    renderCabecera_();
+    renderClasificacion_();
+    renderMejoresVueltas_();
+    renderConsistencia_();
+    renderLideradas_();
+    renderSectorTabs_();
+    renderSectorTabla_(1);
+    renderPosiciones_();
+    renderTiempos_();
+    renderPenalizaciones_();
+  }catch(err){
+    document.getElementById('infoSesion').innerHTML = '<div class="empty-state">No se pudo cargar la carrera: ' + esc(err.message) + '</div>';
+  }
+}
+
+// ------------------------------------------------------------
+// PROCESADO DEL JSON DE LA CARRERA
+// ------------------------------------------------------------
+function procesarCarrera_(){
+  DRIVERS_MAP={}; CARS_MAP={}; LAPS_BY_DRIVER={}; RESULTS=[]; PILOTOS_POR_STEAM={};
+  PENALIZACIONES_POR_COCHE={};
+  GLOBAL_BEST={time:Infinity, key:null};
+  SECTOR_COUNT = 2;
+
+  PILOTOS.forEach(p=>{
+    const sid = String(getVal(p,'Player_id')||'').trim();
+    if(sid) PILOTOS_POR_STEAM[sid] = p;
+  });
+
+  (RACE.drivers||[]).forEach(d=> DRIVERS_MAP[gk(d.guid)] = d );
+  (RACE.cars||[]).forEach(c=> CARS_MAP[gk(c.car_id)] = c );
+
+  const carDeDriver = {};
+  (RACE.laps||[]).forEach(l=>{
+    const k = gk(l.driver_key);
+    if(!LAPS_BY_DRIVER[k]) LAPS_BY_DRIVER[k]=[];
+    LAPS_BY_DRIVER[k].push(l);
+    if(!carDeDriver[k]) carDeDriver[k]=gk(l.car_key);
+    if(Array.isArray(l.split)) SECTOR_COUNT = Math.max(SECTOR_COUNT, l.split.length);
+    if(esLapValida(l.flags) && l.time < GLOBAL_BEST.time) GLOBAL_BEST = { time:l.time, key:k };
+  });
+
+  // Penalizaciones (penalty_collection.session_penalties), agrupadas por coche.
+  // Solo las de tipo "Time_Penalty_Seconds" suman tiempo; los avisos (Warning)
+  // se listan pero valen 0 ms. Se leen tanto las pendientes como las resueltas.
+  const penColl = (RACE.penalty_collection && RACE.penalty_collection.session_penalties) || [];
+  penColl.forEach(sp=>{
+    const ck = gk(sp.car_id);
+    const todas = [].concat(sp.cleared_penalties||[], sp.pending_penalties||[]);
+    todas.forEach(p=>{
+      const pd = p.penalty_data || {};
+      const esTiempo = String(pd.type||'').indexOf('Time_Penalty') !== -1;
+      const esAviso = String(pd.type||'').indexOf('Warning') !== -1;
+      if(!PENALIZACIONES_POR_COCHE[ck]) PENALIZACIONES_POR_COCHE[ck]=[];
+      PENALIZACIONES_POR_COCHE[ck].push({
+        tipo: esTiempo ? 'Sanción de tiempo' : (esAviso ? 'Aviso' : String(pd.type||'').replace(/^PenaltyType_/,'').replace(/_/g,' ')),
+        ms: esTiempo ? (Number(pd.penalty_time_ms)||0) : 0,
+        vuelta: Number(p.given_lap_count)||0,
+        motivo: String(p.investigation||'').replace(/^InvestigationType_/,'').replace(/^Racecar_Cut$/,'Corte de pista').replace(/_/g,' ')
+      });
+    });
+  });
+  Object.keys(PENALIZACIONES_POR_COCHE).forEach(ck=> PENALIZACIONES_POR_COCHE[ck].sort((x,y)=>x.vuelta-y.vuelta));
+  function penDe_(driverKey){ return PENALIZACIONES_POR_COCHE[carDeDriver[driverKey]] || []; }
+  function penMsDe_(driverKey){ return penDe_(driverKey).reduce((acc,p)=>acc+p.ms,0); }
+
+  // Tiempo bruto (suma de vueltas) y tiempo final = bruto + penalizaciones.
+  const tiempoBrutoPorClave = {}, tiempoFinalPorClave = {};
+  Object.keys(LAPS_BY_DRIVER).forEach(k=>{
+    tiempoBrutoPorClave[k] = LAPS_BY_DRIVER[k].reduce((acc,l)=> acc + (Number(l.time)||0), 0);
+    tiempoFinalPorClave[k] = tiempoBrutoPorClave[k] + penMsDe_(k);
+  });
+
+  // Clasificación FINAL: más vueltas primero y, con las mismas vueltas, menor
+  // tiempo con penalizaciones incluidas. (Ya no se usa el orden de
+  // driver_standings, que no aplicaba las sanciones al ganador.)
+  const baseKeys = (RACE.driver_standings||[]).map(gk).filter(k=>LAPS_BY_DRIVER[k]);
+  Object.keys(LAPS_BY_DRIVER).forEach(k=>{ if(baseKeys.indexOf(k)===-1) baseKeys.push(k); });
+  const ordenFinal = baseKeys.map((k,i)=>({k,i})).sort((x,y)=>{
+    const lv = LAPS_BY_DRIVER[y.k].length - LAPS_BY_DRIVER[x.k].length;
+    if(lv!==0) return lv;
+    const dt = tiempoFinalPorClave[x.k] - tiempoFinalPorClave[y.k];
+    return dt!==0 ? dt : x.i - y.i;
+  }).map(o=>o.k);
+
+  // Posiciones por vuelta (para "Lideradas" y el gráfico de "Posiciones"): en
+  // cada vuelta N se ordenan los pilotos que ya completaron N vueltas por su
+  // tiempo acumulado MÁS las penalizaciones recibidas hasta esa vuelta.
+  const cumData = {};
+  Object.keys(LAPS_BY_DRIVER).forEach(k=>{
+    let acc=0;
+    const pens = penDe_(k);
+    cumData[k] = LAPS_BY_DRIVER[k].map((l,i)=>{
+      acc += l.time;
+      const penHasta = pens.filter(p=>p.vuelta<=i+1).reduce((a,p)=>a+p.ms,0);
+      return acc + penHasta;
+    });
+  });
+  const maxLaps = Object.values(cumData).reduce((m,a)=>Math.max(m,a.length),0);
+  POSICIONES_POR_VUELTA = [];
+  const ledCounts = {};
+  for(let lapNum=1; lapNum<=maxLaps; lapNum++){
+    const activos = Object.keys(cumData).filter(k=> cumData[k].length >= lapNum);
+    activos.sort((a,b)=> cumData[a][lapNum-1] - cumData[b][lapNum-1]);
+    // En la última vuelta se fuerza la clasificación final calculada arriba.
+    if(lapNum===maxLaps){
+      const fin = ordenFinal.filter(k=>activos.includes(k));
+      activos.forEach(k=>{ if(!fin.includes(k)) fin.push(k); });
+      activos.length = 0; fin.forEach(k=>activos.push(k));
+    }
+    POSICIONES_POR_VUELTA.push({ lap:lapNum, orden:activos });
+    if(activos.length) ledCounts[activos[0]] = (ledCounts[activos[0]]||0) + 1;
+  }
+
+  const leaderKey = ordenFinal[0];
+  const leaderLaps = (LAPS_BY_DRIVER[leaderKey]||[]).length;
+  const leaderTime = tiempoFinalPorClave[leaderKey];
+
+  RESULTS = ordenFinal.map((key, idx)=>{
+    const driverInfo = DRIVERS_MAP[key] || {};
+    const steamId = String(driverInfo.player_id||'').trim();
+    const pilotoSheet = PILOTOS_POR_STEAM[steamId] || null;
+    const claveCoche = carDeDriver[key];
+    const carInfo = claveCoche ? (CARS_MAP[claveCoche]||{}) : {};
+    const laps = LAPS_BY_DRIVER[key] || [];
+    const validTimes = laps.filter(l=>esLapValida(l.flags)).map(l=>l.time);
+    const bestOwn = validTimes.length ? Math.min.apply(null, validTimes)
+                    : (laps.length ? Math.min.apply(null, laps.map(l=>l.time)) : null);
+    const nombreJson = (String(driverInfo.first_name||'')+' '+String(driverInfo.last_name||'')).trim() || driverInfo.nickname || 'Piloto';
+
+    const miTiempoTotal = tiempoFinalPorClave[key];
+    let gapTexto;
+    if(idx===0){ gapTexto='Líder'; }
+    else if(laps.length < leaderLaps){
+      const dif = leaderLaps - laps.length;
+      gapTexto = '+' + dif + (dif===1 ? ' vuelta' : ' vueltas');
+    } else if(typeof miTiempoTotal==='number' && typeof leaderTime==='number'){
+      gapTexto = '+' + fmtGapPuro_(miTiempoTotal - leaderTime);
+    } else { gapTexto=''; }
+
+    // Consistencia = mejor vuelta propia / media de sus vueltas (sin contar la
+    // primera ni la última) * 100.
+    let consistencia = null;
+    if(bestOwn){
+      const sub = laps.length>=3 ? laps.slice(1,-1).map(l=>l.time) : laps.map(l=>l.time);
+      if(sub.length){
+        const media = sub.reduce((a,b)=>a+b,0)/sub.length;
+        consistencia = (bestOwn/media)*100;
+      }
+    }
+
+    return {
+      key, posicion: idx+1,
+      nombre: pilotoSheet ? (getVal(pilotoSheet,'Nombre_Piloto') || nombreJson) : nombreJson,
+      pilotoSheet,
+      vehiculo: carInfo.model_displayname || '',
+      licencia: pilotoSheet ? getVal(pilotoSheet,'Licencia') : '',
+      equipo: pilotoSheet ? getVal(pilotoSheet,'Equipo') : '',
+      clase: pilotoSheet ? getVal(pilotoSheet,'Clase') : '',
+      marca: pilotoSheet ? getVal(pilotoSheet,'Marca') : '',
+      laps, numVueltas: laps.length, bestOwn, gapTexto,
+      tiempoTotal: miTiempoTotal, tiempoBruto: tiempoBrutoPorClave[key],
+      penalizaciones: penDe_(key), penMs: penMsDe_(key),
+      consistencia, ledLaps: ledCounts[key]||0
+    };
+  });
+}
+
+// ------------------------------------------------------------
+// CABECERA (estilo simresults)
+// ------------------------------------------------------------
+function renderCabecera_(){
+  const sessionMap = { Race:'Carrera', Qualify:'Clasificación', Practice:'Entrenamientos' };
+  const sessionEs = sessionMap[RACE.session_type] || RACE.session_type || '—';
+  const track = (RACE.track_name||'') + (RACE.track_layout_name ? (', '+RACE.track_layout_name) : '');
+  const winner = RESULTS[0];
+  const lideradorMax = RESULTS.slice().sort((a,b)=>b.ledLaps-a.ledLaps)[0];
+  const bestResult = RESULTS.find(r=> r.key===GLOBAL_BEST.key);
+
+  document.getElementById('infoSesion').innerHTML = `
+    <div class="info-row"><span class="k">Sesión</span><span class="v">${esc(sessionEs)}</span></div>
+    <div class="info-row"><span class="k">Circuito</span><span class="v">${esc(track)}</span></div>
+    <div class="info-row"><span class="k">Ronda</span><span class="v">Ronda ${esc(RONDA_NUMERO)}</span></div>
+    <div class="info-row"><span class="k">Ganador</span><span class="v">${esc(winner ? winner.nombre : '—')}</span></div>
+    <div class="info-row"><span class="k">Más vueltas liderando</span><span class="v">${esc(lideradorMax ? lideradorMax.nombre : '—')}</span></div>
+    <div class="info-row"><span class="k">Vuelta rápida</span><span class="v">${bestResult ? esc(bestResult.nombre)+' ('+fmtLap(GLOBAL_BEST.time)+')' : '—'}</span></div>
+  `;
+}
+
+// ------------------------------------------------------------
+// TABS
+// ------------------------------------------------------------
+document.getElementById('raceTabs').addEventListener('click', e=>{
+  const btn = e.target.closest('.pill');
+  if(!btn) return;
+  document.querySelectorAll('#raceTabs .pill').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+});
+
+// ------------------------------------------------------------
+// CLASIFICACIÓN
+// ------------------------------------------------------------
+function renderClasificacion_(){
+  const tbody = document.getElementById('tablaClasificacion');
+  if(!RESULTS.length){ tbody.innerHTML = '<tr><td colspan="12" style="color:var(--text-dim);">Sin datos.</td></tr>'; return; }
+  tbody.innerHTML = RESULTS.map(r=>{
+    const posClass = r.posicion===1?'p1':(r.posicion===2?'p2':(r.posicion===3?'p3':''));
+    const esMejorGlobal = r.bestOwn===GLOBAL_BEST.time && r.key===GLOBAL_BEST.key;
+    return `
+      <tr class="clickable-row" onclick="abrirModalVueltas('${esc(r.key)}')">
+        <td><span class="pos-badge ${posClass}">${r.posicion}</span></td>
+        <td>${r.clase?`<span class="class-tag">${esc(r.clase)}</span>`:''}</td>
+        <td>${esc(r.nombre)}</td>
+        <td>${licenciaBadgeHtml(r.licencia)}</td>
+        <td>${esc(r.equipo)}</td>
+        <td style="text-align:center;">${marcaHtml(r.marca)}</td>
+        <td>${esc(r.vehiculo)}</td>
+        <td class="mono">${fmtTotal(r.tiempoTotal)}</td>
+        <td class="mono">${esc(r.gapTexto)}</td>
+        <td>${penHtml_(r.penMs)}</td>
+        <td class="mono ${esMejorGlobal?'lap-mejor':''}">${fmtLap(r.bestOwn)}</td>
+        <td style="color:var(--text-dim);">—</td>
+      </tr>`;
+  }).join('');
+}
+
+// ------------------------------------------------------------
+// MEJORES VUELTAS
+// ------------------------------------------------------------
+function renderMejoresVueltas_(){
+  const tbody = document.getElementById('tablaMejoresVueltas');
+  const lista = RESULTS.filter(r=>r.bestOwn!==null).slice().sort((a,b)=>a.bestOwn-b.bestOwn);
+  if(!lista.length){ tbody.innerHTML = '<tr><td colspan="8" style="color:var(--text-dim);">Sin datos.</td></tr>'; return; }
+  const fastest = lista[0].bestOwn;
+  tbody.innerHTML = lista.map((r,i)=>{
+    const esMejorGlobal = r.bestOwn===fastest;
+    return `<tr>
+      ${celdasIdent_(r,i+1)}<td>${esc(r.vehiculo)}</td>
+      <td class="mono ${esMejorGlobal?'lap-mejor':''}">${fmtLap(r.bestOwn)}</td>
+      <td class="mono">${r.bestOwn===fastest?'—':'+'+fmtGapPuro_(r.bestOwn-fastest)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ------------------------------------------------------------
+// CONSISTENCIA
+// ------------------------------------------------------------
+function renderConsistencia_(){
+  const tbody = document.getElementById('tablaConsistencia');
+  const lista = RESULTS.filter(r=>r.consistencia!==null).slice().sort((a,b)=>b.consistencia-a.consistencia);
+  if(!lista.length){ tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text-dim);">Sin datos.</td></tr>'; return; }
+  tbody.innerHTML = lista.map((r,i)=>`<tr>${celdasIdent_(r,i+1)}<td>${esc(r.vehiculo)}</td><td class="mono">${r.consistencia.toFixed(2)}%</td></tr>`).join('');
+}
+
+// ------------------------------------------------------------
+// LIDERADAS
+// ------------------------------------------------------------
+function renderLideradas_(){
+  const tbody = document.getElementById('tablaLideradas');
+  const lista = RESULTS.slice().sort((a,b)=>b.ledLaps-a.ledLaps);
+  if(!lista.length){ tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text-dim);">Sin datos.</td></tr>'; return; }
+  tbody.innerHTML = lista.map((r,i)=>`<tr>${celdasIdent_(r,i+1)}<td>${esc(r.vehiculo)}</td><td class="mono">${r.ledLaps}</td></tr>`).join('');
+}
+
+// ------------------------------------------------------------
+// SECTORES
+// ------------------------------------------------------------
+function renderSectorTabs_(){
+  const cont = document.getElementById('sectorTabs');
+  let html = '';
+  for(let s=1;s<=SECTOR_COUNT;s++){
+    html += `<button class="pill ${s===1?'active':''}" data-sector="${s}">Sector ${s}</button>`;
+  }
+  cont.innerHTML = html;
+  cont.addEventListener('click', e=>{
+    const btn = e.target.closest('.pill');
+    if(!btn) return;
+    cont.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    renderSectorTabla_(Number(btn.dataset.sector));
+  });
+}
+function renderSectorTabla_(sectorNum){
+  sectorActivo = sectorNum;
+  const idx = sectorNum-1;
+  const tbody = document.getElementById('tablaSectores');
+  const lista = RESULTS.map(r=>{
+    const tiempos = r.laps.map(l=> Array.isArray(l.split) ? l.split[idx] : undefined).filter(t=>t!==undefined && t!==null);
+    const mejor = tiempos.length ? Math.min.apply(null, tiempos) : null;
+    return { nombre:r.nombre, clase:r.clase, licencia:r.licencia, marca:r.marca, vehiculo:r.vehiculo, mejor };
+  }).filter(r=>r.mejor!==null).sort((a,b)=>a.mejor-b.mejor);
+
+  if(!lista.length){ tbody.innerHTML = '<tr><td colspan="8" style="color:var(--text-dim);">Sin datos para este sector.</td></tr>'; return; }
+  const fastest = lista[0].mejor;
+  tbody.innerHTML = lista.map((r,i)=>{
+    const esMejor = r.mejor===fastest;
+    return `<tr>${celdasIdent_(r,i+1)}<td>${esc(r.vehiculo)}</td>
+      <td class="mono ${esMejor?'lap-mejor':''}">${fmtLap(r.mejor)}</td>
+      <td class="mono">${esMejor?'—':'+'+fmtGapPuro_(r.mejor-fastest)}</td></tr>`;
+  }).join('');
+}
+
+// ------------------------------------------------------------
+// POSICIONES (gráfico de líneas por vuelta)
+// ------------------------------------------------------------
+function colorPiloto_(idx, total){
+  const hue = Math.round((360/Math.max(total,1))*idx);
+  return `hsl(${hue}, 70%, 60%)`;
+}
+function nombrePorClave_(key){
+  const r = RESULTS.find(x=>x.key===key);
+  if(r) return r.nombre;
+  const d = DRIVERS_MAP[key];
+  return d ? ((d.first_name||'')+' '+(d.last_name||'')).trim() : 'Piloto';
+}
+function renderPosiciones_(){
+  const cont = document.getElementById('panel-posiciones');
+  if(!POSICIONES_POR_VUELTA.length){
+    cont.innerHTML = '<div class="empty-state">No hay datos de vueltas para graficar posiciones.</div>';
+    return;
+  }
+  const drivers = Object.keys(LAPS_BY_DRIVER);
+  const totalDrivers = drivers.length;
+  const maxLaps = POSICIONES_POR_VUELTA.length;
+
+  // marginLeft ahora deja sitio para DOS columnas a la izquierda: la etiqueta
+  // fija del eje ("P1", "P2"...) más cerca del borde, y el nombre del piloto
+  // junto al inicio de su línea (igual que antes).
+  const marginLeft=210, marginRight=30, marginTop=20, marginBottom=42;
+  const rowHeight=24, colWidth=Math.max(18, Math.min(30, 900/maxLaps));
+  const plotWidth = Math.max(260, maxLaps*colWidth);
+  const plotHeight = Math.max(rowHeight, totalDrivers*rowHeight);
+  const width = marginLeft+plotWidth+marginRight;
+  const height = marginTop+plotHeight+marginBottom;
+
+  function xFor(lap){ return marginLeft + (lap-1)*colWidth + colWidth/2; }
+  function yFor(pos){ return marginTop + (pos-1)*rowHeight + rowHeight/2; }
+
+  const ordenInicial = POSICIONES_POR_VUELTA[0].orden;
+  const colorPorKey = {};
+  ordenInicial.forEach((k,i)=> colorPorKey[k]=colorPiloto_(i, ordenInicial.length));
+  drivers.forEach((k,i)=>{ if(!colorPorKey[k]) colorPorKey[k]=colorPiloto_(i, drivers.length); });
+
+  let svg = `<svg viewBox="0 0 ${width} ${height}" width="100%" style="max-width:100%;height:auto;font-family:'JetBrains Mono',monospace;overflow:visible;">`;
+
+  // Líneas horizontales de posición + eje Y fijo ("P1", "P2"...).
+  for(let p=1;p<=totalDrivers;p++){
+    svg += `<line x1="${marginLeft}" y1="${yFor(p)}" x2="${marginLeft+plotWidth}" y2="${yFor(p)}" stroke="#262B33" stroke-width="1"/>`;
+    svg += `<text x="16" y="${yFor(p)+4}" text-anchor="start" font-size="11" fill="#5A6270">P${p}</text>`;
+  }
+
+  // Eje X (vueltas), abajo del todo. Si hay muchas vueltas y poco ancho por
+  // columna, se salta alguna etiqueta para que no se amontonen, pero siempre
+  // se muestra la última vuelta.
+  const stepLap = Math.max(1, Math.ceil(26/colWidth));
+  for(let lap=1; lap<=maxLaps; lap++){
+    if((lap-1)%stepLap!==0 && lap!==maxLaps) continue;
+    svg += `<text x="${xFor(lap)}" y="${marginTop+plotHeight+22}" text-anchor="middle" font-size="10" fill="#5A6270">${lap}</text>`;
+  }
+  svg += `<text x="${marginLeft+plotWidth/2}" y="${height-2}" text-anchor="middle" font-size="10" letter-spacing="1px" fill="var(--text-dim)">VUELTA</text>`;
+
+  drivers.forEach(key=>{
+    const color = colorPorKey[key];
+    const puntos = [];
+    POSICIONES_POR_VUELTA.forEach(d=>{
+      const idx = d.orden.indexOf(key);
+      if(idx!==-1) puntos.push({lap:d.lap, pos:idx+1});
+    });
+    if(!puntos.length) return;
+    const nombre = nombrePorClave_(key);
+    const pathPts = puntos.map(pt=> xFor(pt.lap)+','+yFor(pt.pos)).join(' ');
+    svg += `<polyline class="posline" data-key="${esc(key)}" points="${pathPts}" fill="none" stroke="${color}" stroke-width="2.5" opacity="0.9" style="cursor:pointer;transition:stroke-width .15s ease, opacity .15s ease, filter .15s ease;"/>`;
+    puntos.forEach(pt=>{
+      svg += `<circle class="pospoint" data-key="${esc(key)}" data-nombre="${esc(nombre)}" data-lap="${pt.lap}" data-pos="${pt.pos}" `
+           + `cx="${xFor(pt.lap)}" cy="${yFor(pt.pos)}" r="5" fill="${color}" stroke="#0B0D10" stroke-width="1" style="cursor:pointer;"/>`;
+    });
+    svg += `<text x="${marginLeft-10}" y="${yFor(puntos[0].pos)+4}" text-anchor="end" font-size="11" fill="${color}">${esc(nombre)}</text>`;
+  });
+  svg += '</svg>';
+  cont.innerHTML = `<div class="table-wrap" style="padding:16px;overflow-x:auto;position:relative;">${svg}<div class="chart-tooltip" id="chartTooltip"></div></div>`;
+
+  activarInteraccionPosiciones_(cont, colorPorKey);
+}
+
+// Resalte (resplandor + más grosor) de la línea al pasar el ratón, y tooltip
+// con piloto/vuelta/posición al pasar (o tocar en móvil) sobre un punto.
+function activarInteraccionPosiciones_(cont, colorPorKey){
+  const tooltip = cont.querySelector('#chartTooltip');
+  const svgEl = cont.querySelector('svg');
+  const lines = cont.querySelectorAll('.posline');
+  const points = cont.querySelectorAll('.pospoint');
+
+  function resaltarLinea_(key){
+    lines.forEach(l=>{
+      if(l.dataset.key===key){
+        l.setAttribute('stroke-width','5');
+        l.style.opacity='1';
+        l.style.filter = `drop-shadow(0 0 6px ${colorPorKey[key]})`;
+      } else {
+        l.style.opacity='0.15';
+      }
+    });
+  }
+  function quitarResalte_(){
+    lines.forEach(l=>{
+      l.setAttribute('stroke-width','2.5');
+      l.style.opacity='0.9';
+      l.style.filter='none';
+    });
+  }
+  lines.forEach(l=>{
+    l.addEventListener('mouseenter', ()=> resaltarLinea_(l.dataset.key));
+    l.addEventListener('mouseleave', quitarResalte_);
+  });
+
+  function mostrarTooltip_(el, clientX, clientY){
+    const rectCont = cont.getBoundingClientRect();
+    tooltip.innerHTML = `<strong>${esc(el.dataset.nombre)}</strong><br>Vuelta ${esc(el.dataset.lap)} · P${esc(el.dataset.pos)}`;
+    tooltip.style.display='block';
+    tooltip.style.left = (clientX - rectCont.left + 14) + 'px';
+    tooltip.style.top = (clientY - rectCont.top + 14) + 'px';
+  }
+  function ocultarTooltip_(){ tooltip.style.display='none'; }
+
+  points.forEach(p=>{
+    p.addEventListener('mouseenter', e=>{ resaltarLinea_(p.dataset.key); mostrarTooltip_(p, e.clientX, e.clientY); });
+    p.addEventListener('mousemove', e=> mostrarTooltip_(p, e.clientX, e.clientY));
+    p.addEventListener('mouseleave', ()=>{ quitarResalte_(); ocultarTooltip_(); });
+    p.addEventListener('touchstart', e=>{
+      e.preventDefault();
+      const t = e.touches[0];
+      resaltarLinea_(p.dataset.key);
+      mostrarTooltip_(p, t.clientX, t.clientY);
+    }, {passive:false});
+  });
+
+  // Tocar fuera de un punto en móvil oculta el tooltip y quita el resalte.
+  svgEl.addEventListener('touchstart', e=>{
+    if(!e.target.classList.contains('pospoint')){ quitarResalte_(); ocultarTooltip_(); }
+  }, {passive:true});
+}
+
+// ------------------------------------------------------------
+// TIEMPOS (gráfico de líneas: tiempo por vuelta, hasta 3 pilotos)
+// ------------------------------------------------------------
+const TIEMPOS_COLORES = ['#f01c26', '#00E5C7', '#FFB020'];
+
+function renderTiempos_(){
+  const cont = document.getElementById('panel-tiempos');
+  if(!RESULTS.length){ cont.innerHTML = '<div class="empty-state">No hay datos de vueltas.</div>'; return; }
+  const opciones = '<option value="">— Sin piloto —</option>' +
+    RESULTS.map(r=>`<option value="${esc(r.key)}">P${r.posicion} · ${esc(r.nombre)}</option>`).join('');
+  let selects = '';
+  for(let i=0;i<3;i++){
+    selects += `<select id="tiemposSel${i}" style="border-left-color:${TIEMPOS_COLORES[i]};">${opciones}</select>`;
+  }
+  cont.innerHTML = `
+    <div class="tiempos-controls">${selects}</div>
+    <div class="tiempos-legend" id="tiemposLegend"></div>
+    <div class="table-wrap" style="padding:16px;overflow-x:auto;position:relative;" id="tiemposChartWrap"></div>`;
+  for(let i=0;i<3;i++){
+    const sel = document.getElementById('tiemposSel'+i);
+    if(RESULTS[i]) sel.value = RESULTS[i].key;
+    sel.addEventListener('change', dibujarTiempos_);
+  }
+  dibujarTiempos_();
+}
+
+function dibujarTiempos_(){
+  const wrap = document.getElementById('tiemposChartWrap');
+  const legend = document.getElementById('tiemposLegend');
+  const elegidos = [];
+  for(let i=0;i<3;i++){
+    const key = document.getElementById('tiemposSel'+i).value;
+    if(key && !elegidos.some(e=>e.key===key)){
+      const r = RESULTS.find(x=>x.key===key);
+      if(r) elegidos.push({ key, r, color:TIEMPOS_COLORES[i] });
+    }
+  }
+  legend.innerHTML = elegidos.map(e=>`<span><i style="background:${e.color}"></i>${esc(e.r.nombre)}</span>`).join('')
+    + (elegidos.length ? '<span><i style="background:transparent;border:2px solid var(--danger);"></i>vuelta inválida</span>' : '');
+  if(!elegidos.length){
+    wrap.innerHTML = '<div class="empty-state">Elige al menos un piloto para comparar sus tiempos por vuelta.</div>';
+    return;
+  }
+
+  // Escala Y ajustada: la vuelta más rápida de los pilotos elegidos queda abajo
+  // del todo y la más lenta arriba del todo.
+  const todos = [];
+  elegidos.forEach(e=> e.r.laps.forEach(l=> todos.push(l.time)));
+  const tMin = Math.min.apply(null, todos), tMax = Math.max.apply(null, todos);
+  const maxLaps = elegidos.reduce((m,e)=>Math.max(m,e.r.laps.length),0);
+
+  const marginLeft=76, marginRight=24, marginTop=18, marginBottom=44;
+  const plotHeight=380;
+  const colWidth=Math.max(22, Math.min(44, 900/maxLaps));
+  const plotWidth=Math.max(260, maxLaps*colWidth);
+  const width=marginLeft+plotWidth+marginRight, height=marginTop+plotHeight+marginBottom;
+  function xFor(lap){ return marginLeft + (lap-1)*colWidth + colWidth/2; }
+  function yFor(t){ return tMax===tMin ? marginTop+plotHeight/2 : marginTop + (tMax-t)/(tMax-tMin)*plotHeight; }
+
+  let svg = `<svg viewBox="0 0 ${width} ${height}" width="100%" style="max-width:100%;height:auto;font-family:'JetBrains Mono',monospace;overflow:visible;">`;
+  const ticks = 6;
+  for(let i=0;i<=ticks;i++){
+    const t = tMin + (tMax-tMin)*i/ticks, y = yFor(t);
+    svg += `<line x1="${marginLeft}" y1="${y}" x2="${marginLeft+plotWidth}" y2="${y}" stroke="#262B33" stroke-width="1"/>`;
+    svg += `<text x="${marginLeft-10}" y="${y+4}" text-anchor="end" font-size="10.5" fill="#8B93A1">${fmtLap(t)}</text>`;
+  }
+  const stepLap = Math.max(1, Math.ceil(26/colWidth));
+  for(let lap=1; lap<=maxLaps; lap++){
+    if((lap-1)%stepLap!==0 && lap!==maxLaps) continue;
+    svg += `<text x="${xFor(lap)}" y="${marginTop+plotHeight+22}" text-anchor="middle" font-size="10" fill="#5A6270">${lap}</text>`;
+  }
+  svg += `<text x="${marginLeft+plotWidth/2}" y="${height-2}" text-anchor="middle" font-size="10" letter-spacing="1px" fill="#8B93A1">VUELTA</text>`;
+
+  elegidos.forEach(e=>{
+    const pts = e.r.laps.map((l,i)=>({lap:i+1, t:l.time, valida:esLapValida(l.flags)}));
+    svg += `<polyline class="tline" data-key="${esc(e.key)}" points="${pts.map(p=>xFor(p.lap)+','+yFor(p.t)).join(' ')}" fill="none" stroke="${e.color}" stroke-width="2.5" opacity="0.95" style="transition:opacity .15s ease;"/>`;
+    pts.forEach(p=>{
+      svg += `<circle class="tpoint" data-key="${esc(e.key)}" data-nombre="${esc(e.r.nombre)}" data-lap="${p.lap}" data-time="${esc(fmtLap(p.t))}" `
+           + `cx="${xFor(p.lap)}" cy="${yFor(p.t)}" r="4.5" fill="${p.valida?e.color:'#0B0D10'}" stroke="${p.valida?'#0B0D10':'#FF4757'}" stroke-width="${p.valida?1:2}" style="cursor:pointer;"/>`;
+    });
+  });
+  svg += '</svg>';
+  wrap.innerHTML = svg + '<div class="chart-tooltip" id="tiemposTooltip"></div>';
+
+  const tooltip = wrap.querySelector('#tiemposTooltip');
+  const lines = wrap.querySelectorAll('.tline');
+  function resaltar_(key){ lines.forEach(l=>{ l.style.opacity = l.dataset.key===key ? '1' : '0.2'; }); }
+  function quitar_(){ lines.forEach(l=>{ l.style.opacity='0.95'; }); }
+  function mostrar_(el, x, y){
+    const rc = wrap.getBoundingClientRect();
+    tooltip.innerHTML = `<strong>${esc(el.dataset.nombre)}</strong><br>Vuelta ${esc(el.dataset.lap)} · ${esc(el.dataset.time)}`;
+    tooltip.style.display='block';
+    tooltip.style.left = (x - rc.left + wrap.scrollLeft + 14) + 'px';
+    tooltip.style.top = (y - rc.top + 14) + 'px';
+  }
+  wrap.querySelectorAll('.tpoint').forEach(p=>{
+    p.addEventListener('mouseenter', ev=>{ resaltar_(p.dataset.key); mostrar_(p, ev.clientX, ev.clientY); });
+    p.addEventListener('mousemove', ev=> mostrar_(p, ev.clientX, ev.clientY));
+    p.addEventListener('mouseleave', ()=>{ quitar_(); tooltip.style.display='none'; });
+    p.addEventListener('touchstart', ev=>{ ev.preventDefault(); const t=ev.touches[0]; resaltar_(p.dataset.key); mostrar_(p, t.clientX, t.clientY); }, {passive:false});
+  });
+  wrap.querySelector('svg').addEventListener('touchstart', ev=>{
+    if(!ev.target.classList.contains('tpoint')){ quitar_(); tooltip.style.display='none'; }
+  }, {passive:true});
+}
+
+// ------------------------------------------------------------
+// PENALIZACIONES
+// ------------------------------------------------------------
+function renderPenalizaciones_(){
+  const cont = document.getElementById('panel-penalizaciones');
+  const conPen = RESULTS.filter(r=>r.penalizaciones.length);
+  if(!conPen.length){
+    cont.innerHTML = '<div class="empty-state">No hay penalizaciones en esta carrera.</div>';
+    return;
+  }
+  const resumen = conPen.map(r=>`<tr>
+      <td>${esc(r.nombre)}</td><td>${claseTagHtml_(r.clase)}</td><td>${esc(r.vehiculo)}</td>
+      <td>${r.penMs>0 ? penHtml_(r.penMs) : '<span style="color:var(--text-dim);">—</span>'}</td>
+    </tr>`).join('');
+  const detalle = conPen.map(r=> r.penalizaciones.map(p=>`<tr>
+      <td>${esc(r.nombre)}</td><td>${claseTagHtml_(r.clase)}</td><td>${esc(r.vehiculo)}</td>
+      <td class="mono">${p.vuelta||'—'}</td><td>${esc(p.tipo)}</td><td>${esc(p.motivo)}</td>
+      <td>${p.ms>0 ? penHtml_(p.ms) : '<span style="color:var(--text-dim);">—</span>'}</td>
+    </tr>`).join('')).join('');
+  cont.innerHTML = `
+    <div class="sub-title">Resumen por piloto</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Piloto</th><th>Clase</th><th>Vehículo</th><th>Penalización</th></tr></thead>
+      <tbody>${resumen}</tbody>
+    </table></div>
+    <div class="sub-title">Todas las penalizaciones</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Piloto</th><th>Clase</th><th>Vehículo</th><th>Vuelta</th><th>Tipo</th><th>Motivo</th><th>Penalización</th></tr></thead>
+      <tbody>${detalle}</tbody>
+    </table></div>`;
+}
+
+// ------------------------------------------------------------
+// MODAL DE VUELTAS
+// ------------------------------------------------------------
+function abrirModalVueltas(key){
+  const r = RESULTS.find(x=>x.key===key);
+  if(!r) return;
+  document.getElementById('modalVueltasTitulo').textContent = r.nombre + (r.vehiculo ? (' — '+r.vehiculo) : '');
+
+  const headers = ['Vuelta','Vehículo','Tiempo'];
+  for(let s=1;s<=SECTOR_COUNT;s++) headers.push('Sector '+s);
+  document.getElementById('modalVueltasThead').innerHTML = '<tr>'+headers.map(h=>`<th>${esc(h)}</th>`).join('')+'</tr>';
+
+  const filas = r.laps.map((l,i)=>{
+    const valida = esLapValida(l.flags);
+    const esMejorGlobal = valida && l.time===GLOBAL_BEST.time;
+    const esMejorPropia = valida && l.time===r.bestOwn && !esMejorGlobal;
+    let clase = '';
+    if(!valida) clase='lap-invalida';
+    else if(esMejorGlobal) clase='lap-mejor';
+    else if(esMejorPropia) clase='lap-personal';
+    let cells = `<td>${i+1}</td><td>${esc(r.vehiculo)}</td><td class="mono ${clase}">${fmtLap(l.time)}</td>`;
+    for(let s=0;s<SECTOR_COUNT;s++){
+      const sv = Array.isArray(l.split) ? l.split[s] : undefined;
+      cells += `<td class="mono">${sv!==undefined && sv!==null ? fmtLap(sv) : '—'}</td>`;
+    }
+    return '<tr>'+cells+'</tr>';
+  }).join('');
+  document.getElementById('modalVueltasBody').innerHTML = filas || '<tr><td colspan="10" style="color:var(--text-dim);">Sin vueltas registradas.</td></tr>';
+  document.getElementById('modalVueltas').classList.add('show');
+}
+function cerrarModalVueltas(){ document.getElementById('modalVueltas').classList.remove('show'); }
+document.getElementById('btnCerrarModalVueltas').addEventListener('click', cerrarModalVueltas);
+document.getElementById('btnCerrarModalVueltas2').addEventListener('click', cerrarModalVueltas);
+document.getElementById('modalVueltas').addEventListener('click', e=>{ if(e.target.id==='modalVueltas') cerrarModalVueltas(); });
+
+iniciar();
+</script>
+</body>
+</html>
