@@ -441,15 +441,6 @@
   .circuit-tile .photo-big .info{position:absolute;left:20px;right:20px;bottom:16px;z-index:2;}
   .circuit-tile .photo-big .info .name{font-family:'Teko',sans-serif;font-size:32px;margin:0 0 2px;line-height:1.1;}
   .circuit-tile .photo-big .info .date{font-size:13px;color:var(--text-dim);margin:0;}
-  .circuit-tile .podio-box{padding:14px 18px 18px;border-top:1px solid var(--hairline);}
-  .circuit-tile .podio-box h4{
-    margin:0 0 10px;font-size:12px;letter-spacing:1px;text-transform:uppercase;
-    color:var(--text-dim);font-family:'Inter',sans-serif;font-weight:700;
-  }
-  .podio-row{display:flex;align-items:center;gap:10px;padding:5px 0;font-size:14.5px;}
-  .podio-row .medal{font-size:18px;width:24px;text-align:center;flex:none;}
-  .podio-row .pos-name{flex:1;color:var(--text);}
-  .podio-empty{color:var(--text-dim);font-size:13px;}
   
   @media (max-width:760px){ 
     .calendario-grid{ width:100%; }
@@ -2337,6 +2328,15 @@ function renderMiGaraje(){
   }
 }
 
+// Mapa de Ronda -> URL de la página de resultados propia (GitHub Pages). Se
+// añaden más entradas aquí si en el futuro hay más de 4 rondas.
+const RESULTADOS_URL_POR_RONDA = {
+  1: 'https://raceonline1.github.io/academy/R1.html',
+  2: 'https://raceonline1.github.io/academy/R2.html',
+  3: 'https://raceonline1.github.io/academy/R3.html',
+  4: 'https://raceonline1.github.io/academy/R4.html'
+};
+
 function renderCalendario(){
   const grid = document.getElementById('gridCalendario');
   if(!Array.isArray(DB.calendario) || DB.calendario.length === 0){
@@ -2348,41 +2348,21 @@ function renderCalendario(){
     const circuito = getVal(item, 'Circuito');
     const fecha = getVal(item, 'Fecha');
     const img = getVal(item, 'Img');
+    const urlResultados = RESULTADOS_URL_POR_RONDA[String(ronda)] || RESULTADOS_URL_POR_RONDA[Number(ronda)];
+    const onclickAttr = urlResultados
+      ? `onclick="window.open('${esc(urlResultados)}', '_blank')"`
+      : `onclick="abrirModalResultados('${esc(ronda)}')"`;
     return `
       <div class="circuit-tile">
-        <div class="photo-big" style="background-image:url('${esc(img || '')}')" onclick="abrirModalResultados('${esc(ronda)}')">
+        <div class="photo-big" style="background-image:url('${esc(img || '')}')" ${onclickAttr}>
           <div class="cat-tag">RONDA ${esc(ronda || '')}</div>
           <div class="info">
             <p class="name">${esc(circuito || '')}</p>
             <p class="date">${fecha ? 'Fecha: ' + esc(fecha) : ''}</p>
           </div>
         </div>
-        <div class="podio-box">
-          <h4>🏆 Podio</h4>
-          ${renderPodioHtml(ronda)}
-        </div>
       </div>`;
   }).join('');
-}
-
-function renderPodioHtml(ronda){
-  const key = 'r' + ronda;
-  const resultados = Array.isArray(DB[key]) ? DB[key] : [];
-  const medallas = { 1: '🥇', 2: '🥈', 3: '🥉' };
-
-  const podio = [1, 2, 3]
-    .map(pos => ({ pos, row: resultados.find(r => String(getVal(r, 'Posicion')) === String(pos)) }))
-    .filter(x => x.row);
-
-  if(podio.length === 0){
-    return '<div class="podio-empty">Todavía no hay resultados para esta carrera.</div>';
-  }
-
-  return podio.map(({ pos, row }) => `
-    <div class="podio-row">
-      <span class="medal">${medallas[pos] || ''}</span>
-      <span class="pos-name">${esc(getVal(row, 'Piloto') || '')}</span>
-    </div>`).join('');
 }
 
 function marcaLogoHtml(valorMarca){
