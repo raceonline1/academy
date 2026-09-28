@@ -159,7 +159,7 @@
   <div class="tab-panel" id="panel-mejoresvueltas">
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Piloto</th><th>Clase</th><th>Vehículo</th><th>Tiempo</th><th>Gap</th></tr></thead>
+        <thead><tr><th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th>Marca</th><th>Vehículo</th><th>Tiempo</th><th>Gap</th></tr></thead>
         <tbody id="tablaMejoresVueltas"></tbody>
       </table>
     </div>
@@ -168,7 +168,7 @@
   <div class="tab-panel" id="panel-consistencia">
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Piloto</th><th>Clase</th><th>Vehículo</th><th>Consistencia</th></tr></thead>
+        <thead><tr><th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th>Marca</th><th>Vehículo</th><th>Consistencia</th></tr></thead>
         <tbody id="tablaConsistencia"></tbody>
       </table>
     </div>
@@ -177,7 +177,7 @@
   <div class="tab-panel" id="panel-lideradas">
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Piloto</th><th>Clase</th><th>Vehículo</th><th>Vueltas lideradas</th></tr></thead>
+        <thead><tr><th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th>Marca</th><th>Vehículo</th><th>Vueltas lideradas</th></tr></thead>
         <tbody id="tablaLideradas"></tbody>
       </table>
     </div>
@@ -187,7 +187,7 @@
     <div class="pillbar" id="sectorTabs"></div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Piloto</th><th>Clase</th><th>Vehículo</th><th>Tiempo</th><th>Gap</th></tr></thead>
+        <thead><tr><th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th>Marca</th><th>Vehículo</th><th>Tiempo</th><th>Gap</th></tr></thead>
         <tbody id="tablaSectores"></tbody>
       </table>
     </div>
@@ -328,6 +328,15 @@ function marcaHtml(valor){
 function claseTagHtml_(clase){
   const c = String(clase||'').trim();
   return c ? `<span class="class-tag">${esc(c)}</span>` : '';
+}
+function posBadgeHtml_(n){
+  const c = n===1?'p1':(n===2?'p2':(n===3?'p3':''));
+  return `<span class="pos-badge ${c}">${n}</span>`;
+}
+// Columnas comunes: Pos. | Clase | Piloto | Lic. | Marca
+function celdasIdent_(r, pos){
+  return `<td>${posBadgeHtml_(pos)}</td><td>${claseTagHtml_(r.clase)}</td><td>${esc(r.nombre)}</td>`
+       + `<td>${licenciaBadgeHtml(r.licencia)}</td><td style="text-align:center;">${marcaHtml(r.marca)}</td>`;
 }
 function fmtPenSeg_(ms){
   const seg = ms/1000;
@@ -634,12 +643,12 @@ function renderClasificacion_(){
 function renderMejoresVueltas_(){
   const tbody = document.getElementById('tablaMejoresVueltas');
   const lista = RESULTS.filter(r=>r.bestOwn!==null).slice().sort((a,b)=>a.bestOwn-b.bestOwn);
-  if(!lista.length){ tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-dim);">Sin datos.</td></tr>'; return; }
+  if(!lista.length){ tbody.innerHTML = '<tr><td colspan="8" style="color:var(--text-dim);">Sin datos.</td></tr>'; return; }
   const fastest = lista[0].bestOwn;
-  tbody.innerHTML = lista.map(r=>{
+  tbody.innerHTML = lista.map((r,i)=>{
     const esMejorGlobal = r.bestOwn===fastest;
     return `<tr>
-      <td>${esc(r.nombre)}</td><td>${claseTagHtml_(r.clase)}</td><td>${esc(r.vehiculo)}</td>
+      ${celdasIdent_(r,i+1)}<td>${esc(r.vehiculo)}</td>
       <td class="mono ${esMejorGlobal?'lap-mejor':''}">${fmtLap(r.bestOwn)}</td>
       <td class="mono">${r.bestOwn===fastest?'—':'+'+fmtGapPuro_(r.bestOwn-fastest)}</td>
     </tr>`;
@@ -652,8 +661,8 @@ function renderMejoresVueltas_(){
 function renderConsistencia_(){
   const tbody = document.getElementById('tablaConsistencia');
   const lista = RESULTS.filter(r=>r.consistencia!==null).slice().sort((a,b)=>b.consistencia-a.consistencia);
-  if(!lista.length){ tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-dim);">Sin datos.</td></tr>'; return; }
-  tbody.innerHTML = lista.map(r=>`<tr><td>${esc(r.nombre)}</td><td>${claseTagHtml_(r.clase)}</td><td>${esc(r.vehiculo)}</td><td class="mono">${r.consistencia.toFixed(2)}%</td></tr>`).join('');
+  if(!lista.length){ tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text-dim);">Sin datos.</td></tr>'; return; }
+  tbody.innerHTML = lista.map((r,i)=>`<tr>${celdasIdent_(r,i+1)}<td>${esc(r.vehiculo)}</td><td class="mono">${r.consistencia.toFixed(2)}%</td></tr>`).join('');
 }
 
 // ------------------------------------------------------------
@@ -662,8 +671,8 @@ function renderConsistencia_(){
 function renderLideradas_(){
   const tbody = document.getElementById('tablaLideradas');
   const lista = RESULTS.slice().sort((a,b)=>b.ledLaps-a.ledLaps);
-  if(!lista.length){ tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-dim);">Sin datos.</td></tr>'; return; }
-  tbody.innerHTML = lista.map(r=>`<tr><td>${esc(r.nombre)}</td><td>${claseTagHtml_(r.clase)}</td><td>${esc(r.vehiculo)}</td><td class="mono">${r.ledLaps}</td></tr>`).join('');
+  if(!lista.length){ tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text-dim);">Sin datos.</td></tr>'; return; }
+  tbody.innerHTML = lista.map((r,i)=>`<tr>${celdasIdent_(r,i+1)}<td>${esc(r.vehiculo)}</td><td class="mono">${r.ledLaps}</td></tr>`).join('');
 }
 
 // ------------------------------------------------------------
@@ -691,14 +700,14 @@ function renderSectorTabla_(sectorNum){
   const lista = RESULTS.map(r=>{
     const tiempos = r.laps.map(l=> Array.isArray(l.split) ? l.split[idx] : undefined).filter(t=>t!==undefined && t!==null);
     const mejor = tiempos.length ? Math.min.apply(null, tiempos) : null;
-    return { nombre:r.nombre, clase:r.clase, vehiculo:r.vehiculo, mejor };
+    return { nombre:r.nombre, clase:r.clase, licencia:r.licencia, marca:r.marca, vehiculo:r.vehiculo, mejor };
   }).filter(r=>r.mejor!==null).sort((a,b)=>a.mejor-b.mejor);
 
-  if(!lista.length){ tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-dim);">Sin datos para este sector.</td></tr>'; return; }
+  if(!lista.length){ tbody.innerHTML = '<tr><td colspan="8" style="color:var(--text-dim);">Sin datos para este sector.</td></tr>'; return; }
   const fastest = lista[0].mejor;
-  tbody.innerHTML = lista.map(r=>{
+  tbody.innerHTML = lista.map((r,i)=>{
     const esMejor = r.mejor===fastest;
-    return `<tr><td>${esc(r.nombre)}</td><td>${claseTagHtml_(r.clase)}</td><td>${esc(r.vehiculo)}</td>
+    return `<tr>${celdasIdent_(r,i+1)}<td>${esc(r.vehiculo)}</td>
       <td class="mono ${esMejor?'lap-mejor':''}">${fmtLap(r.mejor)}</td>
       <td class="mono">${esMejor?'—':'+'+fmtGapPuro_(r.mejor-fastest)}</td></tr>`;
   }).join('');
