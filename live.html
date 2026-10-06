@@ -186,11 +186,11 @@ const POOL=[[],[],[]];    // tiempos de sector aún sin dueño (la consola no di
 let PLAYERS=null,dirty=false;
 
 function newCar(id){
-  return{id,name:'',steam:'',model:'',laps:0,total:0,last:null,best:null,s:[null,null,null],sb:[Infinity,Infinity,Infinity],cur:[null,null,null],pit:false,out:false,pits:0,piloto:null,upd:0,join:Date.now()};
+  return{id,name:'',steam:'',model:'',laps:0,total:0,last:null,best:null,s:[null,null,null],sb:[Infinity,Infinity,Infinity],cur:[null,null,null],next:null,pit:false,out:false,pits:0,piloto:null,upd:0,join:Date.now()};
 }
 function getCar(id){return CARS[id]||(CARS[id]=newCar(id))}
 function resetStats(c){
-  Object.assign(c,{laps:0,total:0,last:null,best:null,s:[null,null,null],sb:[Infinity,Infinity,Infinity],cur:[null,null,null],pit:false,out:false,pits:0,upd:0});
+  Object.assign(c,{laps:0,total:0,last:null,best:null,s:[null,null,null],sb:[Infinity,Infinity,Infinity],cur:[null,null,null],next:null,pit:false,out:false,pits:0,upd:0});
 }
 function resetAll(){for(const k in CARS)delete CARS[k];GB.fill(Infinity);GL.t=Infinity;POOL.forEach(p=>p.length=0)}
 function linkPilot(c){
@@ -260,27 +260,37 @@ function onLine(raw){
     if(st==='Steady'){if(c.out){c.pits++;c.out=false}c.pit=true}
     else if(st==='OutOfTolerance'){c.pit=false;c.out=true}
     dirty=true;return}
-  // --- sectores (sin carId) ---
+  // --- sectores (sin carId): se muestran en cuanto se completan ---
   if(m=msg.match(RX.split)){
     const id=+m[1],t=+m[2];
     if(id>2)return;
     POOL[id].push(t);if(POOL[id].length>40)POOL[id].shift();
-    const ids=Object.keys(CARS);
-    if(ids.length===1){const c=CARS[ids[0]];if(id===0)c.cur=[null,null,null];c.cur[id]=t;dirty=true}  // un solo coche: sector en directo
+    // ¿De quién es? Un coche "espera" el sector id si ya cruzó la línea y va por ese sector.
+    // Solo se asigna en directo si hay UN único candidato; si hay dudas, se resuelve al acabar la vuelta.
+    const all=Object.values(CARS);
+    const cand=all.length===1?all:all.filter(c=>c.next===id&&!c.pit);
+    if(cand.length===1&&id<2){
+      const c=cand[0];
+      if(id===0)c.cur=[null,null,null];
+      c.cur[id]=t;c.next=id+1;dirty=true}
+    else if(cand.length===1&&id===2){cand[0].cur[2]=t;dirty=true}
     return}
   // --- vuelta de salida de boxes: se descarta ---
-  if(m=msg.match(RX.bad)){POOL[2].pop();if(CARS[m[1]])CARS[m[1]].cur=[null,null,null];dirty=true;return}
+  if(m=msg.match(RX.bad)){POOL[2].pop();if(CARS[m[1]]){CARS[m[1]].cur=[null,null,null];CARS[m[1]].next=0}dirty=true;return}
   // --- vuelta completada ---
   if(m=msg.match(RX.lap)){
     const ms=parseLap(m[2]);if(ms==null)return;
     const c=getCar(m[1]);linkPilot(c);c.upd=Date.now();
-    let sec=matchSectors(ms);
-    if(!sec&&c.cur.every(x=>x!=null)&&c.cur[0]+c.cur[1]+c.cur[2]===ms)sec=c.cur.slice();
+    let sec=null;
+    if(c.cur.every(x=>x!=null)&&c.cur[0]+c.cur[1]+c.cur[2]===ms){
+      sec=c.cur.slice();
+      sec.forEach((v,i)=>{const j=POOL[i].lastIndexOf(v);if(j>=0)POOL[i].splice(j,1)});
+    }else sec=matchSectors(ms);
     if(sec)sec.forEach((v,i)=>setSector(c,i,v));else c.s=[null,null,null];
     c.laps++;c.total+=ms;c.last=ms;
     if(c.best==null||ms<c.best)c.best=ms;
     if(ms<GL.t)GL.t=ms;
-    c.cur=[null,null,null];
+    c.cur=[null,null,null];c.next=0;
     dirty=true}
 }
 
@@ -330,7 +340,8 @@ function paintRows(){
     const live=c.cur.some(v=>v!=null);
     for(let k=0;k<3;k++){
       const v=live?c.cur[k]:c.s[k];
-      setCell(x['s'+(k+1)],v==null?DASH:`<span class="t ${live?'':colorCls(v,c.sb[k],GB[k])}">${fmtS(v)}</span>`,true);
+      const cl=v==null?'':live?(v<=GB[k]?'p':v<=c.sb[k]?'g':''):colorCls(v,c.sb[k],GB[k]);
+      setCell(x['s'+(k+1)],v==null?DASH:`<span class="t ${cl}">${fmtS(v)}</span>`,true);
     }
     setCell(x.last,c.last==null?DASH:`<span class="t ${colorCls(c.last,c.best,GL.t)}">${fmt(c.last)}</span>`,true);
     setCell(x.best,c.best==null?DASH:`<span class="t ${c.best===GL.t?'p':'g'}">${fmt(c.best)}</span>`,true);
