@@ -27,6 +27,7 @@ header.topbar{position:sticky;top:0;z-index:50;background:rgba(11,13,16,.88);bac
 .stype{padding:4px 12px;border-radius:6px;font-weight:700;font-size:12px;letter-spacing:1px;text-transform:uppercase;border:1px solid var(--hairline);background:var(--panel-2)}
 .stype.Race{background:var(--red-dim);border-color:var(--red);color:var(--red)}
 .stype.Qualify{background:rgba(255,176,32,.12);border-color:var(--amber);color:var(--amber)}
+.stype.Warmup{background:rgba(139,147,161,.12);border-color:#8B93A1;color:#C9CFD8}
 .stype.Practice{background:rgba(0,229,199,.12);border-color:var(--green);color:var(--green)}
 main{max-width:1500px;margin:0 auto;padding:20px 20px 80px}
 .checkered{height:8px;border-radius:4px;margin:14px 0;background-image:linear-gradient(45deg,#0B0D10 25%,transparent 25%,transparent 75%,#0B0D10 75%,#0B0D10),linear-gradient(45deg,#0B0D10 25%,transparent 25%,transparent 75%,#0B0D10 75%,#0B0D10);background-size:12px 12px;background-position:0 0,6px 6px;background-color:#3a3f47;opacity:.5}
@@ -78,6 +79,7 @@ td.live-cell.flash{animation:flash 1.3s ease-out}
     <label>Sesión<select id="sType"><option value="Practice">Practice</option><option value="Qualify">Qualifying</option><option value="Race">Race</option></select></label>
     <label>Vueltas (carrera)<input id="sLaps" type="number" min="1" value="25"></label>
     <label>Duración (min)<input id="sMin" type="number" min="1" value="45"></label>
+    <label>Retraso reloj (s)<input id="sDelay" type="number" step="0.5" value="8"></label>
     <label>URL del relay<input id="sRelay" style="min-width:300px" placeholder="https://tu-relay/stream"></label>
     <button class="btn" id="btnSave">Guardar</button>
     <button class="btn" id="btnClock">⏱ Reiniciar reloj</button>
@@ -93,8 +95,8 @@ td.live-cell.flash{animation:flash 1.3s ease-out}
   <div class="checkered"></div>
 
   <div class="table-wrap"><table>
-    <thead><tr><th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th>Marca</th><th>Espec.</th><th>Sector 1</th><th>Sector 2</th><th>Sector 3</th><th>Últ. V</th><th>Mejor V.</th><th>Gap</th><th>Pits</th></tr></thead>
-    <tbody id="tb"><tr><td colspan="13" class="empty">Esperando datos del servidor…</td></tr></tbody>
+    <thead><tr><th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th>Marca</th><th>Espec.</th><th>Sector 1</th><th>Sector 2</th><th>Sector 3</th><th>Últ. V</th><th>Mejor V.</th><th>Gap</th><th>Vueltas</th><th>Pits</th></tr></thead>
+    <tbody id="tb"><tr><td colspan="14" class="empty">Esperando pilotos en el servidor…</td></tr></tbody>
   </table></div>
   <div id="raw"></div>
 </main>
@@ -105,24 +107,28 @@ td.live-cell.flash{animation:flash 1.3s ease-out}
 // ============================================================
 const API_URL='https://script.google.com/macros/s/AKfycbwO9vraqdENCW_UKLmlNZCGm8b1s5H_4Xyj6SumvOGQ2yLlbJITU2yu-K3KrIwW9xlZyA/exec';
 const STATIC_DATA_URL='https://raceonline1.github.io/academy/data/race-data.json';
-const DEFAULT_RELAY='https://relay-live-xf0l.onrender.com/stream';
+const DEFAULT_RELAY='https://relay-live-xf0l.onrender.com/stream';   // o ?relay=https://... en la URL
 
-// Expresiones para interpretar las líneas de la consola. Si tu consola las
-// escribe distinto, ajusta SOLO esto (usa "Ver líneas crudas" para ver el formato real).
+// Formato REAL de la consola de Assetto Corsa EVO (comprobado con un log del servidor).
+// Si el juego cambia el texto de alguna línea, ajusta SOLO esto (usa "Ver líneas crudas").
+const CID='[0-9a-f]{16}-[0-9a-f]{16}';   // carId: 2 bloques hexadecimales
 const RX={
-  split:/Split completed for car/i,
-  lap:/New lap carId/i,
-  carId:/car(?:Id)?\s*[:=#]?\s*(\d+)/i,
-  sector:/(?:sector|split\s*(?:index|id|number)?)\s*[:=#]\s*(\d+)/i,
-  time:/(?:time|laptime|ms)\s*[:=]\s*(\d+(?::\d{2}\.\d{1,3})?(?:\.\d+)?)|(\d+)\s*ms\b|(\d+:\d{2}\.\d{3})/i,
-  steam:/\b(7656\d{13})\b/,
-  name:/(?:driver|player|name|nickname)\s*[:=]\s*"?([^,"\]\)\|]+)/i,
+  stamp:/^@(\d+) ([\s\S]*)$/,                          // hora del relay delante de cada línea
+  prefix:/^\[[^\]]*\]\s*\[[^\]]*\]\s*\[[^\]]*\]\s*/,   // "[fecha] [categoría] [nivel] "
+  // Car [carId] #0 for driver Nombre#8 [SteamID]
+  join:new RegExp(String.raw`Car \[(${CID})\] #\d+ for driver (.+?) \[(\d{17})\]`),
+  // SteamID connected (true) on car ks_modelo, with new carId carId
+  model:new RegExp(String.raw`(\d{17}) connected \(true\) on car (\S+?), with new carId (${CID})`),
+  leave:new RegExp(String.raw`Disconnected carId (${CID})`),
+  // New lap carId carId: 02:03.708
+  lap:new RegExp(String.raw`New lap carId (${CID}):\s*((?:\d+:)?\d+:\d{2}\.\d{1,3})`),
+  // On Split start false end false id 0 splittime 39417   (NO lleva carId)
+  split:/On Split start (?:true|false) end (?:true|false) id (\d+) splittime (\d+)/,
+  bad:new RegExp(String.raw`Couldn't create lap from opensplits \((?:carId )?(${CID})`),
+  pit:new RegExp(String.raw`\[SERVER\]\[(${CID})\] Received pit_state:(.*)`),
+  created:/(Practice|Qualifying|Warmup|Race)\s+created/i,
   players:/Server updated:\s*(\d+)\s*players/i,
-  reset:/Starting RemoteGameServer/i,
-  pitIn:/(?:enter\w*|in)\s+(?:the\s+)?pit|pit\s*(?:in|enter)/i,
-  pitOut:/(?:exit\w*|leav\w*|out\s+of)\s+(?:the\s+)?pit|pit\s*(?:out|exit)/i,
-  // Si el tiempo de "Split completed" es ACUMULADO desde el inicio de vuelta, pon true
-  splitsCumulative:false
+  reset:/Starting RemoteGameServer/i
 };
 
 // ============================================================
@@ -130,16 +136,17 @@ const RX={
 // ============================================================
 const $=id=>document.getElementById(id);
 const esc=v=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,'');
 const getVal=(o,k)=>{if(!o)return'';const t=norm(k);const kk=Object.keys(o).find(x=>norm(x)===t);return kk?o[kk]:''};
 const p2=n=>(n<10?'0':'')+n,p3=n=>(n<10?'00':n<100?'0':'')+n;
 function fmt(ms){if(ms==null||isNaN(ms))return'—';ms=Math.round(ms);const m=Math.floor(ms/60000),s=Math.floor(ms%60000/1000);return m+':'+p2(s)+'.'+p3(ms%1000)}
 function fmtS(ms){if(ms==null||isNaN(ms))return'—';ms=Math.round(ms);const m=Math.floor(ms/60000),s=Math.floor(ms%60000/1000);return m>0?m+':'+p2(s)+'.'+p3(ms%1000):s+'.'+p3(ms%1000)}
-function parseTime(str){
-  if(str==null)return null;str=String(str);
-  let m=str.match(/^(\d+):(\d{2})\.(\d+)$/);if(m)return(+m[1])*60000+(+m[2])*1000+Math.round(parseFloat('0.'+m[3])*1000);
-  const n=parseFloat(str);if(isNaN(n))return null;
-  return str.includes('.')&&n<1000?Math.round(n*1000):Math.round(n);
+// "02:03.708" -> 123708 ms  (también acepta h:mm:ss.mmm)
+function parseLap(str){
+  const m=String(str).match(/^((?:\d+:)*)(\d+)\.(\d{1,3})$/);if(!m)return null;
+  const parts=m[1].split(':').filter(Boolean).map(Number);
+  let sec=+m[2];for(let i=parts.length-1,mul=60;i>=0;i--,mul*=60)sec+=parts[i]*mul;
+  return sec*1000+(+m[3].padEnd(3,'0'));
 }
 function licHtml(l){l=String(l||'').trim();if(!l)return'';const k=l.toUpperCase();return`<span class="badge ${['SIL','AMA','PAM','PRO'].includes(k)?'lic-'+k:'lic-default'}"><span class="dot"></span>${esc(l)}</span>`}
 let FORZAR={};
@@ -150,20 +157,22 @@ function marcaHtml(v){v=String(v||'').trim();if(!v)return'';if(!/^(https?:|data:
 // AJUSTES DE SESIÓN
 // ============================================================
 const qs=new URLSearchParams(location.search);
-const CFG=Object.assign({track:'',type:'Race',laps:25,min:45,relay:'',clock:null},JSON.parse(localStorage.getItem('lt_cfg')||'{}'));
+const CFG=Object.assign({track:'',type:'Race',laps:25,min:45,relay:'',clock:null,delay:8},JSON.parse(localStorage.getItem('lt_cfg')||'{}'));
 if(qs.get('relay'))CFG.relay=qs.get('relay');
 const RELAY=CFG.relay||DEFAULT_RELAY;
+const TYPE_TXT={Race:'Race',Qualify:'Qualifying',Practice:'Practice',Warmup:'Warmup'};
+let SKEW=0,SESS_START=null;   // SKEW = hora del relay - hora de este navegador; SESS_START = hora (del relay) en que empezó la sesión
 function applyCfg(){
   $('hTrack').textContent=CFG.track||'—';
-  const t=$('hType');t.textContent={Race:'Race',Qualify:'Qualifying',Practice:'Practice'}[CFG.type];t.className='stype '+CFG.type;
-  $('sTrack').value=CFG.track;$('sType').value=CFG.type;$('sLaps').value=CFG.laps;$('sMin').value=CFG.min;$('sRelay').value=CFG.relay;
+  const t=$('hType');t.textContent=TYPE_TXT[CFG.type]||'—';t.className='stype '+CFG.type;
+  $('sTrack').value=CFG.track;$('sType').value=CFG.type;$('sLaps').value=CFG.laps;$('sMin').value=CFG.min;$('sRelay').value=CFG.relay;$('sDelay').value=CFG.delay;
   $('hProgK').textContent=CFG.type==='Race'?'Vuelta':'Tiempo restante';
   paintRows();
 }
 const saveCfg=()=>localStorage.setItem('lt_cfg',JSON.stringify(CFG));
 $('btnSet').onclick=()=>$('settings').classList.toggle('show');
-$('btnSave').onclick=()=>{CFG.track=$('sTrack').value;CFG.type=$('sType').value;CFG.laps=+$('sLaps').value||25;CFG.min=+$('sMin').value||45;CFG.relay=$('sRelay').value.trim();saveCfg();location.reload()};
-$('btnClock').onclick=()=>{CFG.clock=Date.now();saveCfg()};
+$('btnSave').onclick=()=>{CFG.track=$('sTrack').value;CFG.type=$('sType').value;CFG.laps=+$('sLaps').value||25;CFG.min=+$('sMin').value||45;CFG.relay=$('sRelay').value.trim();const dl=parseFloat($('sDelay').value);CFG.delay=isNaN(dl)?8:dl;saveCfg();location.reload()};
+$('btnClock').onclick=()=>{CFG.clock=Date.now();SESS_START=Date.now()+SKEW;saveCfg()};
 $('btnRaw').onclick=()=>{const r=$('raw');r.style.display=r.style.display==='block'?'none':'block'};
 if(!CFG.clock){CFG.clock=Date.now();saveCfg()}
 
@@ -173,24 +182,38 @@ if(!CFG.clock){CFG.clock=Date.now();saveCfg()}
 let PILOTOS=[],BY_STEAM={},BY_NAME={};
 const CARS={};            // carId -> estado
 const GB=[Infinity,Infinity,Infinity],GL={t:Infinity};   // mejores globales
+const POOL=[[],[],[]];    // tiempos de sector aún sin dueño (la consola no dice a qué coche pertenecen)
 let PLAYERS=null,dirty=false;
 
-function getCar(id){
-  return CARS[id]||(CARS[id]={id,name:'',steam:'',laps:0,total:0,last:null,best:null,s:[null,null,null],sb:[Infinity,Infinity,Infinity],cur:[null,null,null],pit:false,pits:0,piloto:null,upd:0});
+function newCar(id){
+  return{id,name:'',steam:'',model:'',laps:0,total:0,last:null,best:null,s:[null,null,null],sb:[Infinity,Infinity,Infinity],cur:[null,null,null],pit:false,out:false,pits:0,piloto:null,upd:0,join:Date.now()};
 }
+function getCar(id){return CARS[id]||(CARS[id]=newCar(id))}
+function resetStats(c){
+  Object.assign(c,{laps:0,total:0,last:null,best:null,s:[null,null,null],sb:[Infinity,Infinity,Infinity],cur:[null,null,null],pit:false,out:false,pits:0,upd:0});
+}
+function resetAll(){for(const k in CARS)delete CARS[k];GB.fill(Infinity);GL.t=Infinity;POOL.forEach(p=>p.length=0)}
 function linkPilot(c){
   if(c.piloto)return;
   c.piloto=(c.steam&&BY_STEAM[c.steam])||(c.name&&BY_NAME[norm(c.name)])||null;
 }
-function identify(c,line){
-  const sm=line.match(RX.steam);if(sm)c.steam=sm[1];
-  const nm=line.match(RX.name);if(nm&&!c.name)c.name=nm[1].trim();
-  linkPilot(c);
-}
 function setSector(c,i,ms){
-  c.s[i]=ms;c.cur[i]=ms;
+  c.s[i]=ms;
   if(ms<c.sb[i])c.sb[i]=ms;
   if(ms<GB[i])GB[i]=ms;
+}
+// La consola da S1, S2 y S3 SIN decir de qué coche son, pero al terminar la vuelta da el tiempo total.
+// Buscamos la combinación S1+S2+S3 que suma exactamente ese tiempo: así sabemos de quién son.
+function matchSectors(lap){
+  const P0=POOL[0],P1=POOL[1],P2=POOL[2];
+  for(let k=P2.length-1;k>=0;k--){
+    for(let j=P1.length-1;j>=0;j--){
+      const a=lap-P2[k]-P1[j];if(a<=0)continue;
+      const i=P0.lastIndexOf(a);
+      if(i>=0){const r=[a,P1[j],P2[k]];P0.splice(i,1);P1.splice(j,1);P2.splice(k,1);return r}
+    }
+  }
+  return null;
 }
 const SESS={},TR={},LY={};let CUR_DEF='',CUR_SESS='',TC=false;
 function applySess(){
@@ -200,12 +223,9 @@ function applySess(){
   if(TR[CUR_SESS])$('hTrack').textContent=TR[CUR_SESS]+(LY[CUR_SESS]?' '+LY[CUR_SESS]:'');
   $('hProgK').textContent=(SESS[CUR_SESS]||{}).laps>0?'Vuelta':'Tiempo restante';
 }
-// Lee de la consola: sesión activa, circuito, duración y vueltas (volcado de config al arrancar el servidor)
-function parseSession(line){
+// Lee de la consola: circuito, duración y vueltas de cada sesión (volcado de config al arrancar el servidor)
+function parseConfig(line){
   let m;
-  if(m=line.match(/(Practice|Qualifying|Warmup|Race)\s+created/i)){
-    CUR_SESS=m[1][0].toUpperCase()+m[1].slice(1).toLowerCase();
-    for(const k in CARS)delete CARS[k];GB.fill(Infinity);GL.t=Infinity;CFG.clock=Date.now();dirty=true;applySess();return true}
   if(/"track_content_data"/.test(line)){TC=true;return true}
   if(TC&&(m=line.match(/"name":\s*"([^"]+)"/))){TR[CUR_DEF]=m[1];TC=false;applySess();return true}
   if(m=line.match(/"track_layout_name":\s*"([^"]+)"/)){LY[CUR_DEF]=m[1];applySess();return true}
@@ -214,42 +234,61 @@ function parseSession(line){
   if(CUR_DEF&&(m=line.match(/"session_laps":\s*(\d+)/))){SESS[CUR_DEF].laps=+m[1];return true}
   return false;
 }
-function onLine(line){
-  const raw=$('raw');raw.textContent+=line+'\n';if(raw.textContent.length>40000)raw.textContent=raw.textContent.slice(-20000);raw.scrollTop=raw.scrollHeight;
+function onLine(raw){
+  let ts=null,line=raw;
+  const sm=raw.match(RX.stamp);if(sm){ts=+sm[1];line=sm[2]}
+  const box=$('raw');box.textContent+=line+'\n';if(box.textContent.length>40000)box.textContent=box.textContent.slice(-20000);box.scrollTop=box.scrollHeight;
+  const msg=line.replace(RX.prefix,'');
   let m;
-  if(parseSession(line))return;
-  if(RX.reset.test(line)){for(const k in CARS)delete CARS[k];GB.fill(Infinity);GL.t=Infinity;CFG.clock=Date.now();saveCfg();dirty=true;return}
-  if(m=line.match(RX.players)){PLAYERS=+m[1];dirty=true;return}
-  const isSplit=RX.split.test(line),isLap=RX.lap.test(line);
-  const cm=line.match(RX.carId);
-  if(!cm)return;
-  const c=getCar(cm[1]);identify(c,line);
-  if(isSplit||isLap){
-    const tm=line.match(RX.time);const ms=parseTime(tm&&(tm[1]||tm[2]||tm[3]));
-    if(ms==null)return;
-    c.pit=false;c.upd=Date.now();
-    if(isSplit){
-      const sm=line.match(RX.sector);const idx=sm?Math.min(2,Math.max(0,+sm[1]-1)):(c.cur[0]==null?0:(c.cur[1]==null?1:2));
-      if(idx===0)c.cur=[null,null,null];
-      let val=ms;if(RX.splitsCumulative&&idx>0)val=ms-c.cur.slice(0,idx).reduce((a,b)=>a+(b||0),0);
-      setSector(c,idx,val);
-    }else{
-      // Vuelta completada: sector 3 = vuelta - S1 - S2 si no llegó como split
-      if(c.cur[0]!=null&&c.cur[1]!=null&&c.cur[2]==null){const s3=ms-c.cur[0]-c.cur[1];if(s3>0)setSector(c,2,s3)}
-      c.laps++;c.total+=ms;c.last=ms;
-      if(c.best==null||ms<c.best)c.best=ms;
-      if(ms<GL.t)GL.t=ms;
-      c.cur=[null,null,null];
-    }
-  }else if(RX.pitIn.test(line)){c.pit=true;c.pits++}
-  else if(RX.pitOut.test(line)){c.pit=false}
-  dirty=true;
+  if(RX.reset.test(msg)){resetAll();SESS_START=null;dirty=true;return}
+  if(m=msg.match(RX.created)){
+    CUR_SESS=m[1][0].toUpperCase()+m[1].slice(1).toLowerCase();
+    for(const k in CARS)resetStats(CARS[k]);GB.fill(Infinity);GL.t=Infinity;POOL.forEach(p=>p.length=0);
+    SESS_START=ts!=null?ts:Date.now()+SKEW;CFG.clock=Date.now();dirty=true;applySess();return}
+  if(parseConfig(msg))return;
+  if(m=msg.match(RX.players)){PLAYERS=+m[1];dirty=true;return}
+  // --- pilotos que entran y salen ---
+  if(m=msg.match(RX.join)){
+    const c=getCar(m[1]);c.steam=m[3];c.name=m[2].replace(/#\d+$/,'').trim();c.piloto=null;linkPilot(c);dirty=true;return}
+  if(m=msg.match(RX.model)){const c=getCar(m[3]);c.steam=m[1];c.model=m[2];c.piloto=null;linkPilot(c);dirty=true;return}
+  if(m=msg.match(RX.leave)){
+    delete CARS[m[1]];if(ROWS[m[1]]){ROWS[m[1]].tr.remove();delete ROWS[m[1]]}dirty=true;return}
+  // --- boxes ---
+  if(m=msg.match(RX.pit)){
+    const c=CARS[m[1]];if(!c)return;
+    const st=(m[2].match(/pit_step:\s*(\w+)/)||[])[1];
+    if(st==='Steady'){if(c.out){c.pits++;c.out=false}c.pit=true}
+    else if(st==='OutOfTolerance'){c.pit=false;c.out=true}
+    dirty=true;return}
+  // --- sectores (sin carId) ---
+  if(m=msg.match(RX.split)){
+    const id=+m[1],t=+m[2];
+    if(id>2)return;
+    POOL[id].push(t);if(POOL[id].length>40)POOL[id].shift();
+    const ids=Object.keys(CARS);
+    if(ids.length===1){const c=CARS[ids[0]];if(id===0)c.cur=[null,null,null];c.cur[id]=t;dirty=true}  // un solo coche: sector en directo
+    return}
+  // --- vuelta de salida de boxes: se descarta ---
+  if(m=msg.match(RX.bad)){POOL[2].pop();if(CARS[m[1]])CARS[m[1]].cur=[null,null,null];dirty=true;return}
+  // --- vuelta completada ---
+  if(m=msg.match(RX.lap)){
+    const ms=parseLap(m[2]);if(ms==null)return;
+    const c=getCar(m[1]);linkPilot(c);c.upd=Date.now();
+    let sec=matchSectors(ms);
+    if(!sec&&c.cur.every(x=>x!=null)&&c.cur[0]+c.cur[1]+c.cur[2]===ms)sec=c.cur.slice();
+    if(sec)sec.forEach((v,i)=>setSector(c,i,v));else c.s=[null,null,null];
+    c.laps++;c.total+=ms;c.last=ms;
+    if(c.best==null||ms<c.best)c.best=ms;
+    if(ms<GL.t)GL.t=ms;
+    c.cur=[null,null,null];
+    dirty=true}
 }
 
 // ============================================================
 // RENDER (actualiza solo las celdas que cambian + destello)
 // ============================================================
 const ROWS={};
+const NCOL=14;
 function colorCls(v,best,gbest){if(v==null)return'';if(v===gbest)return'p';if(v===best)return'g';return''}
 function setCell(td,html,live){
   if(td._h===html)return;
@@ -259,20 +298,21 @@ function setCell(td,html,live){
 function ensureRow(id){
   if(ROWS[id])return ROWS[id];
   const tr=document.createElement('tr');
-  const names=['pos','cls','drv','lic','mk','car','s1','s2','s3','last','best','gap','pits'];
+  const names=['pos','cls','drv','lic','mk','car','s1','s2','s3','last','best','gap','laps','pits'];
   const cells={};
   names.forEach(n=>{const td=document.createElement('td');if(['s1','s2','s3','last','best'].includes(n))td.className='live-cell';tr.appendChild(td);cells[n]=td});
   cells.mk.style.textAlign='center';
   return ROWS[id]={tr,cells};
 }
+const DASH='<span class="t" style="color:var(--text-dim)">—</span>';
 function paintRows(){
   const list=Object.values(CARS);
   const tb=$('tb');
-  if(!list.length){if(!tb.querySelector('.empty'))tb.innerHTML='<tr><td colspan="13" class="empty">Esperando datos del servidor…</td></tr>';updHeader([]);return}
+  if(!list.length){if(!tb.querySelector('.empty'))tb.innerHTML='<tr><td colspan="'+NCOL+'" class="empty">Esperando pilotos en el servidor…</td></tr>';updHeader([]);return}
   const race=CFG.type==='Race';
   list.sort((a,b)=>{
-    if(race){if(b.laps!==a.laps)return b.laps-a.laps;if(a.laps>0&&a.total!==b.total)return a.total-b.total;return a.upd-b.upd}
-    if(a.best==null&&b.best==null)return 0;if(a.best==null)return 1;if(b.best==null)return-1;return a.best-b.best;
+    if(race){if(b.laps!==a.laps)return b.laps-a.laps;if(a.laps>0&&a.total!==b.total)return a.total-b.total;return a.join-b.join}
+    if(a.best==null&&b.best==null)return a.join-b.join;if(a.best==null)return 1;if(b.best==null)return-1;return a.best-b.best;
   });
   if(tb.querySelector('.empty'))tb.innerHTML='';
   const L=list[0];
@@ -283,16 +323,17 @@ function paintRows(){
     setCell(x.pos,`<span class="pos-badge ${posCls}">${i+1}</span>`);
     const cls=pl?getVal(pl,'Clase'):'';
     setCell(x.cls,cls?`<span class="class-tag">${esc(cls)}</span>`:'');
-    setCell(x.drv,esc(pl?(getVal(pl,'Nombre_Piloto')||c.name):(c.name||'Coche #'+c.id)));
+    setCell(x.drv,esc(pl?(getVal(pl,'Nombre_Piloto')||c.name):(c.name||'Coche #'+c.id.slice(0,4))));
     setCell(x.lic,licHtml(pl?getVal(pl,'Licencia'):''));
     setCell(x.mk,marcaHtml(pl?getVal(pl,'Marca'):''));
-    setCell(x.car,esc(pl?(getVal(pl,'Espec')||getVal(pl,'Coche_Principal')):''));
+    setCell(x.car,esc(pl?(getVal(pl,'Espec')||getVal(pl,'Coche_Principal')):String(c.model||'').replace(/^ks_/,'').replace(/_/g,' ')));
+    const live=c.cur.some(v=>v!=null);
     for(let k=0;k<3;k++){
-      const v=c.cur[k]!=null?c.cur[k]:c.s[k];
-      setCell(x['s'+(k+1)],v==null?'<span class="t" style="color:var(--text-dim)">—</span>':`<span class="t ${colorCls(v,c.sb[k],GB[k])}">${fmtS(v)}</span>`,true);
+      const v=live?c.cur[k]:c.s[k];
+      setCell(x['s'+(k+1)],v==null?DASH:`<span class="t ${live?'':colorCls(v,c.sb[k],GB[k])}">${fmtS(v)}</span>`,true);
     }
-    setCell(x.last,c.last==null?'<span class="t" style="color:var(--text-dim)">—</span>':`<span class="t ${colorCls(c.last,c.best,GL.t)}">${fmt(c.last)}</span>`,true);
-    setCell(x.best,c.best==null?'<span class="t" style="color:var(--text-dim)">—</span>':`<span class="t ${c.best===GL.t?'p':'g'}">${fmt(c.best)}</span>`,true);
+    setCell(x.last,c.last==null?DASH:`<span class="t ${colorCls(c.last,c.best,GL.t)}">${fmt(c.last)}</span>`,true);
+    setCell(x.best,c.best==null?DASH:`<span class="t ${c.best===GL.t?'p':'g'}">${fmt(c.best)}</span>`,true);
     // Gap
     let gap='';
     if(i>0){
@@ -300,6 +341,7 @@ function paintRows(){
       else if(c.best!=null&&L.best!=null)gap='+'+fmtS(c.best-L.best);
     }else gap=c.laps||c.best?'Líder':'';
     setCell(x.gap,`<span class="t">${esc(gap)}</span>`);
+    setCell(x.laps,`<span class="t">${c.laps}</span>`);
     setCell(x.pits,c.pit?'<span class="box">BOX</span>':(race?`<span class="t">${c.pits}</span>`:''));
     tb.appendChild(r.tr);
   });
@@ -315,7 +357,10 @@ function tickClock(){
     const lead=list.reduce((m,c)=>Math.max(m,c.laps),0);
     $('hProg').textContent=list.length?Math.min(lead+1,NL)+'/'+NL:'—/'+NL;
   }else{
-    const rem=(d.ms||CFG.min*60000)-(Date.now()-CFG.clock);
+    // Inicio = hora (del relay) a la que llegó "… created" + retraso configurable (el cronómetro del juego arranca algo después)
+    const base=SESS_START!=null?SESS_START+(CFG.delay||0)*1000:CFG.clock;
+    const now=SESS_START!=null?Date.now()+SKEW:Date.now();
+    const rem=(d.ms||CFG.min*60000)-(now-base);
     $('hProg').textContent=rem>0?(()=>{const s=Math.floor(rem/1000),h=Math.floor(s/3600);return(h?h+':':'')+p2(Math.floor(s%3600/60))+':'+p2(s%60)})():'00:00';
   }
 }
@@ -336,6 +381,7 @@ async function loadPilotos(){
     const sid=String(getVal(p,'Player_id')||'').trim();if(sid)BY_STEAM[sid]=p;
     const n=norm(getVal(p,'Nombre_Piloto'));if(n)BY_NAME[n]=p;
   });
+  for(const k in CARS)CARS[k].piloto=null;   // reintenta el enlace con los datos recién cargados
   dirty=true;
 }
 function setLive(on){$('liveBadge').classList.toggle('off',!on)}
@@ -343,21 +389,31 @@ function connect(){
   const es=new EventSource(RELAY);
   es.onopen=()=>setLive(true);
   es.onmessage=e=>onLine(e.data);
+  es.addEventListener('sync',e=>{SKEW=(+e.data)-Date.now()});
   es.onerror=()=>{setLive(false);es.close();setTimeout(connect,3000)};
 }
 
-// Modo demo (?demo=1): genera líneas falsas para probar el diseño sin servidor.
+// Modo demo (?demo=1): genera líneas falsas (con el formato real) para probar el diseño sin servidor.
 function demo(){
-  const ids=[1,2,3,4,5];let lapN={};ids.forEach(i=>lapN[i]=0);
   setLive(true);
-  ids.forEach(i=>setTimeout(function go(){
-    const s1=28000+Math.random()*1500,s2=31000+Math.random()*1500,s3=29000+Math.random()*1500;
-    onLine(`Split completed for car ${i} sector: 1 time: ${Math.round(s1)}`);
-    setTimeout(()=>onLine(`Split completed for car ${i} sector: 2 time: ${Math.round(s2)}`),s1/20);
-    setTimeout(()=>{onLine(`New lap carId ${i} time: ${Math.round(s1+s2+s3)}`);},(s1+s2)/20);
-    setTimeout(go,(s1+s2+s3)/20);
-  },i*800));
-  onLine('Server updated: 5 players');
+  setTimeout(()=>{
+    const steams=Object.keys(BY_STEAM).slice(0,5);while(steams.length<5)steams.push('7656119800000000'+steams.length);
+    const ids=steams.map((_,i)=>'d0000000000000'+(10+i)+'-a000000000000'+(10+i));
+    const lapStr=ms=>p2(Math.floor(ms/60000))+':'+p2(Math.floor(ms%60000/1000))+'.'+p3(ms%1000);
+    onLine('Practice created');
+    ids.forEach((id,i)=>{
+      onLine(`Car [${id}] #${i} for driver Piloto ${i+1}#${i} [${steams[i]}]`);
+      onLine(`${steams[i]} connected (true) on car ks_datsun_240z_fairlady, with new carId ${id}`);
+      setTimeout(function go(){
+        const s1=34000+Math.round(Math.random()*4000),s2=34000+Math.round(Math.random()*3000),s3=50000+Math.round(Math.random()*3000);
+        onLine(`On Split start false end false id 0 splittime ${s1}`);
+        setTimeout(()=>onLine(`On Split start false end false id 1 splittime ${s2}`),2000);
+        setTimeout(()=>{onLine(`On Split start true end true id 2 splittime ${s3}`);onLine(`New lap carId ${id}: ${lapStr(s1+s2+s3)}`)},4000);
+        setTimeout(go,6000);
+      },(i+1)*1500);
+    });
+    onLine('Server updated: 5 players');
+  },1500);
 }
 
 applyCfg();if(!qs.get('admin'))$('btnSet').style.display='none';
