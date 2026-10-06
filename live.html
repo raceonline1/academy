@@ -51,7 +51,7 @@ tbody tr:hover{background:var(--panel-2)}
 .dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px;background:currentColor}
 .lic-SIL{background:rgba(198,205,212,.14);color:#D7DCE2}.lic-AMA{background:rgba(201,138,74,.16);color:#E3A468}.lic-PAM{background:rgba(232,195,60,.16);color:#F5D34A}.lic-PRO{background:#050607;color:#F0F0F0;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}.lic-default{background:var(--panel-2);color:var(--text-dim)}
 .t{font-family:'JetBrains Mono';color:var(--text)}
-.t.g{color:var(--green);font-weight:700}.t.p{color:var(--purple);font-weight:700}
+.t.g{color:var(--green);font-weight:700}.t.p{color:var(--purple);font-weight:700}.t.inv{color:#ff4d4d;font-weight:700}
 td.live-cell.flash{animation:flash 1.3s ease-out}
 @keyframes flash{0%{background:rgba(255,255,255,.28)}100%{background:transparent}}
 .box{display:inline-block;background:var(--amber);color:#000;font-weight:800;font-family:'JetBrains Mono';font-size:12px;padding:3px 10px;border-radius:6px;letter-spacing:1px;animation:pulse 1s infinite}
@@ -65,10 +65,10 @@ td.live-cell.flash{animation:flash 1.3s ease-out}
   <div class="brand"><h1><span class="live off" id="liveBadge"><i></i><span id="liveTxt">LIVE TIMING</span></span></h1>
     <span class="sub">Race Online Shop · Assetto Corsa Evo Academy</span></div>
   <div class="sessinfo">
-    <div class="stat"><div class="k">Circuito</div><div class="v" id="hTrack">—</div></div>
-    <div class="stat"><div class="k">Sesión</div><div class="v"><span class="stype" id="hType">—</span></div></div>
+    <div class="stat"><div class="k">Circuito</div><div class="v" id="hTrack"></div></div>
+    <div class="stat"><div class="k">Sesión</div><div class="v"><span class="stype" id="hType"></span></div></div>
     <div class="stat"><div class="k" id="hProgK"></div><div class="v mono" id="hProg"></div></div>
-    <div class="stat"><div class="k">Jugadores</div><div class="v mono" id="hPlayers">—</div></div>
+    <div class="stat"><div class="k">Jugadores</div><div class="v mono" id="hPlayers"></div></div>
     <button class="btn" id="btnSet">⚙ Ajustes</button>
   </div>
 </div></header>
@@ -105,6 +105,7 @@ td.live-cell.flash{animation:flash 1.3s ease-out}
 // ============================================================
 // CONFIGURACIÓN
 // ============================================================
+const RESULTADOS_ID='1lnJP56cv3VCFBc6YZaVqtTksT6WlDWfroigAiB9DQ_s';
 const API_URL='https://script.google.com/macros/s/AKfycbwO9vraqdENCW_UKLmlNZCGm8b1s5H_4Xyj6SumvOGQ2yLlbJITU2yu-K3KrIwW9xlZyA/exec';
 const STATIC_DATA_URL='https://raceonline1.github.io/academy/data/race-data.json';
 const DEFAULT_RELAY='https://relay-live-xf0l.onrender.com/stream';   // o ?relay=https://... en la URL
@@ -163,8 +164,6 @@ const RELAY=CFG.relay||DEFAULT_RELAY;
 const TYPE_TXT={Race:'Race',Qualify:'Qualifying',Practice:'Practice',Warmup:'Warmup'};
 let SKEW=0,SESS_START=null;   // SKEW = hora del relay - hora de este navegador; SESS_START = hora (del relay) en que empezó la sesión
 function applyCfg(){
-  $('hTrack').textContent=CFG.track||'—';
-  const t=$('hType');t.textContent=TYPE_TXT[CFG.type]||'—';t.className='stype '+CFG.type;
   $('sTrack').value=CFG.track;$('sType').value=CFG.type;$('sLaps').value=CFG.laps;$('sMin').value=CFG.min;$('sRelay').value=CFG.relay;$('sDelay').value=CFG.delay;
   updProgLabel();
   paintRows();
@@ -186,11 +185,11 @@ const POOL=[[],[],[]];    // tiempos de sector aún sin dueño (la consola no di
 let PLAYERS=null,dirty=false;
 
 function newCar(id){
-  return{id,name:'',steam:'',model:'',laps:0,total:0,last:null,best:null,s:[null,null,null],sb:[Infinity,Infinity,Infinity],cur:[null,null,null],next:null,pit:false,out:false,pits:0,piloto:null,upd:0,join:Date.now()};
+  return{id,name:'',steam:'',model:'',laps:0,total:0,last:null,best:null,s:[null,null,null],sb:[Infinity,Infinity,Infinity],cur:[null,null,null],next:null,hist:[],lastInv:false,pit:false,out:false,pits:0,piloto:null,upd:0,join:Date.now()};
 }
 function getCar(id){return CARS[id]||(CARS[id]=newCar(id))}
 function resetStats(c){
-  Object.assign(c,{laps:0,total:0,last:null,best:null,s:[null,null,null],sb:[Infinity,Infinity,Infinity],cur:[null,null,null],next:null,pit:false,out:false,pits:0,upd:0});
+  Object.assign(c,{laps:0,total:0,last:null,best:null,s:[null,null,null],sb:[Infinity,Infinity,Infinity],cur:[null,null,null],next:null,hist:[],lastInv:false,pit:false,out:false,pits:0,upd:0});
 }
 function resetAll(){for(const k in CARS)delete CARS[k];GB.fill(Infinity);GL.t=Infinity;POOL.forEach(p=>p.length=0)}
 function linkPilot(c){
@@ -215,12 +214,69 @@ function matchSectors(lap){
   }
   return null;
 }
+// Vueltas inválidas: la consola no lo dice; llega del JSON de resultados del servidor (lo lee el relay) y se aplica por tiempo de vuelta.
+function applyResults(R){
+  if(!R||!CUR_SESS||!String(R.type||'').length)return;
+  if(!CUR_SESS.toLowerCase().startsWith(String(R.type).toLowerCase().slice(0,4)))return;
+  const by={};(R.laps||[]).forEach(l=>{(by[l.p]=by[l.p]||[]).push(l)});
+  for(const c of Object.values(CARS)){
+    const rl=by[c.steam];if(!rl)continue;
+    c.hist.forEach(h=>{h.m=false});
+    rl.forEach(l=>{const h=c.hist.find(h=>!h.m&&h.t===l.t);if(h){h.m=true;h.inv=!l.v}});
+    const ok=c.hist.filter(h=>!h.inv);
+    c.best=ok.length?Math.min(...ok.map(h=>h.t)):null;
+    for(let k=0;k<3;k++){const v=ok.filter(h=>h.s).map(h=>h.s[k]);c.sb[k]=v.length?Math.min(...v):Infinity}
+    const lh=c.hist[c.hist.length-1];c.lastInv=!!(lh&&lh.inv);
+  }
+  GL.t=Infinity;GB.fill(Infinity);
+  for(const c of Object.values(CARS)){if(c.best!=null&&c.best<GL.t)GL.t=c.best;c.sb.forEach((v,k)=>{if(v<GB[k])GB[k]=v})}
+  dirty=true;
+}
+// Coches: el modelo que da el servidor (ks_xxx) se cruza con la pestaña CochesLogos (nombre = Specs, logo, forzar blanco)
+let CAR_ROWS=[];
+const ctok=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/^ks_/,'').split(/[^a-z0-9]+/).filter(t=>t&&t!=='ks');
+function prettyCar(m){return ctok(m).map(t=>t.length>3&&/^[a-z]+$/.test(t)?t[0].toUpperCase()+t.slice(1):t.toUpperCase()).join(' ')}
+function carInfo(model){
+  if(!model||!CAR_ROWS.length)return null;
+  const raw=String(model).trim().toLowerCase(),ids=new Set(ctok(model));
+  let best=null,bs=0;
+  for(const r of CAR_ROWS){
+    if(r.cells.some(v=>String(v).trim().toLowerCase()===raw))return r;      // coincidencia exacta con el id interno, si lo has puesto en alguna columna
+    const com=r.tokens.filter(t=>ids.has(t)).length;if(!com||!r.tokens.length)continue;
+    const ratio=com/r.tokens.length;if(ratio<0.6||com<2)continue;
+    const sc=ratio*100+r.tokens.length;if(sc>bs){bs=sc;best=r}
+  }
+  return best;
+}
+function csvRows(t){const out=[];let row=[],f='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];
+  if(q){if(ch==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=ch}
+  else if(ch==='"')q=true;else if(ch===','){row.push(f);f=''}
+  else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;row.push(f);out.push(row);row=[];f=''}
+  else f+=ch}
+  if(f||row.length){row.push(f);out.push(row)}return out}
+async function loadCoches(){
+  let rows=null;
+  try{const r=await fetch(API_URL+'?action=cochesLogos');const j=await r.json();if(j&&j.ok&&Array.isArray(j.data))rows=j.data}catch(e){}
+  if(!rows)try{const r=await fetch('https://docs.google.com/spreadsheets/d/'+RESULTADOS_ID+'/gviz/tq?tqx=out:csv&sheet=CochesLogos');if(r.ok)rows=csvRows(await r.text())}catch(e){}
+  if(!rows||!rows.length)return;
+  const head=rows[0].map(x=>norm(x));
+  let nc=head.findIndex(x=>x.includes('spec'));if(nc<0)nc=0;
+  const hasHead=!/^(https?:|data:image)/.test(String(rows[0][2]||'').trim());
+  CAR_ROWS=[];
+  rows.slice(hasHead?1:0).forEach(r=>{
+    const name=String(r[nc]||'').trim();if(!name)return;
+    const logo=String(r[2]||'').trim(),white=/^si$/.test(norm(r[4]));
+    if(logo&&white)FORZAR[logo]=true;
+    CAR_ROWS.push({name,tokens:ctok(name),logo,white,cells:r});
+  });
+  dirty=true;
+}
 const SESS={},TR={},LY={};let CUR_DEF='',CUR_SESS='',TC=false;
 function applySess(){
   const t={Practice:'Practice',Qualifying:'Qualify',Warmup:'Warmup',Race:'Race'}[CUR_SESS];
   if(t)CFG.type=t;
-  const e=$('hType');e.textContent=CUR_SESS||'—';e.className='stype '+CFG.type;
-  if(TR[CUR_SESS])$('hTrack').textContent=TR[CUR_SESS]+(LY[CUR_SESS]?' '+LY[CUR_SESS]:'');
+  const e=$('hType');e.textContent=CUR_SESS||'';e.className='stype '+(CUR_SESS?CFG.type:'');
+  $('hTrack').textContent=TR[CUR_SESS]?TR[CUR_SESS]+(LY[CUR_SESS]?' '+LY[CUR_SESS]:''):'';
   updProgLabel();
 }
 function updProgLabel(){
@@ -291,7 +347,7 @@ function onLine(raw){
       sec.forEach((v,i)=>{const j=POOL[i].lastIndexOf(v);if(j>=0)POOL[i].splice(j,1)});
     }else sec=matchSectors(ms);
     if(sec)sec.forEach((v,i)=>setSector(c,i,v));else c.s=[null,null,null];
-    c.laps++;c.total+=ms;c.last=ms;
+    c.laps++;c.total+=ms;c.last=ms;c.lastInv=false;c.hist.push({t:ms,s:sec,inv:false,m:false});
     if(c.best==null||ms<c.best)c.best=ms;
     if(ms<GL.t)GL.t=ms;
     c.cur=[null,null,null];c.next=0;
@@ -339,15 +395,16 @@ function paintRows(){
     setCell(x.cls,cls?`<span class="class-tag">${esc(cls)}</span>`:'');
     setCell(x.drv,esc(pl?(getVal(pl,'Nombre_Piloto')||c.name):(c.name||'Coche #'+c.id.slice(0,4))));
     setCell(x.lic,licHtml(pl?getVal(pl,'Licencia'):''));
-    setCell(x.mk,marcaHtml(pl?getVal(pl,'Marca'):''));
-    setCell(x.car,esc(pl?(getVal(pl,'Espec')||getVal(pl,'Coche_Principal')):String(c.model||'').replace(/^ks_/,'').replace(/_/g,' ')));
+    const ci=carInfo(c.model);
+    setCell(x.mk,marcaHtml(ci?ci.logo:''));
+    setCell(x.car,esc(ci?ci.name:prettyCar(c.model)));
     const live=c.cur.some(v=>v!=null);
     for(let k=0;k<3;k++){
       const v=live?c.cur[k]:c.s[k];
       const cl=v==null?'':live?(v<=GB[k]?'p':v<=c.sb[k]?'g':''):colorCls(v,c.sb[k],GB[k]);
       setCell(x['s'+(k+1)],v==null?DASH:`<span class="t ${cl}">${fmtS(v)}</span>`,true);
     }
-    setCell(x.last,c.last==null?DASH:`<span class="t ${colorCls(c.last,c.best,GL.t)}">${fmt(c.last)}</span>`,true);
+    setCell(x.last,c.last==null?DASH:`<span class="t ${c.lastInv?'inv':colorCls(c.last,c.best,GL.t)}">${fmt(c.last)}</span>`,true);
     setCell(x.best,c.best==null?DASH:`<span class="t ${c.best===GL.t?'p':'g'}">${fmt(c.best)}</span>`,true);
     // Gap
     let gap='';
@@ -363,7 +420,7 @@ function paintRows(){
   updHeader(list);
 }
 function updHeader(list){
-  $('hPlayers').textContent=PLAYERS==null?'—':PLAYERS;
+  $('hPlayers').textContent=PLAYERS==null?'':PLAYERS;
 }
 function tickClock(){
   const list=Object.values(CARS);
@@ -402,12 +459,21 @@ async function loadPilotos(){
   dirty=true;
 }
 function setLive(on){$('liveBadge').classList.toggle('off',!on)}
+// Servidor de juego cerrado (o web recién conectada al relay): se borra todo y la cabecera queda en blanco
+function blankAll(){
+  resetAll();
+  for(const k in SESS)delete SESS[k];for(const k in TR)delete TR[k];for(const k in LY)delete LY[k];
+  CUR_DEF='';CUR_SESS='';TC=false;SESS_START=null;PLAYERS=null;dirty=true;
+  applySess();tickClock();paintRows();
+}
 function connect(){
   const es=new EventSource(RELAY);
-  es.onopen=()=>setLive(true);
+  es.onopen=()=>{setLive(false);blankAll()};   // el relay reenvía todo al conectar; el piloto verde "EN VIVO" solo si el servidor de juego está activo
   es.onmessage=e=>onLine(e.data);
+  es.addEventListener('results',e=>{try{applyResults(JSON.parse(e.data))}catch(x){}});
+  es.addEventListener('status',e=>{if(e.data==='online')setLive(true);else{setLive(false);blankAll()}});
   es.addEventListener('sync',e=>{SKEW=(+e.data)-Date.now()});
-  es.onerror=()=>{setLive(false);es.close();setTimeout(connect,3000)};
+  es.onerror=()=>{setLive(false);blankAll();es.close();setTimeout(connect,3000)};
 }
 
 // Modo demo (?demo=1): genera líneas falsas (con el formato real) para probar el diseño sin servidor.
@@ -434,7 +500,7 @@ function demo(){
 }
 
 applyCfg();if(!qs.get('admin'))$('btnSet').style.display='none';
-loadPilotos();
+loadPilotos();loadCoches();
 if(qs.get('demo'))demo();else connect();
 </script>
 </body>
