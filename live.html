@@ -67,7 +67,7 @@ td.live-cell.flash{animation:flash 1.3s ease-out}
   <div class="sessinfo">
     <div class="stat"><div class="k">Circuito</div><div class="v" id="hTrack">—</div></div>
     <div class="stat"><div class="k">Sesión</div><div class="v"><span class="stype" id="hType">—</span></div></div>
-    <div class="stat"><div class="k" id="hProgK">Tiempo</div><div class="v mono" id="hProg">—</div></div>
+    <div class="stat"><div class="k" id="hProgK"></div><div class="v mono" id="hProg"></div></div>
     <div class="stat"><div class="k">Jugadores</div><div class="v mono" id="hPlayers">—</div></div>
     <button class="btn" id="btnSet">⚙ Ajustes</button>
   </div>
@@ -166,7 +166,7 @@ function applyCfg(){
   $('hTrack').textContent=CFG.track||'—';
   const t=$('hType');t.textContent=TYPE_TXT[CFG.type]||'—';t.className='stype '+CFG.type;
   $('sTrack').value=CFG.track;$('sType').value=CFG.type;$('sLaps').value=CFG.laps;$('sMin').value=CFG.min;$('sRelay').value=CFG.relay;$('sDelay').value=CFG.delay;
-  $('hProgK').textContent=CFG.type==='Race'?'Vuelta':'Tiempo restante';
+  updProgLabel();
   paintRows();
 }
 const saveCfg=()=>localStorage.setItem('lt_cfg',JSON.stringify(CFG));
@@ -221,7 +221,11 @@ function applySess(){
   if(t)CFG.type=t;
   const e=$('hType');e.textContent=CUR_SESS||'—';e.className='stype '+CFG.type;
   if(TR[CUR_SESS])$('hTrack').textContent=TR[CUR_SESS]+(LY[CUR_SESS]?' '+LY[CUR_SESS]:'');
-  $('hProgK').textContent=(SESS[CUR_SESS]||{}).laps>0?'Vuelta':'Tiempo restante';
+  updProgLabel();
+}
+function updProgLabel(){
+  const d=SESS[CUR_SESS]||{};
+  $('hProgK').textContent=d.laps>0?'Vuelta':d.ms?'Tiempo restante':'';
 }
 // Lee de la consola: circuito, duración y vueltas de cada sesión (volcado de config al arrancar el servidor)
 function parseConfig(line){
@@ -230,8 +234,8 @@ function parseConfig(line){
   if(TC&&(m=line.match(/"name":\s*"([^"]+)"/))){TR[CUR_DEF]=m[1];TC=false;applySess();return true}
   if(m=line.match(/"track_layout_name":\s*"([^"]+)"/)){LY[CUR_DEF]=m[1];applySess();return true}
   if(m=line.match(/"name":\s*"(Practice|Qualifying|Warmup|Race)"/)){CUR_DEF=m[1];SESS[CUR_DEF]=SESS[CUR_DEF]||{};return true}
-  if(CUR_DEF&&(m=line.match(/"session_duration_ms":\s*(\d+)/))){SESS[CUR_DEF].ms=+m[1];return true}
-  if(CUR_DEF&&(m=line.match(/"session_laps":\s*(\d+)/))){SESS[CUR_DEF].laps=+m[1];return true}
+  if(CUR_DEF&&(m=line.match(/"session_duration_ms":\s*(\d+)/))){SESS[CUR_DEF].ms=+m[1];applySess();return true}
+  if(CUR_DEF&&(m=line.match(/"session_laps":\s*(\d+)/))){SESS[CUR_DEF].laps=+m[1];applySess();return true}
   return false;
 }
 function onLine(raw){
@@ -363,15 +367,17 @@ function updHeader(list){
 }
 function tickClock(){
   const list=Object.values(CARS);
-  const d=SESS[CUR_SESS]||{},NL=d.laps>0?d.laps:(d.ms?0:(CFG.type==='Race'?CFG.laps:0));
-  if(NL){
-    const lead=list.reduce((m,c)=>Math.max(m,c.laps),0);
+  const d=SESS[CUR_SESS]||{};
+  // Sin datos del servidor (duración o vueltas de la sesión actual) no se muestra nada
+  if(!(d.laps>0)&&!d.ms){$('hProg').textContent='';return}
+  if(d.laps>0){
+    const NL=d.laps,lead=list.reduce((m,c)=>Math.max(m,c.laps),0);
     $('hProg').textContent=list.length?Math.min(lead+1,NL)+'/'+NL:'—/'+NL;
   }else{
     // Inicio = hora (del relay) a la que llegó "… created" + retraso configurable (el cronómetro del juego arranca algo después)
     const base=SESS_START!=null?SESS_START+(CFG.delay||0)*1000:CFG.clock;
     const now=SESS_START!=null?Date.now()+SKEW:Date.now();
-    const rem=(d.ms||CFG.min*60000)-(now-base);
+    const rem=d.ms-(now-base);
     $('hProg').textContent=rem>0?(()=>{const s=Math.floor(rem/1000),h=Math.floor(s/3600);return(h?h+':':'')+p2(Math.floor(s%3600/60))+':'+p2(s%60)})():'00:00';
   }
 }
