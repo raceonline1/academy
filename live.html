@@ -64,6 +64,7 @@ td.live-cell.flash{animation:flash 1.3s ease-out}
 #toast b{display:block;font-size:14px}#toast span{display:block;font-size:12px;color:var(--text-dim)}
 .spin{width:18px;height:18px;border:3px solid #3a4252;border-top-color:var(--amber);border-radius:50%;animation:rot .8s linear infinite;flex:none}
 @keyframes rot{to{transform:rotate(360deg)}}
+@media print{#toast,#raw,#settings,#btnSet,#btnPdf{display:none!important}header.topbar{position:static;backdrop-filter:none}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 </style>
 </head>
 <body>
@@ -83,7 +84,7 @@ td.live-cell.flash{animation:flash 1.3s ease-out}
 </div></header>
 
 <main>
-  <div id="fzBar"><span id="fzTxt"></span><button class="btn" id="btnJpg">⬇ Descargar JPG</button></div>
+  <div id="fzBar"><span id="fzTxt"></span><button class="btn" id="btnPdf">⬇ Descargar PDF</button></div>
   <div id="settings">
     <label>Circuito<input id="sTrack" placeholder="Brands Hatch GP"></label>
     <label>Sesión<select id="sType"><option value="Practice">Practice</option><option value="Qualify">Qualifying</option><option value="Race">Race</option></select></label>
@@ -187,7 +188,7 @@ const saveCfg=()=>localStorage.setItem('lt_cfg',JSON.stringify(CFG));
 $('btnSet').onclick=()=>$('settings').classList.toggle('show');
 $('btnSave').onclick=()=>{CFG.track=$('sTrack').value;CFG.type=$('sType').value;CFG.laps=+$('sLaps').value||25;CFG.min=+$('sMin').value||45;CFG.relay=$('sRelay').value.trim();const dl=parseFloat($('sDelay').value);CFG.adj=isNaN(dl)?0:dl;saveCfg();location.reload()};
 $('btnClock').onclick=()=>{CFG.clock=Date.now();SESS_START=Date.now()+SKEW;saveCfg()};
-$('btnJpg').onclick=()=>downloadClass();
+$('btnPdf').onclick=()=>downloadPDF();
 $('btnRaw').onclick=()=>{const r=$('raw');r.style.display=r.style.display==='block'?'none':'block'};
 if(!CFG.clock){CFG.clock=Date.now();saveCfg()}
 
@@ -289,32 +290,33 @@ function sortCars(list,race){
 }
 // Carrera: va delante quien más sectores ha completado; a igualdad, quien llegó antes a ese punto
 function raceCmp(a,b){if(b.prog!==a.prog)return b.prog-a.prog;if(a.progT!==b.progT)return a.progT-b.progT;return a.join-b.join}
-// Descarga de la clasificación como JPG (dibujada en un canvas, sin librerías)
-function downloadClass(){
-  if(!FREEZE)return;
-  const race=sameType(FREEZE.type,'Race'),list=sortCars(FREEZE.cars,race);
-  const W=1100,rh=36,top=96,H=top+rh*(list.length+1)+24,cv=document.createElement('canvas');cv.width=W;cv.height=H;
-  const x=cv.getContext('2d');x.fillStyle='#0f1115';x.fillRect(0,0,W,H);
-  x.fillStyle='#fff';x.font='700 26px Teko, Inter, sans-serif';x.fillText((FREEZE.server||'Live Timing')+' · '+FREEZE.type,24,40);
-  x.fillStyle='#9aa3b2';x.font='500 15px Inter, sans-serif';x.fillText((FREEZE.track?FREEZE.track+' · ':'')+new Date().toLocaleString(),24,66);
-  const cols=[['Pos',24],['Piloto',80],['Clase',340],['Coche',430],['Mejor V.',720],['Gap',840],['Vueltas',950]];
-  x.font='700 13px Inter, sans-serif';x.fillStyle='#9aa3b2';cols.forEach(c=>x.fillText(c[0].toUpperCase(),c[1],top));
-  const L=list[0];
-  list.forEach((c,i)=>{
-    const y=top+rh*(i+1),pl=c.piloto,ci=carInfo(c.model);
-    if(i%2){x.fillStyle='#161a21';x.fillRect(0,y-rh+10,W,rh)}
-    x.font='600 16px Inter, sans-serif';x.fillStyle='#fff';
-    x.fillText((c.fin?'🏁 ':'')+(i+1),24,y);
-    x.fillText(String(pl?(getVal(pl,'Nombre_Piloto')||c.name):c.name||'—').slice(0,34),80,y);
-    x.fillStyle='#cbd2dd';x.fillText(String(pl?getVal(pl,'Clase'):'').slice(0,14),340,y);
-    x.fillText(String(ci?ci.name:prettyCar(c.model)).slice(0,34),430,y);
-    x.fillStyle=c.best!=null&&c.best===FREEZE.g.gl?'#c77dff':'#fff';x.font='700 16px JetBrains Mono, monospace';
-    x.fillText(c.best==null?'—':fmt(c.best),720,y);
-    x.fillStyle='#cbd2dd';
-    let gap='';if(i>0){if(race){const d=L.laps-c.laps;gap=d>0?'+'+d+(d===1?' vuelta':' vueltas'):(c.laps>0?'+'+fmtS(Math.max(0,c.total-L.total)):'')}else if(c.best!=null&&L.best!=null)gap='+'+fmtS(c.best-L.best)}
-    x.fillText(gap,840,y);x.fillText(String(c.laps),950,y);
-  });
-  cv.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='clasificacion_'+FREEZE.type.toLowerCase()+'_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.jpg';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000)},'image/jpeg',0.92);
+// Descarga de TODA la web como PDF (una sola página larga, sin cortes). Usa html2canvas + jsPDF, que se cargan al pulsar el botón.
+const loadScript=src=>new Promise((ok,ko)=>{const e=document.createElement('script');e.src=src;e.onload=ok;e.onerror=()=>ko(new Error('No se pudo cargar '+src));document.head.appendChild(e)});
+async function downloadPDF(){
+  const btn=$('btnPdf'),old=btn.textContent;btn.disabled=true;btn.textContent='Generando PDF…';
+  try{
+    if(!window.html2canvas)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    if(!window.jspdf)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    if(document.fonts&&document.fonts.ready)await document.fonts.ready;
+    window.scrollTo(0,0);
+    const de=document.documentElement,W=de.scrollWidth,H=de.scrollHeight;
+    const scale=Math.min(2,16000/H);   // límite de tamaño del canvas en los navegadores
+    const cv=await html2canvas(document.body,{backgroundColor:'#0B0D10',scale,useCORS:true,logging:false,width:W,height:H,windowWidth:W,windowHeight:H,scrollX:0,scrollY:0,
+      ignoreElements:e=>e.id==='toast'||e.id==='raw'||e.id==='settings',
+      onclone:d=>{
+        const hd=d.querySelector('header.topbar');if(hd){hd.style.position='static';hd.style.backdropFilter='none';hd.style.webkitBackdropFilter='none'}
+        const bt=d.getElementById('btnPdf');if(bt)bt.style.display='none';
+        const bs=d.getElementById('btnSet');if(bs)bs.style.display='none';
+        d.querySelectorAll('td.flash').forEach(t=>t.classList.remove('flash'));
+      }});
+    const w=cv.width/scale,h=cv.height/scale;
+    const pdf=new window.jspdf.jsPDF({orientation:w>h?'l':'p',unit:'px',format:[w,h],hotfixes:['px_scaling'],compress:true});
+    pdf.addImage(cv.toDataURL('image/jpeg',0.95),'JPEG',0,0,w,h);
+    pdf.save('live-timing_'+(FREEZE?FREEZE.type.toLowerCase():'sesion')+'_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.pdf');
+  }catch(e){
+    console.error(e);toast('No se pudo generar el PDF','Se abre la impresión: elige "Guardar como PDF"',false,6000);
+    setTimeout(()=>window.print(),300);
+  }finally{btn.disabled=false;btn.textContent=old}
 }
 // Coches: el modelo que da el servidor (ks_xxx) se cruza con la pestaña CochesLogos (nombre = Specs, logo, forzar blanco)
 let CAR_ROWS=[];const NOLINK=new Set();
@@ -481,12 +483,14 @@ const NCOL=15;
 function colorCls(v,best,gbest){if(v==null)return'';if(v===gbest)return'p';if(v===best)return'g';return''}
 function setCell(td,html,live){
   if(td._h===html)return;
-  const first=td._h===undefined;td._h=html;td.innerHTML=html;
-  if(live&&!first){td.classList.remove('flash');void td.offsetWidth;td.classList.add('flash')}
+  const first=td._h===undefined,key=html.replace(/ class="[^"]*"/g,'');   // el color (clase) no cuenta: solo parpadea la celda cuyo valor cambia
+  const same=td._k===key;td._h=html;td._k=key;td.innerHTML=html;
+  if(live&&!first&&!same){td.classList.remove('flash');void td.offsetWidth;td.classList.add('flash')}
 }
 function ensureRow(id){
   if(ROWS[id])return ROWS[id];
   const tr=document.createElement('tr');
+  tr.addEventListener('animationend',e=>e.target.classList.remove('flash'));   // la clase no se queda puesta: si no, al recolocar la fila se repetiría el destello
   const names=['pos','cls','drv','lic','mk','car','s1','s2','s3','last','best','gap','laps','pits','box'];
   const cells={};
   names.forEach(n=>{const td=document.createElement('td');if(['s1','s2','s3','last','best'].includes(n))td.className='live-cell';tr.appendChild(td);cells[n]=td});
@@ -496,7 +500,14 @@ function ensureRow(id){
 const DASH='<span class="t" style="color:var(--text-dim)">—</span>';
 function paintRows(){
   const list=FREEZE?FREEZE.cars.slice():Object.values(CARS);
-  const G=FREEZE?{gb:FREEZE.g.gb,gl:FREEZE.g.gl}:{gb:GB,gl:GL.t};
+  // El morado es de UN solo piloto por sector (y uno para la mejor vuelta): quien tenga el mejor tiempo ahora mismo,
+  // contando los sectores que se están haciendo en este momento. Si otro piloto lo mejora, el anterior pasa a verde
+  // (si es su mejor personal) o a blanco. En empate de tiempos se queda el que lo hizo primero (el que entró antes).
+  const OWN={s:[null,null,null],sv:[Infinity,Infinity,Infinity],l:null,lv:Infinity};
+  list.slice().sort((a,b)=>a.join-b.join).forEach(c=>{
+    for(let k=0;k<3;k++){const v=Math.min(c.sb[k],c.cur[k]!=null?c.cur[k]:Infinity);if(v<OWN.sv[k]){OWN.sv[k]=v;OWN.s[k]=c}}
+    if(c.best!=null&&c.best<OWN.lv){OWN.lv=c.best;OWN.l=c}
+  });
   const tb=$('tb');
   for(const id in ROWS)if(!list.some(c=>c.id===id)){ROWS[id].tr.remove();delete ROWS[id]}
   if(!list.length){if(!tb.querySelector('.empty'))tb.innerHTML='<tr><td colspan="'+NCOL+'" class="empty">Esperando pilotos en el servidor…</td></tr>';updHeader([]);return}
@@ -523,11 +534,11 @@ function paintRows(){
     const live=c.cur.some(v=>v!=null);
     for(let k=0;k<3;k++){
       const v=live?c.cur[k]:c.s[k];
-      const cl=v==null?'':live?(v<=G.gb[k]?'p':v<=c.sb[k]?'g':''):colorCls(v,c.sb[k],G.gb[k]);
+      const cl=v==null?'':(OWN.s[k]===c&&v===OWN.sv[k])?'p':v<=c.sb[k]?'g':'';
       setCell(x['s'+(k+1)],v==null?DASH:`<span class="t ${cl}">${fmtS(v)}</span>`,true);
     }
-    setCell(x.last,c.last==null?DASH:`<span class="t ${c.lastInv?'inv':colorCls(c.last,c.best,G.gl)}">${fmt(c.last)}</span>`,true);
-    setCell(x.best,c.best==null?DASH:`<span class="t ${c.best===G.gl?'p':'g'}">${fmt(c.best)}</span>`,true);
+    setCell(x.last,c.last==null?DASH:`<span class="t ${c.lastInv?'inv':(OWN.l===c&&c.last===OWN.lv)?'p':c.last===c.best?'g':''}">${fmt(c.last)}</span>`,true);
+    setCell(x.best,c.best==null?DASH:`<span class="t ${OWN.l===c?'p':'g'}">${fmt(c.best)}</span>`,true);
     // Gap
     let gap='';
     if(i>0){
@@ -538,7 +549,7 @@ function paintRows(){
     setCell(x.laps,`<span class="t">${c.laps}</span>`);
     setCell(x.pits,`<span class="t">${c.pits}</span>`);
     setCell(x.box,c.pit?'<span class="box">BOX</span>':'');
-    tb.appendChild(r.tr);
+    if(tb.children[i]!==r.tr)tb.insertBefore(r.tr,tb.children[i]||null);   // solo se mueve la fila si cambia de posición
   });
   updHeader(list);
 }
