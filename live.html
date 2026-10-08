@@ -7,6 +7,23 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
+/* === AJUSTE ESCRITORIO (≥1100px) === */
+:root{
+  --padx:25px;   /* margen lateral de la web */
+  --mapw:380px;  /* ancho del mapa */
+  --maph:488px;  /* alto del mapa */
+  --lgap:14px;   /* separación mapa-tabla */
+  --tfont:13.5px;/* tamaño letra tabla */
+}
+/* === AJUSTE MÓVIL · CABECERA (≤640px) === */
+:root{
+  --h-val:13px;  /* tamaño de los datos */
+  --h-key:7.5px; /* tamaño de los títulos */
+  --h-gap:10px;  /* separación entre datos */
+  --h-padx:8px;  /* margen lateral cabecera */
+  --h-pady:6px;  /* margen vertical cabecera */
+  --h-live:9px;  /* tamaño «LIVE TIMING» y servidor */
+}
 :root{--asphalt:#0B0D10;--panel:#14171C;--panel-2:#1B1F26;--hairline:#262B33;--text:#E7EAEE;--text-dim:#8B93A1;--red:#f01c26;--red-dim:#4d1a1c;--amber:#FFB020;--danger:#FF4757;--green:#00E5C7;--purple:#C77DFF;--radius:10px;}
 *{box-sizing:border-box}html,body{margin:0;padding:0}
 body{background:radial-gradient(1200px 600px at 10% -10%,rgba(0,229,199,.06),transparent 60%),radial-gradient(900px 500px at 100% 0,rgba(255,176,32,.05),transparent 55%),var(--asphalt);color:var(--text);font-family:'Inter',system-ui,sans-serif;min-height:100vh}
@@ -85,7 +102,6 @@ td.live-cell.flash{animation:flash 1.3s ease-out}
   #layout.hasmap #mapSvg{height:min(64vh,560px)}
 }
 /* ===== Pantalla completa: tabla sin márgenes laterales, sin scroll horizontal y mapa más pequeño ===== */
-:root{--mapw:310px}
 .topbar-inner{max-width:none;padding-left:12px;padding-right:12px}
 main{max-width:none;padding:12px 0 80px}
 main>#settings,main>#fzBar,main>#raw{margin-left:12px;margin-right:12px}
@@ -104,6 +120,36 @@ tbody td{padding:8px clamp(4px,.55vw,10px)}
   #layout.hasmap #mapCard{margin:0 10px 0 0}
   #layout.hasmap #mapSvg{height:min(45vh,392px)}
 }
+/* ===== Ajustes de tamaño ===== */
+@media(min-width:1100px){
+  .topbar-inner{padding-left:var(--padx);padding-right:var(--padx)}
+  main{padding:12px var(--padx) 80px}
+  main>#settings,main>#fzBar,main>#raw,main>#simPanel{margin-left:0;margin-right:0}
+  .table-wrap{border-left:1px solid var(--hairline);border-right:1px solid var(--hairline);border-radius:var(--radius)}
+  table{font-size:var(--tfont)}
+  #layout.hasmap{display:grid;grid-template-columns:minmax(0,1fr) var(--mapw);gap:var(--lgap);align-items:start}
+  #layout.hasmap .table-wrap{grid-column:1;grid-row:1}
+  #layout.hasmap #mapCard{grid-column:2;grid-row:1;position:sticky;top:76px;max-width:none;margin:0}
+  #layout.hasmap #mapSvg{height:var(--maph)}
+}
+@media(max-width:640px){
+  .topbar-inner{padding:var(--h-pady) var(--h-padx);gap:var(--h-gap)}
+  .sessinfo{gap:var(--h-gap)}
+  .stat .v,.stat .v.mono{font-size:var(--h-val)}
+  .stat .k{font-size:var(--h-key)}
+  .stype{font-size:var(--h-val);padding:2px 8px}
+  .live,.brand span.sub{font-size:var(--h-live)}
+}
+/* ===== Simulador (solo ?admin=1) ===== */
+main>#simPanel{display:none;background:var(--panel);border:1px dashed var(--amber);border-radius:var(--radius);padding:12px 14px;margin:0 12px 12px}
+#simPanel h3{margin:0;font:600 18px 'Teko',sans-serif;letter-spacing:1px;color:var(--amber)}
+#simPanel .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+#simPanel label{font-size:11px;color:var(--text-dim);display:flex;align-items:center;gap:6px}
+#simPanel select,#simPanel input[type=number]{background:var(--panel-2);color:var(--text);border:1px solid var(--hairline);border-radius:8px;padding:5px 8px;font-size:12px;width:auto}
+#simPanel input[type=number]{width:64px}
+#simList{font:12px 'JetBrains Mono',monospace;color:var(--text-dim);display:flex;flex-direction:column;gap:3px}
+#simList b{color:var(--text);cursor:pointer;margin-left:8px}
+#simStat{font:12px 'JetBrains Mono',monospace;color:var(--green)}
 </style>
 </head>
 <body>
@@ -134,6 +180,22 @@ tbody td{padding:8px clamp(4px,.55vw,10px)}
     <button class="btn" id="btnSave">Guardar</button>
     <button class="btn" id="btnClock">⏱ Reiniciar reloj</button>
     <button class="btn" id="btnRaw">Ver líneas crudas</button>
+  </div>
+
+  <div id="simPanel">
+    <h3>🧪 SIMULADOR (admin)</h3>
+    <div class="row"><input type="file" id="simFiles" multiple accept=".log,.txt,.json,.csv,text/*,application/json">
+      <span style="font-size:11px;color:var(--text-dim)">Logs de la consola (.log/.txt) y JSON de resultados (con "laps"). Puedes añadir varios.</span></div>
+    <div class="row" id="simList"></div>
+    <div class="row">
+      <label>Velocidad <select id="simSpd"><option>0.5</option><option selected>1</option><option>2</option><option>5</option><option>10</option><option>30</option><option>100</option></select>×</label>
+      <label>Espera máx. entre líneas <input type="number" id="simCap" min="0" step="1" value="0"> s (0 = sin límite)</label>
+    </div>
+    <div class="row">
+      <button class="btn" id="simPlay">▶ Simular</button><button class="btn" id="simPause">⏸ Pausa</button>
+      <button class="btn" id="simStop">⏹ Parar y limpiar</button><button class="btn" id="simAll">⏭ Todo de golpe</button>
+      <button class="btn" id="simJson">📄 Aplicar JSON ahora</button><button class="btn" id="simDemo">🎲 Demo</button>
+      <button class="btn" id="simLive">↺ Volver al relay real</button><span id="simStat"></span></div>
   </div>
 
   <div class="checkered"></div>
@@ -646,14 +708,15 @@ function blankAll(){
   CUR_DEF='';CUR_SESS='';TC=false;SESS_START=null;PLAYERS=null;SERVER_NAME='';FREEZE=null;$('toast').style.display='none';dirty=true;
   applySess();tickClock();paintRows();
 }
+let ES=null,SIMON=false;   // SIMON: simulador activo (el relay real se ignora)
 function connect(){
-  const es=new EventSource(RELAY);
-  es.onopen=()=>{setLive(false);blankAll()};   // el relay reenvía todo al conectar; el piloto verde "EN VIVO" solo si el servidor de juego está activo
-  es.onmessage=e=>onLine(e.data);
-  es.addEventListener('results',e=>{try{applyResults(JSON.parse(e.data))}catch(x){}});
-  es.addEventListener('status',e=>{if(e.data==='online')setLive(true);else{setLive(false);blankAll()}});
-  es.addEventListener('sync',e=>{SKEW=(+e.data)-Date.now()});
-  es.onerror=()=>{setLive(false);blankAll();es.close();setTimeout(connect,3000)};
+  const es=ES=new EventSource(RELAY);
+  es.onopen=()=>{if(SIMON)return;setLive(false);blankAll()};   // el relay reenvía todo al conectar; el piloto verde "EN VIVO" solo si el servidor de juego está activo
+  es.onmessage=e=>{if(!SIMON)onLine(e.data)};
+  es.addEventListener('results',e=>{if(SIMON)return;try{applyResults(JSON.parse(e.data))}catch(x){}});
+  es.addEventListener('status',e=>{if(SIMON)return;if(e.data==='online')setLive(true);else{setLive(false);blankAll()}});
+  es.addEventListener('sync',e=>{if(!SIMON)SKEW=(+e.data)-Date.now()});
+  es.onerror=()=>{if(SIMON){es.close();return}setLive(false);blankAll();es.close();setTimeout(connect,3000)};
 }
 
 // Modo demo (?demo=1): genera líneas falsas (con el formato real) para probar el diseño sin servidor.
@@ -765,6 +828,59 @@ MAPA.frame=ts=>{
   else $('mapTip').style.display='none';
 };
 requestAnimationFrame(MAPA.frame);
+
+// ============================================================
+// ADMIN (?admin=1): simulador de logs y JSON de resultados
+// ============================================================
+if(qs.get('admin'))(function(){
+  $('simPanel').style.display='block';
+  const FILES=[];let Q=[],pos=0,timer=null,paused=false,JQ=[];
+  const stat=t=>$('simStat').textContent=t||'';
+  const spd=()=>+$('simSpd').value||1;
+  const tsOf=l=>{const m=String(l).match(/^@(\d+) /);return m?+m[1]:null};
+  function render(){
+    $('simList').innerHTML=FILES.length?FILES.map((f,i)=>esc(f.name)+' · '+(f.json?'JSON resultados ('+(f.json.laps||[]).length+' vueltas)':f.lines.length+' líneas')+' <b data-i="'+i+'">✕</b>').join('<br>'):'Sin archivos cargados';
+    $('simList').querySelectorAll('b').forEach(b=>b.onclick=()=>{FILES.splice(+b.dataset.i,1);render()});
+  }
+  render();
+  $('simFiles').onchange=async e=>{
+    for(const f of e.target.files){
+      const txt=await f.text();let j=null;try{j=JSON.parse(txt)}catch(x){}
+      if(j&&!Array.isArray(j)&&Array.isArray(j.laps))FILES.push({name:f.name,json:j});
+      else if(Array.isArray(j)&&j.length&&j.every(x=>typeof x==='string'))FILES.push({name:f.name,lines:j});
+      else if(Array.isArray(j)&&j.length&&j.every(x=>x&&Array.isArray(x.laps)))j.forEach((x,i)=>FILES.push({name:f.name+' #'+(i+1),json:x}));
+      else FILES.push({name:f.name,lines:txt.split(/\r?\n/).filter(l=>l.trim())});
+    }
+    e.target.value='';render();
+  };
+  function takeOver(){SIMON=true;try{ES&&ES.close()}catch(x){}SKEW=0}
+  function emit(l){onLine('@'+Date.now()+' '+String(l).replace(/^@\d+ /,''))}
+  function applyJson(){const n=JQ.length;JQ.forEach(j=>applyResults(Object.assign({type:CUR_SESS},j)));JQ=[];if(n)stat('JSON aplicado ('+n+')')}
+  function clearTimer(){clearTimeout(timer);timer=null}
+  function finish(){stat('Fin del log ('+Q.length+' líneas)');if(JQ.length)setTimeout(applyJson,1000/spd())}
+  function step(){
+    if(paused||pos>=Q.length){if(pos>=Q.length)finish();return}
+    let d=0,n=0;
+    do{const l=Q[pos++];emit(l);
+      if(RX.exit.test(l)&&JQ.length)setTimeout(applyJson,2500/spd());
+      const nx=Q[pos];d=120;if(nx!=null){const a=tsOf(l),b=tsOf(nx);if(a&&b)d=Math.max(0,b-a)}
+      d/=spd();const cap=+$('simCap').value;if(cap>0)d=Math.min(d,cap*1000);
+    }while(d<2&&pos<Q.length&&++n<400);
+    stat('Línea '+pos+' / '+Q.length+(spd()!==1?' · '+spd()+'×':''));
+    if(pos>=Q.length){finish();return}
+    timer=setTimeout(step,d);
+  }
+  function load(){Q=[];FILES.forEach(f=>f.lines&&Q.push(...f.lines));JQ=FILES.filter(f=>f.json).map(f=>f.json);pos=0;paused=false;clearTimer();
+    if(!Q.length&&!JQ.length){stat('Carga algún archivo primero');return false}
+    takeOver();blankAll();setLive(true);return true}
+  $('simPlay').onclick=()=>{if(load()&&Q.length)step();else if(JQ.length)stat('Solo hay JSON: usa «Aplicar JSON ahora» con una sesión activa')};
+  $('simAll').onclick=()=>{if(!load())return;while(pos<Q.length)emit(Q[pos++]);finish()};
+  $('simPause').onclick=()=>{if(!Q.length)return;paused=!paused;$('simPause').textContent=paused?'▶ Seguir':'⏸ Pausa';if(!paused)step();else stat('En pausa · línea '+pos+' / '+Q.length)};
+  $('simStop').onclick=()=>{clearTimer();Q=[];pos=0;paused=false;takeOver();blankAll();setLive(false);$('simPause').textContent='⏸ Pausa';stat('Parado')};
+  $('simJson').onclick=()=>{JQ=FILES.filter(f=>f.json).map(f=>f.json);if(!JQ.length){stat('No hay JSON cargado');return}applyJson()};
+  $('simDemo').onclick=()=>{clearTimer();Q=[];takeOver();blankAll();demo()};
+  $('simLive').onclick=()=>location.reload();
+})();
 
 applyCfg();if(!qs.get('admin'))$('btnSet').style.display='none';
 loadPilotos();loadCoches();loadTracks();
