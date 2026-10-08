@@ -1,0 +1,39 @@
+1. Crear el proyecto
+	1	En claude.ai, entra en Proyectos (barra lateral) y pulsa Nuevo proyecto.
+	2	Ponle un nombre, por ejemplo "Circuitos Live Timing".
+	3	En Conocimiento del proyecto sube tu circuitos.json, que es el ejemplo del formato.
+	4	En Instrucciones del proyecto, pega el texto de abajo.
+	5	Activa Ejecución de código y creación de archivos en Configuración → Capacidades. Si no lo ves, usa el buscador de Configuración. Sin esto, Claude no puede procesar imágenes, SVG ni GeoJSON.
+2. Instrucciones para pegar
+
+Genero circuitos para mi página de live timing de Assetto Corsa EVO, en el mismo
+formato que circuitos.json (en el conocimiento del proyecto). Cada circuito es una entrada:
+
+"clave": { "n": "Nombre", "alias": [...], "vb": [x,y,ancho,alto], "splits": [s1,s2], "pts": [x1,y1,x2,y2,...] }
+
+Reglas del formato (cópialas de las entradas existentes):
+- clave: nombre del circuito en minúsculas, sin espacios, tildes ni símbolos (ej. "brandshatch").
+  La web compara con el nombre que da el servidor ("track_content_data.name"), así que pídeme ese nombre exacto.
+- alias: variantes en minúsculas sin espacios ni tildes (ciudad, país, nombre corto), p. ej. ["austria","spielberg"].
+  Evita alias demasiado genéricos. Una entrada por circuito: la web no distingue layouts.
+- pts: línea central cerrada de EXACTAMENTE 320 puntos, equiespaciados (remuestreados por longitud de arco),
+  empezando en la línea de meta y en el SENTIDO DE CARRERA. No repitas el último punto. Un decimal.
+  Eje y hacia abajo (como SVG). Escala: longitud total del trazado entre ~900 y ~1300 unidades
+  (el grosor de la línea está en esas unidades, así que la escala importa).
+- vb: caja del trazado con margen 14 por cada lado: [minX-14, minY-14, ancho+28, alto+28].
+- splits: fracción del recorrido donde terminan S1 y S2 (ej. [0.33, 0.66]). Si te doy tiempos de sector de una
+  vuelta limpia, usa [S1/vuelta, (S1+S2)/vuelta]; si no, dime que es una estimación.
+
+Nunca inventes coordenadas de memoria. Si no te doy un trazado real (imagen limpia del trazado visto desde arriba,
+SVG, GPX o GeoJSON de OpenStreetMap), pídemelo. Pregúntame: nombre exacto del servidor, dónde está la meta,
+el sentido de carrera, y los tiempos de sector si los tengo.
+
+Antes de entregar, comprueba con código: JSON válido, 320 puntos, paso casi uniforme, trazado cerrado, vb correcto,
+empieza en meta y va en sentido de carrera. Entrega el circuitos.json completo actualizado (todas las entradas
+anteriores intactas) y un resumen de lo que has comprobado y de lo que es una estimación.
+3. Cómo usarlo en cada chat
+	•	Adjunta la fuente del trazado: una imagen limpia del circuito visto desde arriba, un SVG, un GPX o un GeoJSON. Para un GeoJSON, puedes exportar la pista desde OpenStreetMap (overpass-turbo.eu, buscando highway=raceway).
+	•	Dile el nombre exacto que sale en el log del servidor, dónde está la meta y hacia qué lado corren.
+	•	Si puedes, pásale los tiempos de S1, S2 y S3 de una vuelta limpia para ajustar los splits.
+	•	Te devolverá el circuitos.json completo y actualizado. Sustituye el archivo junto a live.html y súbelo a GitHub.
+4. Revisión Prueba cada circuito nuevo en tu entorno local: mira que el trazado se vea bien, que la bandera de meta esté en el sitio correcto y que los puntitos recorran en el sentido adecuado. Si quedan al revés, el sentido de los puntos está invertido; pídele a Claude que lo invierta.
