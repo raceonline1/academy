@@ -1,0 +1,600 @@
+<title>Trazador de circuitos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: pit-wall de dos columnas. Izquierda: pasos 1 y 2. Derecha: vista previa fija. Debajo: resultado y comprobaciones. */
+:root {
+  --bg: #e9ecee;
+  --panel: #f6f7f8;
+  --field: #ffffff;
+  --line: #c9d0d5;
+  --fg: #14191d;
+  --muted: #56626b;
+  --accent: #5a3fd0;
+  --accent-fg: #ffffff;
+  --canvas: #fbfcfc;
+  --ink: #b9c0c6;
+  --ok: #12764f;
+  --warn: #a76a0c;
+  --bad: #c1352b;
+  --f-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1215; --panel: #161a1e; --field: #0c0f11; --line: #2a3138; --fg: #e5e9ec; --muted: #8f9ba4;
+    --accent: #a794ff; --accent-fg: #14101f; --canvas: #0c0f11; --ink: #3a434b;
+    --ok: #4ccf9a; --warn: #e3a64a; --bad: #ff7b6e; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1215; --panel: #161a1e; --field: #0c0f11; --line: #2a3138; --fg: #e5e9ec; --muted: #8f9ba4;
+  --accent: #a794ff; --accent-fg: #14101f; --canvas: #0c0f11; --ink: #3a434b;
+  --ok: #4ccf9a; --warn: #e3a64a; --bad: #ff7b6e; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.45; }
+.app { max-width: 1240px; margin: 0 auto; padding-inline: clamp(16px, 3vw, 32px); padding-block: 24px 48px; display: grid; gap: 20px; }
+header h1 { font-family: var(--f-display); font-weight: 700; font-size: 2rem; letter-spacing: .01em; margin: 0; text-wrap: balance; }
+header p { margin: 4px 0 0; color: var(--muted); max-width: 70ch; }
+.cols { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 980px) {
+  .cols { grid-template-columns: minmax(0, 430px) minmax(0, 1fr); align-items: start; }
+  .preview { position: sticky; top: env(safe-area-inset-top, 0px); }
+}
+.stack { display: grid; gap: 20px; min-width: 0; }
+section.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 16px; display: grid; gap: 14px; min-width: 0; }
+h2 { font-family: var(--f-display); font-weight: 600; font-size: 1.15rem; letter-spacing: .08em; text-transform: uppercase; margin: 0; display: flex; align-items: baseline; gap: 10px; }
+h2 .n { font-family: var(--f-mono); font-size: .8rem; color: var(--accent); letter-spacing: 0; }
+label, .lbl { display: grid; gap: 4px; font-size: .82rem; font-weight: 600; color: var(--muted); letter-spacing: .02em; }
+label small, .hint { font-weight: 400; color: var(--muted); font-size: .8rem; letter-spacing: 0; }
+input[type=text], input[type=number], select, textarea {
+  width: 100%; font: inherit; color: var(--fg); background: var(--field); border: 1px solid var(--line);
+  border-radius: 4px; padding: 8px 10px; min-width: 0;
+}
+input[type=text], input[type=number], textarea { font-family: var(--f-mono); font-size: .88rem; }
+textarea { resize: vertical; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.row { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.row3 { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.chk { display: flex; align-items: center; gap: 8px; font-weight: 500; color: var(--fg); font-size: .9rem; }
+.chk input { accent-color: var(--accent); width: 16px; height: 16px; }
+button { font: inherit; font-weight: 600; border-radius: 4px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--line); background: var(--field); color: var(--fg); }
+button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+.drop { border: 1.5px dashed var(--line); border-radius: 6px; padding: 14px; display: grid; gap: 8px; justify-items: start; background: var(--field); }
+.drop.over { border-color: var(--accent); }
+.drop input[type=file] { font: inherit; font-size: .85rem; max-width: 100%; }
+.sliders { display: grid; gap: 10px; }
+.sl { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; font-size: .82rem; font-weight: 600; color: var(--muted); }
+.sl output { font-family: var(--f-mono); color: var(--fg); font-weight: 500; }
+.sl input { grid-column: 1 / -1; }
+.view-wrap { position: relative; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--canvas); }
+canvas#view { display: block; width: 100%; cursor: crosshair; touch-action: manipulation; }
+.status { font-size: .85rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+.status b { color: var(--fg); font-weight: 600; }
+.status .err { color: var(--bad); font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: .78rem; color: var(--muted); }
+.legend i { display: inline-block; width: 18px; height: 3px; background: var(--accent); vertical-align: middle; margin-right: 6px; }
+.legend i.m { background: var(--ok); }
+.out-grid { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 980px) { .out-grid { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; } }
+pre.code { margin: 0; font-family: var(--f-mono); font-size: .76rem; line-height: 1.5; background: var(--field); border: 1px solid var(--line); border-radius: 4px; padding: 12px; max-height: 360px; overflow: auto; white-space: pre-wrap; word-break: break-all; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.bar .note { color: var(--muted); font-size: .82rem; }
+ul.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+ul.checks li { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 2px 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: .88rem; }
+ul.checks li:first-child { border-top: 0; }
+.tag { font-family: var(--f-display); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: .78rem; }
+.tag.ok { color: var(--ok); } .tag.warn { color: var(--warn); } .tag.bad { color: var(--bad); }
+ul.checks .d { color: var(--muted); font-family: var(--f-mono); font-size: .76rem; overflow-wrap: anywhere; }
+details summary { cursor: pointer; font-weight: 600; font-size: .88rem; }
+details[open] summary { margin-bottom: 8px; }
+.tagline { font-family: var(--f-mono); font-size: .72rem; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { button { transition: background-color .12s, opacity .12s; } }
+</style>
+
+<main class="app">
+  <header>
+    <h1>Trazador de circuitos</h1>
+    <p>Sube la imagen del trazado (línea negra sobre fondo blanco, vista desde arriba), marca la meta y el sentido, y copia la entrada lista para tu circuitos.json.</p>
+  </header>
+
+  <div class="cols">
+    <div class="stack">
+      <section class="card" aria-labelledby="h1">
+        <h2 id="h1"><span class="n">1</span> Imagen del trazado</h2>
+        <div class="drop" id="drop">
+          <input type="file" id="file" accept="image/*">
+          <span class="hint">Arrastra la imagen aquí, elígela o pégala con Ctrl+V. <span id="srcnote"></span></span>
+          <button type="button" id="btnExample">Usar imagen de ejemplo</button>
+        </div>
+        <div class="sliders">
+          <div class="sl"><label for="thr" style="display:contents">Umbral del negro</label><output id="o_thr">150</output>
+            <input type="range" id="thr" min="40" max="230" value="150"></div>
+          <div class="sl"><label for="close" style="display:contents">Cerrar huecos en la línea (px)</label><output id="o_close">0</output>
+            <input type="range" id="close" min="0" max="16" value="0"></div>
+          <div class="sl"><label for="smooth" style="display:contents">Suavizado del trazo</label><output id="o_smooth">4</output>
+            <input type="range" id="smooth" min="0" max="16" value="4"></div>
+        </div>
+        <label class="chk"><input type="checkbox" id="inv"> Línea blanca sobre fondo negro</label>
+        <label class="chk"><input type="checkbox" id="largest" checked> Quedarme solo con el trazado más grande (quita textos y logos)</label>
+      </section>
+
+      <section class="card" aria-labelledby="h2">
+        <h2 id="h2"><span class="n">2</span> Datos del circuito</h2>
+        <label for="name">Nombre exacto del servidor
+          <input type="text" id="name" autocomplete="off" placeholder="p. ej. Circuit de Spa Francorchamps">
+          <small>El valor de track_content_data.name, tal cual.</small>
+        </label>
+        <div class="row">
+          <label for="key">Clave
+            <input type="text" id="key" autocomplete="off" spellcheck="false">
+          </label>
+          <label for="alias">Alias
+            <input type="text" id="alias" autocomplete="off" spellcheck="false" placeholder="austria, spielberg">
+          </label>
+        </div>
+        <div class="row">
+          <label for="dir">Sentido de carrera (visto desde arriba)
+            <select id="dir"><option value="cw">Horario (clockwise)</option><option value="ccw">Antihorario (anticlockwise)</option></select>
+          </label>
+          <label for="target">Longitud del trazado (unidades)
+            <input type="number" id="target" min="900" max="1300" step="10" value="1100">
+          </label>
+        </div>
+        <label class="chk"><input type="checkbox" id="flip"> Invertir el sentido (si las flechas van al revés)</label>
+        <div class="lbl">Meta
+          <span class="hint" id="metaHint">Haz clic sobre la línea de meta en la vista previa.</span>
+        </div>
+        <div class="lbl">Tiempos de sector de una vuelta limpia (opcional)
+          <div class="row3">
+            <input type="text" id="s1" placeholder="S1" aria-label="Sector 1" autocomplete="off">
+            <input type="text" id="s2" placeholder="S2" aria-label="Sector 2" autocomplete="off">
+            <input type="text" id="s3" placeholder="S3" aria-label="Sector 3" autocomplete="off">
+          </div>
+          <span class="hint">Formato 28.456 o 1:02.345. Sin los tres tiempos, los splits son una estimación [0.33, 0.66].</span>
+        </div>
+        <details>
+          <summary>Pegar mi circuitos.json actual (opcional)</summary>
+          <textarea id="existing" rows="4" spellcheck="false" placeholder="Pega aquí el contenido completo. Se generará también el archivo completo con la entrada añadida y las anteriores intactas."></textarea>
+        </details>
+      </section>
+    </div>
+
+    <section class="card preview" aria-labelledby="h3">
+      <h2 id="h3">Vista previa</h2>
+      <div class="view-wrap"><canvas id="view" width="10" height="10" aria-label="Vista previa del trazado. Haz clic para marcar la meta."></canvas></div>
+      <div class="status" id="status"></div>
+      <div class="legend"><span><i></i>Línea central (320 puntos)</span><span><i class="m"></i>Meta y sentido</span><span>Trazo gris: tu imagen</span></div>
+    </section>
+  </div>
+
+  <section class="card" aria-labelledby="h4">
+    <h2 id="h4"><span class="n">3</span> Resultado</h2>
+    <div class="out-grid">
+      <div style="display:grid;gap:12px;min-width:0">
+        <div class="lbl">Entrada para circuitos.json
+          <pre class="code" id="outEntry" tabindex="0"></pre>
+        </div>
+        <div class="bar">
+          <button type="button" class="primary" id="copyEntry" disabled>Copiar entrada</button>
+          <button type="button" id="copyFull" disabled hidden>Copiar circuitos.json completo</button>
+          <span class="note" id="copyNote" role="status"></span>
+        </div>
+        <div class="lbl" id="fullWrap" hidden>circuitos.json completo
+          <pre class="code" id="outFull" tabindex="0"></pre>
+        </div>
+      </div>
+      <div style="min-width:0">
+        <div class="lbl" style="margin-bottom:6px">Comprobaciones</div>
+        <ul class="checks" id="checks"></ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const N = 320;
+const state = { W: 0, H: 0, gray: null, ink: null, inkCanvas: null, raw: null, skel: 0, cover: 0, err: '', meta: null, rs: null, isExample: false, keyManual: false };
+
+/* ---------- utilidades ---------- */
+const norm = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const debounce = (f, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => f(...a), ms); }; };
+function parseTime(s) {
+  s = String(s).trim().replace(',', '.'); if (!s) return NaN;
+  const m = s.match(/^(?:(\d+):)?(\d+(?:\.\d+)?)$/); if (!m) return NaN;
+  return (m[1] ? +m[1] * 60 : 0) + parseFloat(m[2]);
+}
+
+/* ---------- carga de imagen ---------- */
+function loadSource(src, isExample) {
+  const iw = src.naturalWidth || src.width, ih = src.naturalHeight || src.height;
+  const mx = Math.max(iw, ih);
+  const sc = mx > 1400 ? 1400 / mx : (mx < 700 ? 2 : 1);
+  const W = Math.max(8, Math.round(iw * sc)), H = Math.max(8, Math.round(ih * sc));
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d', { willReadFrequently: true });
+  g.fillStyle = '#fff'; g.fillRect(0, 0, W, H); g.drawImage(src, 0, 0, W, H);
+  const d = g.getImageData(0, 0, W, H).data, gray = new Uint8Array(W * H);
+  for (let i = 0, j = 0; i < gray.length; i++, j += 4) gray[i] = (d[j] * 299 + d[j + 1] * 587 + d[j + 2] * 114) / 1000;
+  Object.assign(state, { W, H, gray, meta: null, isExample: !!isExample });
+  $('srcnote').textContent = isExample ? 'Ahora se muestra una imagen de ejemplo, no es un circuito real.' : '';
+  runAll();
+}
+function loadFile(file) {
+  if (!file || !/^image\//.test(file.type)) return;
+  const fr = new FileReader();
+  fr.onload = () => { const im = new Image(); im.onload = () => { loadSource(im, false); }; im.src = fr.result; };
+  fr.readAsDataURL(file);
+}
+function makeExample() {
+  const c = document.createElement('canvas'); c.width = 1000; c.height = 640;
+  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, 1000, 640);
+  const P = [[200,520],[420,540],[700,530],[860,470],[880,350],[780,300],[700,360],[640,250],[720,130],[600,80],[460,120],[400,220],[300,150],[170,190],[110,320],[160,420]];
+  const n = P.length; g.beginPath(); g.moveTo(P[0][0], P[0][1]);
+  for (let i = 0; i < n; i++) {
+    const p0 = P[(i + n - 1) % n], p1 = P[i], p2 = P[(i + 1) % n], p3 = P[(i + 2) % n];
+    g.bezierCurveTo(p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6, p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6, p2[0], p2[1]);
+  }
+  g.lineWidth = 10; g.lineJoin = 'round'; g.strokeStyle = '#000'; g.stroke();
+  return c;
+}
+
+/* ---------- etapa 1: máscara, esqueleto y recorrido (pesada) ---------- */
+function fillHoles(m, W, H, maxArea) {
+  const lab = new Int32Array(W * H), st = new Int32Array(W * H), sizes = [0], border = [false]; let id = 0;
+  for (let i = 0; i < W * H; i++) {
+    if (m[i] || lab[i]) continue;
+    id++; let sp = 0, size = 0, b = false; st[sp++] = i; lab[i] = id;
+    while (sp) {
+      const p = st[--sp]; size++; const x = p % W, y = (p / W) | 0;
+      if (x === 0 || y === 0 || x === W - 1 || y === H - 1) b = true;
+      if (x > 0 && !m[p - 1] && !lab[p - 1]) { lab[p - 1] = id; st[sp++] = p - 1; }
+      if (x < W - 1 && !m[p + 1] && !lab[p + 1]) { lab[p + 1] = id; st[sp++] = p + 1; }
+      if (y > 0 && !m[p - W] && !lab[p - W]) { lab[p - W] = id; st[sp++] = p - W; }
+      if (y < H - 1 && !m[p + W] && !lab[p + W]) { lab[p + W] = id; st[sp++] = p + W; }
+    }
+    sizes.push(size); border.push(b);
+  }
+  for (let i = 0; i < W * H; i++) if (!m[i] && !border[lab[i]] && sizes[lab[i]] <= maxArea) m[i] = 1;
+}
+function dilate(m, W, H) {
+  const t = new Uint8Array(W * H), o = new Uint8Array(W * H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = y * W + x; t[i] = (m[i] || (x > 0 && m[i - 1]) || (x < W - 1 && m[i + 1])) ? 1 : 0; }
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = y * W + x; o[i] = (t[i] || (y > 0 && t[i - W]) || (y < H - 1 && t[i + W])) ? 1 : 0; }
+  m.set(o);
+}
+function keepLargest(m, W, H) {
+  const lab = new Int32Array(W * H), st = new Int32Array(W * H); let id = 0, best = 0, bestId = 0;
+  for (let i = 0; i < W * H; i++) {
+    if (!m[i] || lab[i]) continue;
+    id++; let sp = 0, size = 0; st[sp++] = i; lab[i] = id;
+    while (sp) {
+      const p = st[--sp]; size++; const x = p % W, y = (p / W) | 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+        const q = ny * W + nx; if (m[q] && !lab[q]) { lab[q] = id; st[sp++] = q; }
+      }
+    }
+    if (size > best) { best = size; bestId = id; }
+  }
+  for (let i = 0; i < W * H; i++) if (m[i] && lab[i] !== bestId) m[i] = 0;
+}
+function thin(m, W, H) {
+  let changed = true; const del = [];
+  while (changed) {
+    changed = false;
+    for (let step = 0; step < 2; step++) {
+      del.length = 0;
+      for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+        const i = y * W + x; if (!m[i]) continue;
+        const p2 = m[i - W], p3 = m[i - W + 1], p4 = m[i + 1], p5 = m[i + W + 1], p6 = m[i + W], p7 = m[i + W - 1], p8 = m[i - 1], p9 = m[i - W - 1];
+        const B = p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9; if (B < 2 || B > 6) continue;
+        const A = (1 - p2) * p3 + (1 - p3) * p4 + (1 - p4) * p5 + (1 - p5) * p6 + (1 - p6) * p7 + (1 - p7) * p8 + (1 - p8) * p9 + (1 - p9) * p2;
+        if (A !== 1) continue;
+        if (step === 0) { if (p2 * p4 * p6 !== 0 || p4 * p6 * p8 !== 0) continue; }
+        else { if (p2 * p4 * p8 !== 0 || p2 * p6 * p8 !== 0) continue; }
+        del.push(i);
+      }
+      if (del.length) { changed = true; for (const i of del) m[i] = 0; }
+    }
+  }
+}
+function prune(m, W, H) {
+  // Quita los puntos "simples" con una sola racha de vecinos (extremos y esquinas en triángulo).
+  // Un bucle cerrado conserva su topología; una línea abierta se come entera.
+  const nb = [-W - 1, -W, -W + 1, -1, 1, W - 1, W, W + 1], q = [];
+  const test = i => {
+    const p2 = m[i - W], p3 = m[i - W + 1], p4 = m[i + 1], p5 = m[i + W + 1], p6 = m[i + W], p7 = m[i + W - 1], p8 = m[i - 1], p9 = m[i - W - 1];
+    const B = p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9;
+    const A = (1 - p2) * p3 + (1 - p3) * p4 + (1 - p4) * p5 + (1 - p5) * p6 + (1 - p6) * p7 + (1 - p7) * p8 + (1 - p8) * p9 + (1 - p9) * p2;
+    return B === 0 || (A === 1 && B < 8);
+  };
+  for (let i = 0; i < W * H; i++) if (m[i] && test(i)) q.push(i);
+  while (q.length) {
+    const i = q.pop(); if (!m[i] || !test(i)) continue; m[i] = 0;
+    for (const d of nb) { const j = i + d; if (m[j]) q.push(j); }
+  }
+}
+function walk(m, W, H) {
+  const nb = [-W - 1, -W, -W + 1, -1, 1, W - 1, W, W + 1];
+  let skel = 0, start = -1, first = -1;
+  for (let i = 0; i < W * H; i++) if (m[i]) {
+    skel++; if (first < 0) first = i;
+    if (start < 0) { let c = 0; for (const d of nb) c += m[i + d]; if (c === 2) start = i; }
+  }
+  if (start < 0) start = first;
+  const vis = new Uint8Array(W * H), path = [start]; vis[start] = 1;
+  let cur = start, closed = false; const sx = start % W, sy = (start / W) | 0, maxSteps = skel * 3 + 200;
+  for (let s = 0; s < maxSteps; s++) {
+    const L = path.length, cx = cur % W, cy = (cur / W) | 0;
+    let dx = 0, dy = 0, hasDir = false;
+    if (L > 1) { const pj = path[L - 1 - Math.min(10, L - 1)]; dx = cx - pj % W; dy = cy - ((pj / W) | 0); hasDir = true; }
+    let best = -1, bs = -9;
+    for (const d of nb) {
+      const j = cur + d; if (!m[j] || vis[j] >= 2) continue;
+      let rec = false; for (let k = Math.max(0, L - 12); k < L; k++) if (path[k] === j) { rec = true; break; }
+      if (rec) continue;
+      const ex = (j % W) - cx, ey = ((j / W) | 0) - cy;
+      let sc = hasDir ? (ex * dx + ey * dy) / (Math.hypot(ex, ey) * Math.hypot(dx, dy) || 1) : 0;
+      sc -= vis[j] * 0.05;
+      if (sc > bs) { bs = sc; best = j; }
+    }
+    if (best < 0) break;
+    cur = best; vis[cur]++; path.push(cur);
+    if (path.length > Math.max(40, 0.5 * skel) && Math.hypot((cur % W) - sx, ((cur / W) | 0) - sy) <= 1.5) { path.pop(); closed = true; break; }
+  }
+  return { raw: path.map(i => [i % W, (i / W) | 0]), skel, closed };
+}
+function stage1() {
+  const { W, H, gray } = state, thr = +$('thr').value, inv = $('inv').checked, close = +$('close').value;
+  const m = new Uint8Array(W * H);
+  for (let i = 0; i < m.length; i++) m[i] = inv ? (gray[i] >= thr ? 1 : 0) : (gray[i] < thr ? 1 : 0);
+  fillHoles(m, W, H, 150);
+  state.ink = m.slice();
+  for (let k = 0; k < close; k++) dilate(m, W, H);
+  for (let x = 0; x < W; x++) { m[x] = 0; m[(H - 1) * W + x] = 0; }
+  for (let y = 0; y < H; y++) { m[y * W] = 0; m[y * W + W - 1] = 0; }
+  if ($('largest').checked) keepLargest(m, W, H);
+  thin(m, W, H); prune(m, W, H);
+  const r = walk(m, W, H);
+  state.raw = null; state.err = '';
+  if (r.skel < 30) state.err = 'No se encontró un trazado cerrado. Sube el umbral o aumenta "Cerrar huecos".';
+  else if (!r.closed) state.err = 'El recorrido no vuelve al punto de partida. Probablemente la línea tiene un hueco: aumenta "Cerrar huecos".';
+  else { state.raw = r.raw; state.skel = r.skel; state.cover = r.raw.length / r.skel; }
+  buildInk();
+}
+function buildInk() {
+  const { W, H, ink } = state; if (!ink) return;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d'), id = g.createImageData(W, H);
+  const hex = css('--ink').replace('#', ''), r = parseInt(hex.slice(0, 2), 16), gg = parseInt(hex.slice(2, 4), 16), b = parseInt(hex.slice(4, 6), 16);
+  for (let i = 0; i < ink.length; i++) if (ink[i]) { id.data[i * 4] = r; id.data[i * 4 + 1] = gg; id.data[i * 4 + 2] = b; id.data[i * 4 + 3] = 255; }
+  g.putImageData(id, 0, 0); state.inkCanvas = c;
+}
+
+/* ---------- etapa 2: suavizar, orientar, remuestrear, escalar ---------- */
+function smoothPath(P, h) {
+  const n = P.length, w = 2 * h + 1, Q = new Array(n);
+  for (let i = 0; i < n; i++) { let sx = 0, sy = 0; for (let j = -h; j <= h; j++) { const p = P[(i + j + n * 4) % n]; sx += p[0]; sy += p[1]; } Q[i] = [sx / w, sy / w]; }
+  return Q;
+}
+const signedArea = P => { let a = 0; for (let i = 0; i < P.length; i++) { const p = P[i], q = P[(i + 1) % P.length]; a += p[0] * q[1] - q[0] * p[1]; } return a / 2; };
+function resample(P, K) {
+  const n = P.length, cum = [0];
+  for (let i = 0; i < n; i++) { const a = P[i], b = P[(i + 1) % n]; cum.push(cum[i] + Math.hypot(b[0] - a[0], b[1] - a[1])); }
+  const L = cum[n], out = []; let j = 0;
+  for (let k = 0; k < K; k++) {
+    const t = k * L / K; while (cum[j + 1] < t) j++;
+    const a = P[j], b = P[(j + 1) % n], seg = cum[j + 1] - cum[j], f = seg > 0 ? (t - cum[j]) / seg : 0;
+    out.push([a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]);
+  }
+  return { pts: out, L };
+}
+function stage2() {
+  state.rs = null; if (!state.raw) return;
+  const h = +$('smooth').value;
+  let P = h > 0 ? smoothPath(smoothPath(state.raw, h), h) : state.raw.map(p => p.slice());
+  let xs = P.map(p => p[0]), ys = P.map(p => p[1]);
+  const bw = Math.max(...xs) - Math.min(...xs), bh = Math.max(...ys) - Math.min(...ys);
+  const area = signedArea(P);                  // con y hacia abajo, área > 0 es sentido horario
+  const wantCW = $('dir').value === 'cw';
+  let rev = (area > 0) !== wantCW; if ($('flip').checked) rev = !rev;
+  if (rev) P.reverse();
+  state.sm = P;
+  let i0 = 0, metaDist = null;
+  if (state.meta) {
+    let bd = 1e18; for (let i = 0; i < P.length; i++) { const d = (P[i][0] - state.meta.x) ** 2 + (P[i][1] - state.meta.y) ** 2; if (d < bd) { bd = d; i0 = i; } }
+    metaDist = Math.sqrt(bd);
+  }
+  P = P.slice(i0).concat(P.slice(0, i0));
+  const { pts: R, L } = resample(P, N);
+  const target = Math.min(1300, Math.max(900, +$('target').value || 1100)), sc = target / L;
+  const minX = Math.min(...R.map(p => p[0])), minY = Math.min(...R.map(p => p[1]));
+  const pts = R.map(p => [Math.round(((p[0] - minX) * sc + 40) * 10) / 10, Math.round(((p[1] - minY) * sc + 40) * 10) / 10]);
+  state.rs = { R, pts, L, sc, area, areaRatio: Math.abs(area) / Math.max(1, bw * bh), metaDist, i0 };
+}
+
+/* ---------- salida y comprobaciones ---------- */
+function entryText(key, e) {
+  return `  ${JSON.stringify(key)}: {\n    "n": ${JSON.stringify(e.n)},\n    "alias": [${e.alias.map(a => JSON.stringify(a)).join(', ')}],\n    "vb": [${e.vb.join(', ')}],\n    "splits": [${e.splits.join(', ')}],\n    "pts": [${e.pts.join(',')}]\n  }`;
+}
+function mergeFull(existing, key, text) {
+  let src = existing.trim();
+  const re = new RegExp('\\n  ' + JSON.stringify(key).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ': \\{[\\s\\S]*?\\n  \\}(,?)');
+  let replaced = false;
+  if (re.test(src)) { src = src.replace(re, (_, comma) => '\n' + text + comma); replaced = true; }
+  else src = src.replace(/\s*\}\s*$/, ',\n' + text + '\n}');
+  return { text: src + '\n', replaced };
+}
+const GENERIC = ['circuit', 'circuito', 'park', 'parque', 'raceway', 'speedway', 'international', 'track', 'autodromo', 'gp', 'grandprix', 'racetrack', 'motorsport', 'racing', 'road', 'course', 'circuitdespa'];
+let lastEntry = '', lastFull = '';
+function buildOutput() {
+  const checks = [], add = (lvl, label, detail) => checks.push({ lvl, label, detail });
+  const name = $('name').value.trim(), key = $('key').value.trim();
+  const rs = state.rs;
+  const alias = [...new Set($('alias').value.split(/[,;\n]/).map(norm).filter(Boolean))].filter(a => a !== key);
+  lastEntry = ''; lastFull = '';
+
+  if (!rs) { $('outEntry').textContent = state.err || 'Sube una imagen para generar la entrada.'; $('checks').innerHTML = ''; setCopy(false, false); $('fullWrap').hidden = true; return; }
+
+  const s = ['s1', 's2', 's3'].map(i => parseTime($(i).value));
+  let splits, est = true;
+  if (s.every(v => v > 0)) { const lap = s[0] + s[1] + s[2]; splits = [Math.round(s[0] / lap * 1000) / 1000, Math.round((s[0] + s[1]) / lap * 1000) / 1000]; est = false; }
+  else splits = [0.33, 0.66];
+
+  const P = rs.pts, xs = P.map(p => p[0]), ys = P.map(p => p[1]);
+  const x0 = Math.floor(Math.min(...xs) - 14), y0 = Math.floor(Math.min(...ys) - 14);
+  const vb = [x0, y0, Math.ceil(Math.max(...xs) + 14) - x0, Math.ceil(Math.max(...ys) + 14) - y0];
+  const flat = []; P.forEach(p => flat.push(p[0].toFixed(1), p[1].toFixed(1)));
+  const entry = { n: name || '(sin nombre)', alias, vb, splits, pts: flat };
+  lastEntry = entryText(key || 'clave', entry);
+  $('outEntry').textContent = lastEntry;
+
+  // comprobaciones sobre el texto generado
+  let parsed = null;
+  try { parsed = JSON.parse('{\n' + lastEntry + '\n}'); add('ok', 'JSON válido', 'La entrada se lee sin errores.'); }
+  catch (e) { add('bad', 'JSON no válido', String(e.message)); }
+  if (parsed) {
+    const e = parsed[Object.keys(parsed)[0]], q = e.pts;
+    add(q.length === 2 * N ? 'ok' : 'bad', 'Puntos', `${q.length / 2} puntos (se esperan ${N}).`);
+    const pp = []; for (let i = 0; i < q.length; i += 2) pp.push([q[i], q[i + 1]]);
+    const st = pp.map((p, i) => { const r = pp[(i + 1) % pp.length]; return Math.hypot(r[0] - p[0], r[1] - p[1]); });
+    const mean = st.reduce((a, b) => a + b, 0) / st.length, mn = Math.min(...st), mx = Math.max(...st), total = st.reduce((a, b) => a + b, 0);
+    add((mx - mn) / mean < 0.2 ? 'ok' : 'warn', 'Paso uniforme', `medio ${mean.toFixed(2)}, mín ${mn.toFixed(2)}, máx ${mx.toFixed(2)} (${(((mx - mn) / mean) * 100).toFixed(0)}% de variación).`);
+    const wrap = st[st.length - 1];
+    add(wrap > 0.3 * mean && wrap < 1.6 * mean ? 'ok' : 'bad', 'Trazado cerrado', `el último punto está a ${wrap.toFixed(2)} del primero y no se repite.`);
+    const vx = Math.min(...pp.map(p => p[0])), vy = Math.min(...pp.map(p => p[1]));
+    const ex = [Math.floor(vx - 14), Math.floor(vy - 14)];
+    const okvb = e.vb[0] === ex[0] && e.vb[1] === ex[1] && e.vb[2] >= Math.max(...pp.map(p => p[0])) - vx + 28 && e.vb[3] >= Math.max(...pp.map(p => p[1])) - vy + 28;
+    add(okvb ? 'ok' : 'bad', 'Caja vb', `[${e.vb.join(', ')}] con margen 14 en cada lado.`);
+    add(total >= 900 && total <= 1300 ? 'ok' : 'warn', 'Longitud', `${total.toFixed(0)} unidades (entre 900 y 1300).`);
+    const a = signedArea(pp), cw = a > 0, want = $('dir').value === 'cw';
+    const flipped = $('flip').checked;
+    let dl = `${cw ? 'horario' : 'antihorario'} según el área del trazado final.`;
+    if (rs.areaRatio < 0.04) add('warn', 'Sentido', 'Trazado en forma de 8 o muy alargado: el sentido no se puede deducir del área. Comprueba las flechas de la vista previa. ' + (flipped ? 'Invertido a mano.' : ''));
+    else if (flipped) add('warn', 'Sentido', `Invertido a mano; el trazado final es ${dl}`);
+    else add(cw === want ? 'ok' : 'bad', 'Sentido', `Elegido ${want ? 'horario' : 'antihorario'}; el trazado final es ${dl}`);
+  }
+  if (!state.meta) add('bad', 'Meta', 'Falta marcar la meta: haz clic sobre la línea de meta en la vista previa.');
+  else add(rs.metaDist <= 15 ? 'ok' : 'warn', 'Empieza en meta', `El primer punto está a ${rs.metaDist.toFixed(1)} px de tu clic en la imagen. Las flechas muestran el sentido.`);
+  add(est ? 'warn' : 'ok', 'Splits', est ? '[0.33, 0.66] es una estimación. Dame los tiempos de sector de una vuelta limpia para ajustarlos.' : `[${splits.join(', ')}] calculados con tus tiempos de sector.`);
+  if (!name) add('bad', 'Nombre', 'Falta el nombre exacto del servidor.');
+  else if (!key) add('bad', 'Clave', 'La clave está vacía.');
+  else if (key !== norm(name)) add('warn', 'Clave', `No coincide con el nombre normalizado (${norm(name)}). La web compara con el nombre del servidor.`);
+  else add('ok', 'Clave', `"${key}"`);
+  const gen = alias.filter(a => GENERIC.includes(a));
+  if (gen.length) add('warn', 'Alias', `Demasiado genéricos: ${gen.join(', ')}.`);
+  if (state.cover < 0.8) add('warn', 'Ramas', `El recorrido cubre el ${(state.cover * 100).toFixed(0)}% del esqueleto. Puede haber ramas o un segundo bucle (pit lane); revisa la vista previa.`);
+  if (state.isExample) add('warn', 'Imagen', 'Es la imagen de ejemplo. No uses este resultado.');
+
+  // archivo completo
+  const ex = $('existing').value.trim(), fw = $('fullWrap');
+  if (ex && name && key) {
+    const r = mergeFull(ex, key, lastEntry);
+    try { JSON.parse(r.text); lastFull = r.text; $('outFull').textContent = lastFull; fw.hidden = false;
+      add('ok', 'circuitos.json', r.replaced ? `Se reemplazó la entrada "${key}"; las demás quedan intactas.` : `Entrada "${key}" añadida al final; las demás quedan intactas.`);
+    } catch (e) { fw.hidden = true; add('bad', 'circuitos.json', 'El archivo pegado no es JSON válido, no se pudo unir: ' + e.message); }
+  } else fw.hidden = true;
+
+  $('checks').innerHTML = checks.map(c => `<li><span class="tag ${c.lvl}">${c.lvl === 'ok' ? 'OK' : c.lvl === 'warn' ? 'Revisar' : 'Falta'}</span><span><b>${c.label}</b><br><span class="d"></span></span></li>`).join('');
+  [...$('checks').querySelectorAll('.d')].forEach((el, i) => el.textContent = checks[i].detail);
+  const blocked = checks.some(c => c.lvl === 'bad');
+  setCopy(!blocked, !blocked && !!lastFull);
+}
+function setCopy(a, b) {
+  $('copyEntry').disabled = !a; $('copyFull').disabled = !b; $('copyFull').hidden = !lastFull;
+  $('copyNote').textContent = a ? '' : (lastEntry ? 'Resuelve los puntos en "Falta" para copiar.' : '');
+}
+
+/* ---------- vista previa ---------- */
+function draw() {
+  const c = $('view'); if (!state.W) return;
+  const cw = c.parentElement.clientWidth; if (!cw) return;
+  const dpr = Math.min(2, window.devicePixelRatio || 1), ch = Math.round(cw * state.H / state.W);
+  c.style.height = ch + 'px'; c.width = Math.round(cw * dpr); c.height = Math.round(ch * dpr);
+  const g = c.getContext('2d'), k = c.width / state.W;
+  g.fillStyle = css('--canvas'); g.fillRect(0, 0, c.width, c.height);
+  if (state.inkCanvas) g.drawImage(state.inkCanvas, 0, 0, c.width, c.height);
+  const rs = state.rs; if (!rs) return;
+  const acc = css('--accent'), ok = css('--ok'), R = rs.R;
+  g.lineJoin = 'round'; g.lineCap = 'round';
+  g.beginPath(); R.forEach((p, i) => i ? g.lineTo(p[0] * k, p[1] * k) : g.moveTo(p[0] * k, p[1] * k)); g.closePath();
+  g.strokeStyle = acc; g.lineWidth = 2.2 * dpr; g.stroke();
+  // flechas de sentido
+  g.fillStyle = acc;
+  for (let i = 20; i < N; i += 40) {
+    const a = R[(i - 2 + N) % N], b = R[(i + 2) % N], p = R[i], ang = Math.atan2(b[1] - a[1], b[0] - a[0]), s = 6.5 * dpr;
+    g.save(); g.translate(p[0] * k, p[1] * k); g.rotate(ang); g.beginPath(); g.moveTo(s, 0); g.lineTo(-s * .8, -s * .7); g.lineTo(-s * .8, s * .7); g.closePath();
+    g.fillStyle = css('--canvas'); g.fill(); g.lineWidth = 1.6 * dpr; g.strokeStyle = acc; g.stroke(); g.restore();
+  }
+  // splits
+  const sp = currentSplits(); g.font = `600 ${11 * dpr}px ${css('--f-mono')}`; g.textBaseline = 'middle';
+  sp.forEach((f, j) => { const p = R[Math.round(f * N) % N]; g.beginPath(); g.arc(p[0] * k, p[1] * k, 4 * dpr, 0, 7); g.fillStyle = css('--warn'); g.fill(); g.fillStyle = css('--fg'); g.fillText(`${j + 1}|${j + 2}`, p[0] * k + 8 * dpr, p[1] * k - 8 * dpr); });
+  // meta
+  const p0 = R[0], p1 = R[1], ang = Math.atan2(p1[1] - p0[1], p1[0] - p0[0]);
+  g.save(); g.translate(p0[0] * k, p0[1] * k); g.rotate(ang + Math.PI / 2);
+  g.strokeStyle = ok; g.lineWidth = 4 * dpr; g.lineCap = 'butt'; g.beginPath(); g.moveTo(0, -13 * dpr); g.lineTo(0, 13 * dpr); g.stroke(); g.restore();
+  g.fillStyle = css('--fg'); g.fillText(state.meta ? 'META' : 'META (sin marcar)', p0[0] * k + 12 * dpr, p0[1] * k + 14 * dpr);
+}
+function currentSplits() {
+  const s = ['s1', 's2', 's3'].map(i => parseTime($(i).value));
+  if (s.every(v => v > 0)) { const lap = s[0] + s[1] + s[2]; return [s[0] / lap, (s[0] + s[1]) / lap]; }
+  return [0.33, 0.66];
+}
+function updateStatus() {
+  const el = $('status');
+  if (state.err) { el.innerHTML = `<span class="err"></span>`; el.firstChild.textContent = state.err; return; }
+  const rs = state.rs; if (!rs) { el.textContent = ''; return; }
+  el.innerHTML = `<span>Imagen <b>${state.W}×${state.H}</b></span><span>Esqueleto <b>${state.skel}</b> px</span><span>Longitud <b>${(rs.L * rs.sc).toFixed(0)}</b> u</span>`;
+  $('metaHint').textContent = state.meta ? 'Meta marcada. Haz clic en otro punto para moverla.' : 'Haz clic sobre la línea de meta en la vista previa.';
+}
+
+/* ---------- flujo ---------- */
+function runAll() { if (!state.gray) return; stage1(); runFast(); }
+function runFast() { if (state.gray) { stage2(); } updateStatus(); buildOutput(); draw(); }
+const runAllD = debounce(runAll, 140), runFastD = debounce(runFast, 60);
+
+$('view').addEventListener('click', ev => {
+  if (!state.sm) return;
+  const r = $('view').getBoundingClientRect(), x = (ev.clientX - r.left) / r.width * state.W, y = (ev.clientY - r.top) / r.height * state.H;
+  let bd = 1e18, bp = null; for (const p of state.sm) { const d = (p[0] - x) ** 2 + (p[1] - y) ** 2; if (d < bd) { bd = d; bp = p; } }
+  state.meta = { x: bp[0], y: bp[1] }; runFast();
+});
+['thr', 'close', 'smooth'].forEach(id => $(id).addEventListener('input', () => { $('o_' + id).textContent = $(id).value; (id === 'smooth' ? runFastD : runAllD)(); }));
+['inv', 'largest'].forEach(id => $(id).addEventListener('change', runAll));
+['dir', 'flip', 'target', 's1', 's2', 's3', 'alias', 'existing'].forEach(id => $(id).addEventListener('input', runFastD));
+$('name').addEventListener('input', () => { if (!state.keyManual) $('key').value = norm($('name').value); runFastD(); });
+$('key').addEventListener('input', () => { state.keyManual = $('key').value !== norm($('name').value); $('key').value = $('key').value.replace(/[^a-z0-9]/g, ''); runFastD(); });
+$('file').addEventListener('change', e => loadFile(e.target.files[0]));
+$('btnExample').addEventListener('click', () => loadSource(makeExample(), true));
+const drop = $('drop');
+['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => loadFile(e.dataTransfer.files[0]));
+window.addEventListener('paste', e => { const f = [...(e.clipboardData?.files || [])].find(f => /^image\//.test(f.type)); if (f) loadFile(f); });
+function copy(text, btn) {
+  const done = ok => { $('copyNote').textContent = ok ? 'Copiado.' : 'No se pudo copiar: selecciona el texto y usa Ctrl+C.'; };
+  try { navigator.clipboard.writeText(text).then(() => done(true), () => { selectNode(btn === 'full' ? $('outFull') : $('outEntry')); done(false); }); }
+  catch (e) { selectNode(btn === 'full' ? $('outFull') : $('outEntry')); done(false); }
+}
+function selectNode(n) { const r = document.createRange(); r.selectNodeContents(n); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+$('copyEntry').addEventListener('click', () => copy(lastEntry, 'entry'));
+$('copyFull').addEventListener('click', () => copy(lastFull, 'full'));
+new ResizeObserver(draw).observe($('view').parentElement);
+const themeRefresh = () => { buildInk(); draw(); };
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', themeRefresh);
+new MutationObserver(themeRefresh).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+window.__trazador = { state, loadSource, runAll, runFast };
+loadSource(makeExample(), true);
+})();
+</script>
