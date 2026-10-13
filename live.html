@@ -280,8 +280,6 @@ const CFG=Object.assign({track:'',type:'Race',laps:25,min:45,relay:'',clock:null
 if(qs.get('relay'))CFG.relay=qs.get('relay');
 const RELAY=CFG.relay||DEFAULT_RELAY;
 const TYPE_TXT={Race:'Race',Qualify:'Qualifying',Practice:'Practice',Warmup:'Warmup'};
-let VT=null;   // reloj virtual del simulador (null = hora real)
-function NOW(){return VT?VT.v0+(Date.now()-VT.r0)*VT.spd:Date.now()}
 let SKEW=0,SESS_START=null;   // SKEW = hora del relay - hora de este navegador; SESS_START = hora (del relay) en que empezó la sesión
 function applyCfg(){
   $('sTrack').value=CFG.track;$('sType').value=CFG.type;$('sLaps').value=CFG.laps;$('sMin').value=CFG.min;$('sRelay').value=CFG.relay;$('sDelay').value=CFG.adj;
@@ -291,7 +289,7 @@ function applyCfg(){
 const saveCfg=()=>localStorage.setItem('lt_cfg',JSON.stringify(CFG));
 $('btnSet').onclick=()=>$('settings').classList.toggle('show');
 $('btnSave').onclick=()=>{CFG.track=$('sTrack').value;CFG.type=$('sType').value;CFG.laps=+$('sLaps').value||25;CFG.min=+$('sMin').value||45;CFG.relay=$('sRelay').value.trim();const dl=parseFloat($('sDelay').value);CFG.adj=isNaN(dl)?0:dl;saveCfg();location.reload()};
-$('btnClock').onclick=()=>{CFG.clock=Date.now();SESS_START=NOW()+SKEW;saveCfg()};
+$('btnClock').onclick=()=>{CFG.clock=Date.now();SESS_START=Date.now()+SKEW;saveCfg()};
 $('btnPdf').onclick=()=>downloadPDF();
 $('btnRaw').onclick=()=>{const r=$('raw');r.style.display=r.style.display==='block'?'none':'block'};
 if(!CFG.clock){CFG.clock=Date.now();saveCfg()}
@@ -307,7 +305,7 @@ const POOL=[[],[],[]];    // tiempos de sector aún sin dueño (la consola no di
 let PLAYERS=null,dirty=false;
 
 function newCar(id){
-  return{id,name:'',steam:'',model:'',laps:0,total:0,last:null,best:null,s:[null,null,null],sb:[Infinity,Infinity,Infinity],cur:[null,null,null],next:null,hist:[],lastInv:false,fin:false,prog:0,progT:0,pit:false,out:false,pits:0,pxT:0,piloto:null,upd:0,join:NOW()};
+  return{id,name:'',steam:'',model:'',laps:0,total:0,last:null,best:null,s:[null,null,null],sb:[Infinity,Infinity,Infinity],cur:[null,null,null],next:null,hist:[],lastInv:false,fin:false,prog:0,progT:0,pit:false,out:false,pits:0,pxT:0,piloto:null,upd:0,join:Date.now()};
 }
 function getCar(id){return CARS[id]||(CARS[id]=newCar(id))}
 function resetStats(c){
@@ -356,7 +354,7 @@ function applyResults(R){
   if(!R||!R.type)return;
   if(FREEZE&&(!FREEZE.ver||FREEZE.failed)&&sameType(FREEZE.type,R.type)){
     applyResultsTo(R,FREEZE.cars);FREEZE.g=bests(FREEZE.cars);
-    FREEZE.ver=true;FREEZE.failed=false;FREEZE.until=NOW()+FREEZE_MS;
+    FREEZE.ver=true;FREEZE.failed=false;FREEZE.until=Date.now()+FREEZE_MS;
     toast('Vueltas verificadas','Clasificación actualizada',false,4000);dirty=true;return}
   if(!CUR_SESS||!sameType(CUR_SESS,R.type))return;
   const cars=Object.values(CARS);applyResultsTo(R,cars);
@@ -367,18 +365,18 @@ let FREEZE=null;const FREEZE_MS=60000,VERIFY_MS=60000;
 function startFreeze(){
   const cars=Object.values(CARS).filter(c=>c.laps>0).map(c=>Object.assign({},c,{hist:c.hist.map(h=>Object.assign({},h)),s:c.s.slice(),sb:c.sb.slice(),cur:[null,null,null],pit:false}));
   if(!cars.length)return;
-  FREEZE={type:CUR_SESS,cars,ver:false,failed:false,t0:NOW(),until:null,g:bests(cars),
+  FREEZE={type:CUR_SESS,cars,ver:false,failed:false,t0:Date.now(),until:null,g:bests(cars),
           track:TR[CUR_SESS]?TR[CUR_SESS]+(LY[CUR_SESS]?' '+LY[CUR_SESS]:''):'',server:SERVER_NAME};
   toast('Sesión finalizada','Comprobando vueltas…',true);dirty=true;
 }
 function tickFreeze(){
   const bar=$('fzBar');
   if(!FREEZE){bar.style.display='none';return}
-  if(!FREEZE.ver&&NOW()-FREEZE.t0>VERIFY_MS){
-    FREEZE.ver=true;FREEZE.failed=true;FREEZE.until=NOW()+FREEZE_MS;
+  if(!FREEZE.ver&&Date.now()-FREEZE.t0>VERIFY_MS){
+    FREEZE.ver=true;FREEZE.failed=true;FREEZE.until=Date.now()+FREEZE_MS;
     toast('No se pudieron verificar las vueltas','Se muestra la clasificación sin comprobar',false,6000)}
-  if(FREEZE.until&&NOW()>=FREEZE.until){FREEZE=null;bar.style.display='none';dirty=true;return}
-  const left=FREEZE.until?Math.max(0,Math.ceil((FREEZE.until-NOW())/1000)):null;
+  if(FREEZE.until&&Date.now()>=FREEZE.until){FREEZE=null;bar.style.display='none';dirty=true;return}
+  const left=FREEZE.until?Math.max(0,Math.ceil((FREEZE.until-Date.now())/1000)):null;
   bar.style.display='flex';
   $('fzTxt').textContent='🏁 Clasificación final · '+FREEZE.type+(FREEZE.ver?(FREEZE.failed?' (sin verificar)':' (verificada)'):' · comprobando vueltas…')+(left!=null?' · cambia en '+Math.floor(left/60)+':'+p2(left%60):'');
 }
@@ -520,7 +518,7 @@ function onLine(raw){
     CUR_SESS=m[1][0].toUpperCase()+m[1].slice(1).toLowerCase();
     for(const k in CARS)resetStats(CARS[k]);GB.fill(Infinity);GL.t=Infinity;POOL.forEach(p=>p.length=0);
     SESS_START=null;dirty=true;applySess();return}
-  if(RX.outplap.test(msg)){if(SESS_START==null)SESS_START=ts!=null?ts:NOW()+SKEW;return}
+  if(RX.outplap.test(msg)){if(SESS_START==null)SESS_START=ts!=null?ts:Date.now()+SKEW;return}
   if(RX.exit.test(msg)){startFreeze();return}
   if(parseConfig(msg))return;
   if(m=msg.match(RX.players)){PLAYERS=+m[1];dirty=true;return}
@@ -535,7 +533,7 @@ function onLine(raw){
     const c=CARS[m[1]];if(!c)return;
     const st=(m[2].match(/pit_step:\s*(\w+)/)||[])[1];
     if(st==='Steady'){if(c.out){c.pits++;c.out=false}c.pit=true}
-    else if(st==='OutOfTolerance'){c.pit=false;c.out=true;c.pxT=ts!=null?ts:NOW()+SKEW}   // sale de su box: el mapa lo coloca en la línea de meta
+    else if(st==='OutOfTolerance'){c.pit=false;c.out=true;c.pxT=ts!=null?ts:Date.now()+SKEW}   // sale de su box: el mapa lo coloca en la línea de meta
     dirty=true;return}
   // --- sectores (sin carId): se muestran en cuanto se completan ---
   if(m=msg.match(RX.splitcar)){
@@ -544,7 +542,7 @@ function onLine(raw){
     if(k===0)c.cur=[null,null,null];            // empieza vuelta nueva
     if(k<3){c.cur[k]=t;c.next=k===2?0:k+1}
     // Progreso en carrera: nº de vuelta que da el servidor + sector. Sube en cada sector y no baja con las paradas en boxes.
-    c.prog=lapN*3+k;c.progT=ts!=null?ts:NOW()+SKEW;c.upd=NOW();dirty=true;return}
+    c.prog=lapN*3+k;c.progT=ts!=null?ts:Date.now()+SKEW;c.upd=Date.now();dirty=true;return}
   if(m=msg.match(RX.split)){
     if(HAS_CS)return;   // con "Split completed for car" ya sabemos de quién es cada sector
     const id=+m[1],t=+m[2];
@@ -565,7 +563,7 @@ function onLine(raw){
   // --- vuelta completada ---
   if(m=msg.match(RX.lap)){
     const ms=parseLap(m[2]);if(ms==null)return;
-    const c=getCar(m[1]);linkPilot(c);c.upd=NOW();
+    const c=getCar(m[1]);linkPilot(c);c.upd=Date.now();
     let sec=null;
     if(c.cur.every(x=>x!=null)&&c.cur[0]+c.cur[1]+c.cur[2]===ms){
       sec=c.cur.slice();
@@ -574,11 +572,11 @@ function onLine(raw){
     if(sec)sec.forEach((v,i)=>setSector(c,i,v));else c.s=[null,null,null];
     c.laps++;c.total+=ms;c.last=ms;c.lastInv=false;c.hist.push({t:ms,s:sec,inv:false,m:false});
     // Bandera de cuadros: al completar las vueltas de la carrera, o al cruzar la meta una vez agotado el tiempo
-    if(CUR_SESS==='Race'){const d=SESS.Race||{},t=ts!=null?ts:NOW()+SKEW;
+    if(CUR_SESS==='Race'){const d=SESS.Race||{},t=ts!=null?ts:Date.now()+SKEW;
       if((d.laps>0&&c.laps>=d.laps)||(!(d.laps>0)&&d.ms&&SESS_START!=null&&t>=SESS_START+d.ms+(CFG.adj||0)*1000))c.fin=true}
     if(c.best==null||ms<c.best)c.best=ms;
     if(ms<GL.t)GL.t=ms;
-    if(!HAS_CS){c.prog=c.laps*3;c.progT=ts!=null?ts:NOW()+SKEW}
+    if(!HAS_CS){c.prog=c.laps*3;c.progT=ts!=null?ts:Date.now()+SKEW}
     c.cur=[null,null,null];c.next=0;
     dirty=true}
 }
@@ -678,7 +676,7 @@ function tickClock(){
     // El reloj del juego arranca cuando el primer piloto sale de boxes ("Outplap split"). Hasta entonces, la duración completa, parada.
     const fmtT=ms=>{const s=Math.floor(ms/1000),h=Math.floor(s/3600);return(h?h+':':'')+p2(Math.floor(s%3600/60))+':'+p2(s%60)};
     if(SESS_START==null){$('hProg').textContent=fmtT(d.ms);return}
-    const rem=d.ms-(NOW()+SKEW-(SESS_START+(CFG.adj||0)*1000));
+    const rem=d.ms-(Date.now()+SKEW-(SESS_START+(CFG.adj||0)*1000));
     $('hProg').textContent=rem>0?fmtT(rem):'00:00';
   }
 }
@@ -717,7 +715,7 @@ function connect(){
   es.onmessage=e=>{if(!SIMON)onLine(e.data)};
   es.addEventListener('results',e=>{if(SIMON)return;try{applyResults(JSON.parse(e.data))}catch(x){}});
   es.addEventListener('status',e=>{if(SIMON)return;if(e.data==='online')setLive(true);else{setLive(false);blankAll()}});
-  es.addEventListener('sync',e=>{if(!SIMON)SKEW=(+e.data)-NOW()});
+  es.addEventListener('sync',e=>{if(!SIMON)SKEW=(+e.data)-Date.now()});
   es.onerror=()=>{if(SIMON){es.close();return}setLive(false);blankAll();es.close();setTimeout(connect,3000)};
 }
 
@@ -800,7 +798,7 @@ MAPA.frame=ts=>{
     card.style.display=t?'block':'none';$('layout').classList.toggle('hasmap',!!t);
     if(t){const r=$('mapSvg').getBoundingClientRect(),ppu=Math.min(r.width/t.vb[2],r.height/t.vb[3]);if(ppu>0)MAPA.K=1/ppu}}   // los círculos se dibujan en píxeles: mismo tamaño en cualquier circuito y pantalla
   const t=MAPA.track;if(!t)return;
-  const now=NOW()+SKEW,g=$('mapCars'),ids={},pit=[];
+  const now=Date.now()+SKEW,g=$('mapCars'),ids={},pit=[];
   MAPA.list.forEach((c,i)=>{
     if(c.pit){pit.push([c,i]);return}          // en box: se muestra en la zona de boxes, no en la pista
     const tg=MAPA.target(c,t,now);ids[c.id]=1;
@@ -836,7 +834,7 @@ requestAnimationFrame(MAPA.frame);
 // ============================================================
 if(qs.get('admin'))(function(){
   $('simPanel').style.display='block';
-  const FILES=[];let Q=[],pos=0,timer=null,paused=false,JQ=[],noTs=false;
+  const FILES=[];let Q=[],pos=0,timer=null,paused=false,JQ=[];
   const stat=t=>$('simStat').textContent=t||'';
   const spd=()=>+$('simSpd').value||1;
   const tsOf=l=>{const m=String(l).match(/^@(\d+) /);return m?+m[1]:null};
@@ -855,10 +853,8 @@ if(qs.get('admin'))(function(){
     }
     e.target.value='';render();
   };
-  function setClock(sp){const n=NOW();VT={r0:Date.now(),v0:n,spd:sp}}   // el reloj de la web corre a la misma velocidad que el simulador
-  function takeOver(sp){SIMON=true;try{ES&&ES.close()}catch(x){}SKEW=0;setClock(sp||spd())}
-  $('simSpd').onchange=()=>{if(SIMON&&Q.length)setClock(spd());stat('Velocidad '+spd()+'×')};
-  function emit(l){onLine('@'+Math.round(NOW())+' '+String(l).replace(/^@\d+ /,''))}
+  function takeOver(){SIMON=true;try{ES&&ES.close()}catch(x){}SKEW=0}
+  function emit(l){onLine('@'+Date.now()+' '+String(l).replace(/^@\d+ /,''))}
   function applyJson(){const n=JQ.length;JQ.forEach(j=>applyResults(Object.assign({type:CUR_SESS},j)));JQ=[];if(n)stat('JSON aplicado ('+n+')')}
   function clearTimer(){clearTimeout(timer);timer=null}
   function finish(){stat('Fin del log ('+Q.length+' líneas)');if(JQ.length)setTimeout(applyJson,1000/spd())}
@@ -867,10 +863,10 @@ if(qs.get('admin'))(function(){
     let d=0,n=0;
     do{const l=Q[pos++];emit(l);
       if(RX.exit.test(l)&&JQ.length)setTimeout(applyJson,2500/spd());
-      const nx=Q[pos];d=120;noTs=true;if(nx!=null){const a=tsOf(l),b=tsOf(nx);if(a&&b){d=Math.max(0,b-a);noTs=false}}
+      const nx=Q[pos];d=120;if(nx!=null){const a=tsOf(l),b=tsOf(nx);if(a&&b)d=Math.max(0,b-a)}
       d/=spd();const cap=+$('simCap').value;if(cap>0)d=Math.min(d,cap*1000);
     }while(d<2&&pos<Q.length&&++n<400);
-    stat('Línea '+pos+' / '+Q.length+(spd()!==1?' · '+spd()+'×':'')+(noTs?' · ⚠ log sin marcas @tiempo: 120 ms/línea':''));
+    stat('Línea '+pos+' / '+Q.length+(spd()!==1?' · '+spd()+'×':''));
     if(pos>=Q.length){finish();return}
     timer=setTimeout(step,d);
   }
@@ -880,9 +876,9 @@ if(qs.get('admin'))(function(){
   $('simPlay').onclick=()=>{if(load()&&Q.length)step();else if(JQ.length)stat('Solo hay JSON: usa «Aplicar JSON ahora» con una sesión activa')};
   $('simAll').onclick=()=>{if(!load())return;while(pos<Q.length)emit(Q[pos++]);finish()};
   $('simPause').onclick=()=>{if(!Q.length)return;paused=!paused;$('simPause').textContent=paused?'▶ Seguir':'⏸ Pausa';if(!paused)step();else stat('En pausa · línea '+pos+' / '+Q.length)};
-  $('simStop').onclick=()=>{clearTimer();Q=[];pos=0;paused=false;takeOver(1);blankAll();setLive(false);$('simPause').textContent='⏸ Pausa';stat('Parado')};
+  $('simStop').onclick=()=>{clearTimer();Q=[];pos=0;paused=false;takeOver();blankAll();setLive(false);$('simPause').textContent='⏸ Pausa';stat('Parado')};
   $('simJson').onclick=()=>{JQ=FILES.filter(f=>f.json).map(f=>f.json);if(!JQ.length){stat('No hay JSON cargado');return}applyJson()};
-  $('simDemo').onclick=()=>{clearTimer();Q=[];takeOver(1);blankAll();demo()};
+  $('simDemo').onclick=()=>{clearTimer();Q=[];takeOver();blankAll();demo()};
   $('simLive').onclick=()=>location.reload();
 })();
 
