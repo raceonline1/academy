@@ -262,7 +262,7 @@ const RX={
 // ============================================================
 const $=id=>document.getElementById(id);
 const esc=v=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,'');
+const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
 const getVal=(o,k)=>{if(!o)return'';const t=norm(k);const kk=Object.keys(o).find(x=>norm(x)===t);return kk?o[kk]:''};
 const p2=n=>(n<10?'0':'')+n,p3=n=>(n<10?'00':n<100?'0':'')+n;
 const dbg=t=>{const b=$('raw');b.textContent+=t+'\n';b.scrollTop=b.scrollHeight};   // mensajes de diagnóstico en «Ver líneas crudas»
@@ -507,9 +507,9 @@ async function downloadPDF(only){
 }
 // Coches: el modelo que da el servidor (ks_xxx) se cruza con la pestaña CochesLogos (nombre = Specs, logo, forzar blanco)
 let CAR_ROWS=[];const NOLINK=new Set();
-const ctok=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/^ks_/,'').split(/[^a-z0-9]+/).filter(t=>t&&t!=='ks');
+const ctok=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/^ks_/,'').split(/[^a-z0-9]+/).filter(t=>t&&t!=='ks');
 function prettyCar(m){return ctok(m).map(t=>t.length>3&&/^[a-z]+$/.test(t)?t[0].toUpperCase()+t.slice(1):t.toUpperCase()).join(' ')}
-const ccmp=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/^ks_/,'').replace(/[^a-z0-9]/g,'');
+const ccmp=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/^ks_/,'').replace(/[^a-z0-9]/g,'');
 function carInfo(model){
   if(!model||!CAR_ROWS.length)return null;
   const raw=String(model).trim().toLowerCase(),idc=ccmp(model),ids=new Set(ctok(model));
@@ -953,6 +953,11 @@ requestAnimationFrame(MAPA.frame);
 if(qs.get('admin'))(function(){
   $('simPanel').style.display='block';
   const FILES=[];let Q=[],pos=0,timer=null,paused=false,JQ=[];
+  // Retraso (en ms REALES, no depende de la velocidad) entre el fin de sesión y la publicación del JSON por el "servidor".
+  // Mientras tanto la web muestra «Comprobando vueltas…». Si lo pones por encima de 60000, la web marca «sin verificar».
+  const SIM_JSON_MS=20000;
+  let jsonT=null;
+  const schedJson=()=>{if(JQ.length&&!jsonT)jsonT=setTimeout(()=>{jsonT=null;applyJson()},SIM_JSON_MS)};
   const stat=t=>$('simStat').textContent=t||'';
   const spd=()=>+$('simSpd').value||1;
   const tsOf=l=>{const m=String(l).match(/^@(\d+) /);return m?+m[1]:null};
@@ -974,13 +979,13 @@ if(qs.get('admin'))(function(){
   function takeOver(){SIMON=true;try{ES&&ES.close()}catch(x){}SKEW=0}
   function emit(l){onLine('@'+Date.now()+' '+String(l).replace(/^@\d+ /,''))}
   function applyJson(){const n=JQ.length;JQ.forEach(j=>applyResults(Object.assign({type:CUR_SESS},j)));JQ=[];if(n)stat('JSON aplicado ('+n+')')}
-  function clearTimer(){clearTimeout(timer);timer=null}
-  function finish(){stat('Fin del log ('+Q.length+' líneas)');if(JQ.length)setTimeout(applyJson,1000/spd())}
+  function clearTimer(){clearTimeout(timer);timer=null;clearTimeout(jsonT);jsonT=null}
+  function finish(){stat('Fin del log ('+Q.length+' líneas)');schedJson()}
   function step(){
     if(paused||pos>=Q.length){if(pos>=Q.length)finish();return}
     let d=0,n=0;
     do{const l=Q[pos++];emit(l);
-      if(RX.exit.test(l)&&JQ.length)setTimeout(applyJson,2500/spd());
+      if(RX.exit.test(l))schedJson();
       const nx=Q[pos];d=120;if(nx!=null){const a=tsOf(l),b=tsOf(nx);if(a&&b)d=Math.max(0,b-a)}
       d/=spd();const cap=+$('simCap').value;if(cap>0)d=Math.min(d,cap*1000);
     }while(d<2&&pos<Q.length&&++n<400);
@@ -995,7 +1000,7 @@ if(qs.get('admin'))(function(){
   $('simAll').onclick=()=>{if(!load())return;while(pos<Q.length)emit(Q[pos++]);finish()};
   $('simPause').onclick=()=>{if(!Q.length)return;paused=!paused;$('simPause').textContent=paused?'▶ Seguir':'⏸ Pausa';if(!paused)step();else stat('En pausa · línea '+pos+' / '+Q.length)};
   $('simStop').onclick=()=>{clearTimer();Q=[];pos=0;paused=false;takeOver();blankAll();setLive(false);$('simPause').textContent='⏸ Pausa';stat('Parado')};
-  $('simJson').onclick=()=>{JQ=FILES.filter(f=>f.json).map(f=>f.json);if(!JQ.length){stat('No hay JSON cargado');return}applyJson()};
+  $('simJson').onclick=()=>{JQ=FILES.filter(f=>f.json).map(f=>f.json);if(!JQ.length){stat('No hay JSON cargado');return}clearTimeout(jsonT);jsonT=null;applyJson()};
   $('simDemo').onclick=()=>{clearTimer();Q=[];takeOver();blankAll();demo()};
   $('simLive').onclick=()=>location.reload();
 })();
