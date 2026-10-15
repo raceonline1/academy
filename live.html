@@ -75,6 +75,9 @@ td.live-cell.flash{animation:flash 1.3s ease-out}
 @media(max-width:640px){table{font-size:12.5px}.stat .v{font-size:21px}}
 .flag{margin-left:6px;font-size:16px}
 #fzBar{display:none;align-items:center;justify-content:space-between;gap:12px;margin:0 0 10px;padding:10px 14px;border:1px solid var(--amber);border-radius:10px;background:rgba(255,176,0,.08);font-weight:600}
+#fzModal{display:none;position:fixed;left:50%;top:84px;transform:translateX(-50%);z-index:60;width:min(560px,calc(100vw - 24px));max-height:70vh;overflow:auto;padding:14px 16px;border-radius:14px;background:#161a22;border:1px solid var(--amber);box-shadow:0 12px 40px rgba(0,0,0,.6)}
+#fzModal .hd{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700;margin-bottom:8px}
+#fzModal table{width:100%;border-collapse:collapse;font-size:13px}#fzModal td{padding:5px 6px;border-top:1px solid var(--hairline)}#fzModal tr.gone td{opacity:.5}
 #toast{display:none;position:fixed;right:16px;bottom:16px;z-index:50;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;background:#1c212b;border:1px solid #2d3442;box-shadow:0 6px 24px rgba(0,0,0,.45);max-width:300px}
 #toast b{display:block;font-size:14px}#toast span{display:block;font-size:12px;color:var(--text-dim)}
 .spin{width:18px;height:18px;border:3px solid #3a4252;border-top-color:var(--amber);border-radius:50%;animation:rot .8s linear infinite;flex:none}
@@ -150,6 +153,9 @@ main>#simPanel{display:none;background:var(--panel);border:1px dashed var(--ambe
 #simList{font:12px 'JetBrains Mono',monospace;color:var(--text-dim);display:flex;flex-direction:column;gap:3px}
 #simList b{color:var(--text);cursor:pointer;margin-left:8px}
 #simStat{font:12px 'JetBrains Mono',monospace;color:var(--green)}
+/* Piloto desconectado que ya marcó tiempo: su fila se queda en la tabla, en gris */
+tr.gone td{opacity:.42;filter:grayscale(1)}
+.off-tag{margin-left:8px;font-size:9.5px;letter-spacing:.6px;text-transform:uppercase;color:var(--text-dim);border:1px solid var(--hairline);border-radius:5px;padding:1px 6px}
 </style>
 </head>
 <body>
@@ -169,6 +175,7 @@ main>#simPanel{display:none;background:var(--panel);border:1px dashed var(--ambe
 </div></header>
 
 <main>
+  <div id="fzModal"><div class="hd"><span id="fzMTxt"></span><span style="display:flex;gap:8px"><button class="btn" id="fzPdf">⬇ PDF</button><button class="btn" id="fzClose">✕ Cerrar</button></span></div><table><tbody id="fzMTb"></tbody></table></div>
   <div id="fzBar"><span id="fzTxt"></span><button class="btn" id="btnPdf">⬇ Descargar PDF</button></div>
   <div id="settings">
     <label>Circuito<input id="sTrack" placeholder="Brands Hatch GP"></label>
@@ -258,6 +265,7 @@ const esc=v=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').rep
 const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,'');
 const getVal=(o,k)=>{if(!o)return'';const t=norm(k);const kk=Object.keys(o).find(x=>norm(x)===t);return kk?o[kk]:''};
 const p2=n=>(n<10?'0':'')+n,p3=n=>(n<10?'00':n<100?'0':'')+n;
+const dbg=t=>{const b=$('raw');b.textContent+=t+'\n';b.scrollTop=b.scrollHeight};   // mensajes de diagnóstico en «Ver líneas crudas»
 function fmt(ms){if(ms==null||isNaN(ms))return'—';ms=Math.round(ms);const m=Math.floor(ms/60000),s=Math.floor(ms%60000/1000);return m+':'+p2(s)+'.'+p3(ms%1000)}
 function fmtS(ms){if(ms==null||isNaN(ms))return'—';ms=Math.round(ms);const m=Math.floor(ms/60000),s=Math.floor(ms%60000/1000);return m>0?m+':'+p2(s)+'.'+p3(ms%1000):s+'.'+p3(ms%1000)}
 // "02:03.708" -> 123708 ms  (también acepta h:mm:ss.mmm)
@@ -291,6 +299,8 @@ $('btnSet').onclick=()=>$('settings').classList.toggle('show');
 $('btnSave').onclick=()=>{CFG.track=$('sTrack').value;CFG.type=$('sType').value;CFG.laps=+$('sLaps').value||25;CFG.min=+$('sMin').value||45;CFG.relay=$('sRelay').value.trim();const dl=parseFloat($('sDelay').value);CFG.adj=isNaN(dl)?0:dl;saveCfg();location.reload()};
 $('btnClock').onclick=()=>{CFG.clock=Date.now();SESS_START=Date.now()+SKEW;saveCfg()};
 $('btnPdf').onclick=()=>downloadPDF();
+$('fzPdf').onclick=()=>downloadPDF($('fzModal'));
+$('fzClose').onclick=()=>{FREEZE=null;$('fzModal').style.display='none';dirty=true};
 $('btnRaw').onclick=()=>{const r=$('raw');r.style.display=r.style.display==='block'?'none':'block'};
 if(!CFG.clock){CFG.clock=Date.now();saveCfg()}
 
@@ -304,22 +314,47 @@ let HAS_CS=false;       // el servidor da los sectores con carId
 const POOL=[[],[],[]];    // tiempos de sector aún sin dueño (la consola no dice a qué coche pertenecen)
 let PLAYERS=null,dirty=false;
 
+// seg = sector en el que va el coche (0,1,2); segT = hora en que entró en él; ol = vuelta de salida de boxes aún sin avisos de sector (el mapa estima por tiempo)
 function newCar(id){
-  return{id,name:'',steam:'',model:'',laps:0,total:0,last:null,best:null,s:[null,null,null],sb:[Infinity,Infinity,Infinity],cur:[null,null,null],next:null,hist:[],lastInv:false,fin:false,prog:0,progT:0,pit:false,out:false,pits:0,pxT:0,piloto:null,upd:0,join:Date.now()};
+  return{id,name:'',steam:'',model:'',laps:0,total:0,last:null,best:null,s:[null,null,null],sb:[Infinity,Infinity,Infinity],cur:[null,null,null],next:null,hist:[],lastInv:false,fin:false,prog:0,progT:0,pit:false,out:false,pits:0,pxT:0,seg:0,segT:null,ol:false,gone:false,piloto:null,upd:0,join:Date.now()};
 }
 function getCar(id){return CARS[id]||(CARS[id]=newCar(id))}
 function resetStats(c){
-  Object.assign(c,{laps:0,total:0,last:null,best:null,s:[null,null,null],sb:[Infinity,Infinity,Infinity],cur:[null,null,null],next:null,hist:[],lastInv:false,fin:false,prog:0,progT:0,pit:false,out:false,pits:0,pxT:0,upd:0});
+  Object.assign(c,{laps:0,total:0,last:null,best:null,s:[null,null,null],sb:[Infinity,Infinity,Infinity],cur:[null,null,null],next:null,hist:[],lastInv:false,fin:false,prog:0,progT:0,pit:false,out:false,pits:0,pxT:0,seg:0,segT:null,ol:false,gone:false,upd:0});
 }
 function resetAll(){for(const k in CARS)delete CARS[k];GB.fill(Infinity);GL.t=Infinity;POOL.forEach(p=>p.length=0)}
 function linkPilot(c){
   if(c.piloto)return;
   c.piloto=(c.steam&&BY_STEAM[c.steam])||(c.name&&BY_NAME[norm(c.name)])||null;
 }
+// Un piloto que se fue (fila en gris) vuelve a entrar con otro carId: hereda sus vueltas y tiempos y la fila en gris desaparece (no hay dos filas del mismo piloto)
+function adoptGone(c){
+  if(!c.steam)return;
+  for(const id in CARS){const o=CARS[id];
+    if(o!==c&&o.gone&&o.steam===c.steam){
+      Object.assign(c,{laps:o.laps,total:o.total,last:o.last,best:o.best,s:o.s,sb:o.sb,hist:o.hist,lastInv:o.lastInv,fin:o.fin,prog:o.prog,progT:o.progT,pits:o.pits,join:o.join});
+      if(ROWS[id]){ROWS[id].tr.remove();delete ROWS[id]}
+      delete CARS[id];dirty=true}}
+}
+function playerBack(){
+  // Entra un piloto mientras la ventana sigue abierta: la ventana pasa a ser un panel con botón de cerrar y la tabla de detrás muestra ya a los pilotos en vivo
+  if(!FREEZE)return;
+  FREEZE.joined=true;$('toast').style.display='none';
+  if(FREEZE.until)FREEZE.until=Math.min(FREEZE.until,Date.now()+JOINED_MS);
+  dirty=true;
+}
 function setSector(c,i,ms){
   c.s[i]=ms;
   if(ms<c.sb[i])c.sb[i]=ms;
   if(ms<GB[i])GB[i]=ms;
+}
+// Duración esperada (ms) de un sector para un coche: su mejor tiempo, o el último, o un reparto de su mejor vuelta. sp = fracciones donde acaban S1 y S2 en el mapa.
+function secDur(c,i,sp){
+  const B=sp?[0,sp[0],sp[1],1]:[0,1/3,2/3,1];
+  const s=isFinite(c.sb[i])?c.sb[i]:c.s[i];
+  if(s!=null)return Math.max(s*1.04,1000);
+  const ref=c.best||c.last||(isFinite(GL.t)?GL.t:100000);
+  return Math.max((B[i+1]-B[i])*ref*1.04,1000);
 }
 // La consola da S1, S2 y S3 SIN decir de qué coche son, pero al terminar la vuelta da el tiempo total.
 // Buscamos la combinación S1+S2+S3 que suma exactamente ese tiempo: así sabemos de quién son.
@@ -338,46 +373,82 @@ function matchSectors(lap){
 const sameType=(a,b)=>String(a||'').toLowerCase().slice(0,4)===String(b||'').toLowerCase().slice(0,4);
 function bests(cars){const gb=[Infinity,Infinity,Infinity];let gl=Infinity;
   cars.forEach(c=>{if(c.best!=null&&c.best<gl)gl=c.best;c.sb.forEach((v,k)=>{if(v<gb[k])gb[k]=v})});return{gb,gl}}
-function applyResultsTo(R,cars){
-  const by={};(R.laps||[]).forEach(l=>{(by[l.p]=by[l.p]||[]).push(l)});
+// Filas de vueltas del JSON. Admite el formato del relay ({p,t,v}) y el JSON del servidor tal cual (driver_key + drivers[], time, flags: 1 = inválida).
+function resRows(R){
+  const who={};(R.drivers||[]).forEach(d=>{if(d&&d.guid)who[d.guid.a+':'+d.guid.b]=String(d.player_id||'')});
+  return(R.laps||[]).map(l=>{
+    const tv=l.t!=null?l.t:l.time;
+    return{
+      p:String(l.p!=null?l.p:((l.driver_key&&who[l.driver_key.a+':'+l.driver_key.b])||l.steam||l.steam_id||l.player_id||'')),
+      n:norm(String(l.name||l.driver||l.player||'').replace(/#\d+$/,'')),
+      t:typeof tv==='string'?parseLap(tv):+tv,
+      v:l.v!=null?!!l.v:(l.flags!=null?!(l.flags&1):(l.valid!=null?!!l.valid:(l.invalid!=null?!l.invalid:true)))};
+  });
+}
+// Marca las vueltas inválidas y recalcula mejores. Devuelve cuántas vueltas ha casado con las de la consola (por SteamID o, si no, por nombre).
+// mode 0 = en directo (la última vuelta inválida se ve en rojo) · 1 = clasificación final de carrera (igual) · 2 = clasificación final de práctica/clasificación:
+// las vueltas inválidas desaparecen y cada piloto se queda SOLO con su mejor vuelta válida (tiempo y sectores).
+function applyResultsTo(R,cars,mode){
+  const rows=resRows(R);let hit=0;
   for(const c of cars){
-    const rl=by[c.steam];if(!rl)continue;
+    let rl=rows.filter(l=>l.p&&l.p===c.steam);
+    if(!rl.length){const cn=norm(c.name);rl=cn?rows.filter(l=>l.n&&l.n===cn):[]}
+    if(!rl.length)continue;
     c.hist.forEach(h=>{h.m=false});
-    rl.forEach(l=>{const h=c.hist.find(h=>!h.m&&h.t===l.t);if(h){h.m=true;h.inv=!l.v}});
+    rl.forEach(l=>{const h=c.hist.find(h=>!h.m&&Math.abs(h.t-l.t)<=1);if(h){h.m=true;h.inv=!l.v;hit++}});
     const ok=c.hist.filter(h=>!h.inv);
     c.best=ok.length?Math.min(...ok.map(h=>h.t)):null;
     for(let k=0;k<3;k++){const v=ok.filter(h=>h.s).map(h=>h.s[k]);c.sb[k]=v.length?Math.min(...v):Infinity}
-    const lh=c.hist[c.hist.length-1];c.lastInv=!!(lh&&lh.inv);
+    if(mode===2){
+      const bl=ok.length?ok.reduce((a,b)=>b.t<a.t?b:a):null;
+      c.last=bl?bl.t:null;c.s=bl&&bl.s?bl.s.slice():[null,null,null];c.lastInv=false;
+    }else{const lh=c.hist[c.hist.length-1];c.lastInv=!!(lh&&lh.inv)}
   }
+  return hit;
 }
 function applyResults(R){
-  if(!R||!R.type)return;
-  if(FREEZE&&(!FREEZE.ver||FREEZE.failed)&&sameType(FREEZE.type,R.type)){
-    applyResultsTo(R,FREEZE.cars);FREEZE.g=bests(FREEZE.cars);
-    FREEZE.ver=true;FREEZE.failed=false;FREEZE.until=Date.now()+FREEZE_MS;
+  if(!R)return;
+  const ty=R.type||R.session_type||R.session||'';
+  dbg('[resultados] recibido · tipo '+(ty||'?')+' · '+((R.laps||[]).length)+' vueltas');
+  if(FREEZE&&(!FREEZE.ver||FREEZE.failed)&&(!ty||sameType(FREEZE.type,ty))){
+    const n=applyResultsTo(R,FREEZE.cars,sameType(FREEZE.type,'Race')?1:2);
+    if(!n){dbg('[resultados] ninguna vuelta coincide con las de la consola: se ignora y se sigue esperando');return}
+    applyResultsTo(R,Object.values(CARS),0);
+    FREEZE.g=bests(FREEZE.cars);
+    FREEZE.ver=true;FREEZE.failed=false;FREEZE.until=Date.now()+(FREEZE.joined?JOINED_MS:FREEZE_MS);
     toast('Vueltas verificadas','Clasificación actualizada',false,4000);dirty=true;return}
-  if(!CUR_SESS||!sameType(CUR_SESS,R.type))return;
-  const cars=Object.values(CARS);applyResultsTo(R,cars);
+  if(!CUR_SESS||(ty&&!sameType(CUR_SESS,ty)))return;
+  const cars=Object.values(CARS);
+  if(!applyResultsTo(R,cars,0))return;
   const g=bests(cars);GL.t=g.gl;for(let k=0;k<3;k++)GB[k]=g.gb[k];dirty=true;
 }
 // ---- Fin de sesión: la clasificación se queda fija mientras se comprueban las vueltas y 1 minuto después ----
-let FREEZE=null;const FREEZE_MS=60000,VERIFY_MS=60000;
-function startFreeze(){
+let FREEZE=null;const FREEZE_MS=60000,VERIFY_MS=60000,JOINED_MS=15000;
+// Se congela la clasificación cuando acaba la sesión (ended=true) o cuando el servidor se queda sin pilotos (ended=false: aún no ha llegado el fin de sesión).
+// Entran también los desconectados (filas en gris). Si ya hay una ventana abierta, solo se anota que la sesión ha terminado.
+function startFreeze(ended){
+  if(FREEZE){if(ended){FREEZE.ended=true;FREEZE.t0=Date.now()}return}
   const cars=Object.values(CARS).filter(c=>c.laps>0).map(c=>Object.assign({},c,{hist:c.hist.map(h=>Object.assign({},h)),s:c.s.slice(),sb:c.sb.slice(),cur:[null,null,null],pit:false}));
   if(!cars.length)return;
-  FREEZE={type:CUR_SESS,cars,ver:false,failed:false,t0:Date.now(),until:null,g:bests(cars),
+  FREEZE={type:CUR_SESS,cars,ended:!!ended,ver:false,failed:false,t0:Date.now(),until:null,g:bests(cars),
           track:TR[CUR_SESS]?TR[CUR_SESS]+(LY[CUR_SESS]?' '+LY[CUR_SESS]:''):'',server:SERVER_NAME};
-  toast('Sesión finalizada','Comprobando vueltas…',true);dirty=true;
+  toast(ended?'Sesión finalizada':'Sin pilotos en el servidor','Comprobando vueltas…',true);dirty=true;
 }
 function tickFreeze(){
   const bar=$('fzBar');
-  if(!FREEZE){bar.style.display='none';return}
+  if(!FREEZE){bar.style.display='none';$('fzModal').style.display='none';return}
   if(!FREEZE.ver&&Date.now()-FREEZE.t0>VERIFY_MS){
-    FREEZE.ver=true;FREEZE.failed=true;FREEZE.until=Date.now()+FREEZE_MS;
+    FREEZE.ver=true;FREEZE.failed=true;FREEZE.until=Date.now()+(FREEZE.joined?JOINED_MS:FREEZE_MS);
     toast('No se pudieron verificar las vueltas','Se muestra la clasificación sin comprobar',false,6000)}
-  if(FREEZE.until&&Date.now()>=FREEZE.until){FREEZE=null;bar.style.display='none';dirty=true;return}
+  if(FREEZE.until&&Date.now()>=FREEZE.until){FREEZE=null;bar.style.display='none';$('fzModal').style.display='none';dirty=true;return}
   const left=FREEZE.until?Math.max(0,Math.ceil((FREEZE.until-Date.now())/1000)):null;
-  bar.style.display='flex';
+  const stTxt=('🏁 Clasificación final · '+FREEZE.type+(FREEZE.ver?(FREEZE.failed?' (sin verificar)':' (verificada)'):' · comprobando vueltas…')+(left!=null?' · cambia en '+Math.floor(left/60)+':'+p2(left%60):''));
+  if(FREEZE.joined){bar.style.display='none';$('fzModal').style.display='block';$('fzMTxt').textContent=stTxt;
+    const rk=FREEZE.cars.slice().sort((a,b)=>sameType(FREEZE.type,'Race')?raceCmp(a,b):((a.best==null)-(b.best==null)||a.best-b.best));
+    const h=rk.map((c,i)=>'<tr'+(c.gone?' class="gone"':'')+'><td>'+(i+1)+'</td><td>'+esc(c.name||'—')+'</td><td class="t">'+fmt(c.best)+'</td><td class="t">'+(c.laps||0)+' v.</td></tr>').join('');
+    if($('fzMTb').dataset.h!==h){$('fzMTb').innerHTML=h;$('fzMTb').dataset.h=h}
+    return}
+  $('fzModal').style.display='none';bar.style.display='flex';
   $('fzTxt').textContent='🏁 Clasificación final · '+FREEZE.type+(FREEZE.ver?(FREEZE.failed?' (sin verificar)':' (verificada)'):' · comprobando vueltas…')+(left!=null?' · cambia en '+Math.floor(left/60)+':'+p2(left%60):'');
 }
 let toastT=null;
@@ -394,8 +465,8 @@ function sortCars(list,race){
 function raceCmp(a,b){if(b.prog!==a.prog)return b.prog-a.prog;if(a.progT!==b.progT)return a.progT-b.progT;return a.join-b.join}
 // Descarga de TODA la web como PDF (una sola página larga, sin cortes). Usa html2canvas + jsPDF, que se cargan al pulsar el botón.
 const loadScript=src=>new Promise((ok,ko)=>{const e=document.createElement('script');e.src=src;e.onload=ok;e.onerror=()=>ko(new Error('No se pudo cargar '+src));document.head.appendChild(e)});
-async function downloadPDF(){
-  const btn=$('btnPdf'),old=btn.textContent;btn.disabled=true;btn.textContent='Generando PDF…';
+async function downloadPDF(only){
+  const btn=only?$('fzPdf'):$('btnPdf'),old=btn.textContent;btn.disabled=true;btn.textContent='Generando PDF…';
   try{
     if(!window.html2canvas)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
     if(!window.jspdf)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
@@ -405,6 +476,16 @@ async function downloadPDF(){
     const de=document.documentElement,tw=document.querySelector('.table-wrap');
     const W=Math.max(1100,de.scrollWidth,(tw?tw.scrollWidth:0)+40),H=Math.max(de.scrollHeight,300);
     const scale=Math.min(2,16000/H);   // límite de tamaño del canvas en los navegadores
+    if(only){   // panel flotante: se captura solo la clasificación congelada
+      only.style.maxHeight='none';only.style.overflow='visible';
+      const r=only.getBoundingClientRect(),W0=Math.ceil(r.width),H0=Math.ceil(r.height);
+      const c0=await html2canvas(only,{backgroundColor:'#161a22',scale:2,useCORS:true,logging:false,onclone:d=>{const m=d.getElementById('fzModal');m.style.position='static';m.style.transform='none';m.style.width=W0+'px';['fzPdf','fzClose'].forEach(i=>{const b=d.getElementById(i);if(b)b.style.display='none'})}});
+      only.style.maxHeight='';only.style.overflow='';
+      const pw=c0.width/2,ph=c0.height/2;
+      const p0=new window.jspdf.jsPDF({orientation:pw>ph?'l':'p',unit:'px',format:[pw,ph],hotfixes:['px_scaling'],compress:true});
+      p0.addImage(c0.toDataURL('image/jpeg',0.95),'JPEG',0,0,pw,ph);
+      p0.save('live-timing_'+(FREEZE?FREEZE.type.toLowerCase():'sesion')+'_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.pdf');
+      return}
     const cv=await html2canvas(document.body,{backgroundColor:'#0B0D10',scale,useCORS:true,logging:false,width:W,windowWidth:W,windowHeight:H,scrollX:0,scrollY:0,
       ignoreElements:e=>e.id==='toast'||e.id==='raw'||e.id==='settings',
       onclone:d=>{
@@ -426,9 +507,9 @@ async function downloadPDF(){
 }
 // Coches: el modelo que da el servidor (ks_xxx) se cruza con la pestaña CochesLogos (nombre = Specs, logo, forzar blanco)
 let CAR_ROWS=[];const NOLINK=new Set();
-const ctok=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/^ks_/,'').split(/[^a-z0-9]+/).filter(t=>t&&t!=='ks');
+const ctok=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/^ks_/,'').split(/[^a-z0-9]+/).filter(t=>t&&t!=='ks');
 function prettyCar(m){return ctok(m).map(t=>t.length>3&&/^[a-z]+$/.test(t)?t[0].toUpperCase()+t.slice(1):t.toUpperCase()).join(' ')}
-const ccmp=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/^ks_/,'').replace(/[^a-z0-9]/g,'');
+const ccmp=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/^ks_/,'').replace(/[^a-z0-9]/g,'');
 function carInfo(model){
   if(!model||!CAR_ROWS.length)return null;
   const raw=String(model).trim().toLowerCase(),idc=ccmp(model),ids=new Set(ctok(model));
@@ -507,42 +588,76 @@ function parseConfig(line){
   if(CUR_DEF&&(m=line.match(/"session_laps":\s*(\d+)/))){SESS[CUR_DEF].laps=+m[1];applySess();return true}
   return false;
 }
+// Mapa: un sector ha terminado y se sabe (o se supone) de qué coche. Si hay varios coches posibles se elige el más adelantado dentro de ese sector.
+// El final de vuelta (id 2) solo se atribuye si no hay duda: justo después llega «New lap» con el carId, que es lo definitivo.
+function mapSplit(id,tnow){
+  const all=Object.values(CARS);
+  let pc=all.length===1?all.slice():all.filter(c=>!c.pit&&c.seg===id&&c.segT!=null);
+  if(!pc.length)return;
+  if(pc.length>1){
+    if(id===2)return;
+    const sp=MAPA.track?MAPA.track.splits:null;
+    pc.sort((a,b)=>((tnow-b.segT)/secDur(b,id,sp))-((tnow-a.segT)/secDur(a,id,sp)));
+  }
+  const c=pc[0];c.seg=id<2?id+1:0;c.segT=tnow;c.ol=false;
+}
 function onLine(raw){
   let ts=null,line=raw;
   const sm=raw.match(RX.stamp);if(sm){ts=+sm[1];line=sm[2]}
+  const tnow=ts!=null?ts:Date.now()+SKEW;
   const box=$('raw');box.textContent+=line+'\n';if(box.textContent.length>40000)box.textContent=box.textContent.slice(-20000);box.scrollTop=box.scrollHeight;
   const msg=line.replace(RX.prefix,'');
   let m;
   if(RX.reset.test(msg)){resetAll();SESS_START=null;dirty=true;return}
   if(m=msg.match(RX.created)){
     CUR_SESS=m[1][0].toUpperCase()+m[1].slice(1).toLowerCase();
-    for(const k in CARS)resetStats(CARS[k]);GB.fill(Infinity);GL.t=Infinity;POOL.forEach(p=>p.length=0);
+    for(const k in CARS){   // los desconectados eran de la sesión anterior: fuera; los que siguen conectados empiezan de cero
+      if(CARS[k].gone){if(ROWS[k]){ROWS[k].tr.remove();delete ROWS[k]}delete CARS[k]}else resetStats(CARS[k])}
+    GB.fill(Infinity);GL.t=Infinity;POOL.forEach(p=>p.length=0);
     SESS_START=null;dirty=true;applySess();return}
-  if(RX.outplap.test(msg)){if(SESS_START==null)SESS_START=ts!=null?ts:Date.now()+SKEW;return}
-  if(RX.exit.test(msg)){startFreeze();return}
+  if(RX.outplap.test(msg)){
+    if(SESS_START==null)SESS_START=tnow;
+    // Si la línea trae el coche y ese coche va en su vuelta de salida, se reajusta su reloj al cruzar la salida de boxes
+    const om=msg.match(new RegExp(CID));
+    if(om&&CARS[om[0]]&&CARS[om[0]].ol){CARS[om[0]].seg=0;CARS[om[0]].segT=tnow}
+    return}
+  if(RX.exit.test(msg)){startFreeze(true);return}
   if(parseConfig(msg))return;
   if(m=msg.match(RX.players)){PLAYERS=+m[1];dirty=true;return}
   // --- pilotos que entran y salen ---
   if(m=msg.match(RX.join)){
-    const c=getCar(m[1]);c.steam=m[3];c.name=m[2].replace(/#\d+$/,'').trim();c.piloto=null;linkPilot(c);dirty=true;return}
-  if(m=msg.match(RX.model)){const c=getCar(m[3]);c.steam=m[1];c.model=m[2];c.piloto=null;linkPilot(c);dirty=true;return}
+    const c=getCar(m[1]);c.steam=m[3];c.name=m[2].replace(/#\d+$/,'').trim();c.gone=false;c.piloto=null;linkPilot(c);adoptGone(c);playerBack();dirty=true;return}
+  if(m=msg.match(RX.model)){const c=getCar(m[3]);c.steam=m[1];c.model=m[2];c.gone=false;c.piloto=null;linkPilot(c);adoptGone(c);playerBack();dirty=true;return}
   if(m=msg.match(RX.leave)){
-    delete CARS[m[1]];if(ROWS[m[1]]){ROWS[m[1]].tr.remove();delete ROWS[m[1]]}dirty=true;return}
+    const c=CARS[m[1]];
+    if(c){
+      if(c.laps>0){c.gone=true;c.pit=false;c.cur=[null,null,null]}   // ya marcó tiempo: se queda en la tabla, en gris, con su tiempo registrado
+      else{delete CARS[m[1]];if(ROWS[m[1]]){ROWS[m[1]].tr.remove();delete ROWS[m[1]]}}   // se fue sin marcar tiempo: no hay nada que guardar
+    }
+    dirty=true;
+    // Servidor sin pilotos conectados: toca comprobar vueltas (el servidor cierra la sesión pocos segundos después)
+    if(!Object.values(CARS).some(x=>!x.gone))startFreeze(false);
+    return}
   // --- boxes ---
   if(m=msg.match(RX.pit)){
     const c=CARS[m[1]];if(!c)return;
     const st=(m[2].match(/pit_step:\s*(\w+)/)||[])[1];
     if(st==='Steady'){if(c.out){c.pits++;c.out=false}c.pit=true}
-    else if(st==='OutOfTolerance'){c.pit=false;c.out=true;c.pxT=ts!=null?ts:Date.now()+SKEW}   // sale de su box: el mapa lo coloca en la línea de meta
+    else if(st==='OutOfTolerance'){
+      c.pit=false;
+      if(!c.out){           // sale de su box: el mapa lo coloca en la línea de meta y lo hace avanzar por tiempo hasta que lleguen avisos de sector
+        c.pxT=tnow;c.seg=0;c.segT=tnow;c.ol=true;c.next=0;c.cur=[null,null,null]}
+      c.out=true}
     dirty=true;return}
-  // --- sectores (sin carId): se muestran en cuanto se completan ---
+  // --- sectores con carId (si el servidor los diera): se muestran en cuanto se completan ---
   if(m=msg.match(RX.splitcar)){
     HAS_CS=true;
     const c=getCar(m[1]),t=+m[2],k=+m[3],lapN=+m[4];
     if(k===0)c.cur=[null,null,null];            // empieza vuelta nueva
-    if(k<3){c.cur[k]=t;c.next=k===2?0:k+1}
+    if(k<3){c.cur[k]=t;c.next=k===2?0:k+1;c.seg=(k+1)%3;c.segT=tnow;c.ol=false}
     // Progreso en carrera: nº de vuelta que da el servidor + sector. Sube en cada sector y no baja con las paradas en boxes.
-    c.prog=lapN*3+k;c.progT=ts!=null?ts:Date.now()+SKEW;c.upd=Date.now();dirty=true;return}
+    c.prog=lapN*3+k;c.progT=tnow;c.upd=Date.now();dirty=true;return}
+  // --- sectores (sin carId): se muestran en cuanto se completan ---
   if(m=msg.match(RX.split)){
     if(HAS_CS)return;   // con "Split completed for car" ya sabemos de quién es cada sector
     const id=+m[1],t=+m[2];
@@ -557,9 +672,13 @@ function onLine(raw){
       if(id===0)c.cur=[null,null,null];
       c.cur[id]=t;c.next=id+1;dirty=true}
     else if(cand.length===1&&id===2){cand[0].cur[2]=t;dirty=true}
+    mapSplit(id,tnow);   // el punto del mapa avanza con cada sector, aunque la tabla aún no sepa de quién es
     return}
   // --- vuelta de salida de boxes: se descarta ---
-  if(m=msg.match(RX.bad)){POOL[2].pop();if(CARS[m[1]]){CARS[m[1]].cur=[null,null,null];CARS[m[1]].next=0}dirty=true;return}
+  if(m=msg.match(RX.bad)){POOL[2].pop();
+    const c=CARS[m[1]];
+    if(c){c.cur=[null,null,null];c.next=0;c.seg=0;c.segT=tnow;c.ol=false}   // acaba de cruzar la meta: el mapa se recoloca en ella
+    dirty=true;return}
   // --- vuelta completada ---
   if(m=msg.match(RX.lap)){
     const ms=parseLap(m[2]);if(ms==null)return;
@@ -572,12 +691,12 @@ function onLine(raw){
     if(sec)sec.forEach((v,i)=>setSector(c,i,v));else c.s=[null,null,null];
     c.laps++;c.total+=ms;c.last=ms;c.lastInv=false;c.hist.push({t:ms,s:sec,inv:false,m:false});
     // Bandera de cuadros: al completar las vueltas de la carrera, o al cruzar la meta una vez agotado el tiempo
-    if(CUR_SESS==='Race'){const d=SESS.Race||{},t=ts!=null?ts:Date.now()+SKEW;
+    if(CUR_SESS==='Race'){const d=SESS.Race||{},t=tnow;
       if((d.laps>0&&c.laps>=d.laps)||(!(d.laps>0)&&d.ms&&SESS_START!=null&&t>=SESS_START+d.ms+(CFG.adj||0)*1000))c.fin=true}
     if(c.best==null||ms<c.best)c.best=ms;
     if(ms<GL.t)GL.t=ms;
-    if(!HAS_CS){c.prog=c.laps*3;c.progT=ts!=null?ts:Date.now()+SKEW}
-    c.cur=[null,null,null];c.next=0;
+    if(!HAS_CS){c.prog=c.laps*3;c.progT=tnow}
+    c.cur=[null,null,null];c.next=0;c.seg=0;c.segT=tnow;c.ol=false;
     dirty=true}
 }
 
@@ -605,7 +724,8 @@ function ensureRow(id){
 }
 const DASH='<span class="t" style="color:var(--text-dim)">—</span>';
 function paintRows(){
-  const list=FREEZE?FREEZE.cars.slice():Object.values(CARS);
+  const FZ=FREEZE&&!FREEZE.joined;
+  const list=FZ?FREEZE.cars.slice():Object.values(CARS);
   // El morado es de UN solo piloto por sector (y uno para la mejor vuelta): quien tenga el mejor tiempo ahora mismo,
   // contando los sectores que se están haciendo en este momento. Si otro piloto lo mejora, el anterior pasa a verde
   // (si es su mejor personal) o a blanco. En empate de tiempos se queda el que lo hizo primero (el que entró antes).
@@ -617,7 +737,7 @@ function paintRows(){
   const tb=$('tb');
   for(const id in ROWS)if(!list.some(c=>c.id===id)){ROWS[id].tr.remove();delete ROWS[id]}
   if(!list.length){if(!tb.querySelector('.empty'))tb.innerHTML='<tr><td colspan="'+NCOL+'" class="empty">Esperando pilotos en el servidor…</td></tr>';updHeader([]);MAPA.setList([]);return}
-  const race=FREEZE?sameType(FREEZE.type,'Race'):CFG.type==='Race';
+  const race=FZ?sameType(FREEZE.type,'Race'):CFG.type==='Race';
   list.sort((a,b)=>{
     if(race)return raceCmp(a,b);
     if(a.best==null&&b.best==null)return a.join-b.join;if(a.best==null)return 1;if(b.best==null)return-1;return a.best-b.best;
@@ -631,7 +751,8 @@ function paintRows(){
     setCell(x.pos,`<span class="pos-badge ${posCls}">${i+1}</span>${c.fin?'<span class="flag" title="Ha acabado la carrera">🏁</span>':''}`);
     const cls=pl?getVal(pl,'Clase'):'';
     setCell(x.cls,cls?`<span class="class-tag">${esc(cls)}</span>`:'');
-    setCell(x.drv,esc(pl?(getVal(pl,'Nombre_Piloto')||c.name):(c.name||'Coche #'+c.id.slice(0,4))));
+    setCell(x.drv,esc(pl?(getVal(pl,'Nombre_Piloto')||c.name):(c.name||'Coche #'+c.id.slice(0,4)))+(c.gone?'<span class="off-tag">desconectado</span>':''));
+    r.tr.classList.toggle('gone',!!c.gone);
     setCell(x.lic,licHtml(pl?getVal(pl,'Licencia'):''));
     const ci=carInfo(c.model);
     if(!ci&&c.model&&CAR_ROWS.length&&!NOLINK.has(c.model)){NOLINK.add(c.model);const bx=$('raw');bx.textContent+='[coche sin enlazar con CochesLogos] '+c.model+'\n'}
@@ -657,7 +778,7 @@ function paintRows(){
     setCell(x.box,c.pit?'<span class="box">BOX</span>':'');
     if(tb.children[i]!==r.tr)tb.insertBefore(r.tr,tb.children[i]||null);   // solo se mueve la fila si cambia de posición
   });
-  MAPA.setList(list);
+  MAPA.setList(FZ?[]:list);   // con la clasificación final congelada no hay coches en pista
   updHeader(list);
 }
 function updHeader(list){
@@ -713,7 +834,7 @@ function connect(){
   const es=ES=new EventSource(RELAY);
   es.onopen=()=>{if(SIMON)return;setLive(false);blankAll()};   // el relay reenvía todo al conectar; el piloto verde "EN VIVO" solo si el servidor de juego está activo
   es.onmessage=e=>{if(!SIMON)onLine(e.data)};
-  es.addEventListener('results',e=>{if(SIMON)return;try{applyResults(JSON.parse(e.data))}catch(x){}});
+  es.addEventListener('results',e=>{if(SIMON)return;try{applyResults(JSON.parse(e.data))}catch(x){dbg('[resultados] no se pudo leer el evento del relay: '+x.message)}});
   es.addEventListener('status',e=>{if(SIMON)return;if(e.data==='online')setLive(true);else{setLive(false);blankAll()}});
   es.addEventListener('sync',e=>{if(!SIMON)SKEW=(+e.data)-Date.now()});
   es.onerror=()=>{if(SIMON){es.close();return}setLive(false);blankAll();es.close();setTimeout(connect,3000)};
@@ -773,21 +894,17 @@ const mcode=n=>{const w=String(n||'').trim().split(/\s+/).filter(Boolean);if(!w.
 const mname=c=>(c.piloto&&getVal(c.piloto,'Nombre_Piloto'))||c.name||'';
 MAPA.col={};MAPA.K=1;MAPA.pitSig='';
 const mcol=id=>MAPA.col[id]||(MAPA.col[id]=MCOL[Object.keys(MAPA.col).length%MCOL.length]);
-// Posición objetivo (fracción de vuelta) de un coche: último sector cruzado + tiempo transcurrido / tiempo habitual del sector siguiente.
-// Sin ningún sector todavía (inicio de sesión) o recién salido de boxes: aparece en la línea de meta y avanza hacia el sector 1.
+// Posición objetivo (fracción de vuelta) de un coche: sector en el que va (seg) + tiempo transcurrido desde que entró / tiempo habitual de ese sector.
+// Se recoloca con cada aviso de sector, con el fin de vuelta y al cruzar la meta en la vuelta de salida.
+// En la vuelta de salida (ol) puede que el servidor no avise de ningún sector: ahí se avanza por tiempo a través de los tres sectores y se espera en meta.
 MAPA.target=(c,t,now)=>{
-  const B=[0,t.splits[0],t.splits[1],1],ref=c.best||c.last||100000;
-  if(!c.progT||(c.pxT&&c.pxT>c.progT)){
-    const a0=c.pxT||(SESS_START!=null?Math.max(SESS_START,c.join+SKEW):0);
-    if(!a0)return 0;
-    const b=HAS_CS?B[1]:1,s=HAS_CS?(isFinite(c.sb[0])?c.sb[0]:c.s[0]):null,dur=(s!=null?s*1.04:b*ref)*1.25;
-    return b*Math.min(.97,Math.max(0,now-a0)/Math.max(dur,1000));
-  }
-  let a,b,dur;
-  if(HAS_CS){const k=c.prog%3,n=(k+1)%3;a=B[n];b=B[n+1];
-    const s=isFinite(c.sb[n])?c.sb[n]:c.s[n];dur=(s!=null?s*1.04:(b-a)*ref)}
-  else{a=0;b=1;dur=ref*1.03}
-  const el=Math.max(0,now-c.progT);return a+(b-a)*Math.min(.97,el/Math.max(dur,1000));
+  const B=[0,t.splits[0],t.splits[1],1];
+  if(c.segT==null)return 0;
+  const el=Math.max(0,now-c.segT);
+  if(!c.ol){const i=c.seg,d=secDur(c,i,t.splits);return B[i]+(B[i+1]-B[i])*Math.min(.97,el/d)}
+  let r=el;
+  for(let i=c.seg;i<3;i++){const d=secDur(c,i,t.splits)*1.25;if(r<d)return B[i]+(B[i+1]-B[i])*(r/d);r-=d}
+  return .985;
 };
 MAPA.frame=ts=>{
   requestAnimationFrame(MAPA.frame);
@@ -800,6 +917,7 @@ MAPA.frame=ts=>{
   const t=MAPA.track;if(!t)return;
   const now=Date.now()+SKEW,g=$('mapCars'),ids={},pit=[];
   MAPA.list.forEach((c,i)=>{
+    if(c.gone)return;                          // desconectado: no está en pista ni en boxes
     if(c.pit){pit.push([c,i]);return}          // en box: se muestra en la zona de boxes, no en la pista
     const tg=MAPA.target(c,t,now);ids[c.id]=1;
     let e=MAPA.els[c.id];
