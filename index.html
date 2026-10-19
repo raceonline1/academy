@@ -281,8 +281,8 @@
   .ficha-grande .brand-badge{bottom:14px;left:18px;padding:5px 10px;}
   .ficha-grande .brand-badge img{height:19px;max-width:68px;}
 
-  /* Pilotos: rejilla de fichas rectangulares tipo car-card (~350px) */
-  .pilotos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;}
+  /* : rejilla de fichas rectangulares tipo car-card (~350px) */
+  .-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;}
   .pilot-card-v2{
     position:relative;background:var(--panel);border:1px solid var(--hairline);
     border-radius:var(--radius);overflow:hidden;cursor:pointer;
@@ -331,9 +331,9 @@
     padding:3px 8px;border-radius:5px;font-weight:700;
   }
 
-  /* Badge de "Coins" (moneda virtual secundaria, columna W de Pilotos): emoji +
+  /* Badge de "Coins" (moneda virtual secundaria, columna W de ): emoji +
      número en rojo, alineado a la derecha del nombre/licencia. Se usa en la
-     tarjeta de la pestaña Pilotos (.name-coins-row) y en la ficha modal del
+     tarjeta de la pestaña  (.name-coins-row) y en la ficha modal del
      piloto (.pilot-modal-name-row). Para cambiar el emoji, edita el literal
      '🪙' en la constante COIN_EMOJI del <script> — es el único sitio donde
      hace falta tocarlo.
@@ -346,7 +346,7 @@
     display:flex;align-items:center;justify-content:space-between;gap:8px;
   }
 
-  /* Modal ficha de piloto (pestaña Pilotos) */
+  /* Modal ficha de piloto (pestaña ) */
   .pilot-modal-head{display:flex;align-items:center;gap:18px;margin-bottom:14px;}
   .pilot-avatar-lg{
   width:78px;height:78px;border-radius:50%;
@@ -446,7 +446,7 @@
     .calendario-grid{ width:100%; }
   }
 
-  /* Pilotos: mini tabla de estadísticas antes del garaje (max 60%) */
+  /* : mini tabla de estadísticas antes del garaje (max 60%) */
   .pilot-stats-mini{
     grid-column: 1/-1; display: grid;
     grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
@@ -770,7 +770,7 @@
     <nav class="tabs" id="tabs">
       <button class="tab-btn active" data-view="concesionario"><span class="num">01</span> Concesionario</button>
       <button class="tab-btn" data-view="pilotos"><span class="num">02</span> Pilotos</button>
-      <button class="tab-btn" data-view="Resultados"><span class="num">03</span> Calendario</button>
+      <button class="tab-btn" data-view="Calendario"><span class="num">03</span> Calendario</button>
       <button class="tab-btn" data-view="clasificacion"><span class="num">04</span> Clasificación</button>
       <button class="tab-btn" data-view="historial"><span class="num">05</span> Historial</button>
       <button class="login-header-btn login-nav-btn" id="btnIrLoginNav">Iniciar sesión</button>
