@@ -282,7 +282,7 @@
   .ficha-grande .brand-badge img{height:19px;max-width:68px;}
 
   /* : rejilla de fichas rectangulares tipo car-card (~350px) */
-  .-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;}
+  .pilotos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;}
   .pilot-card-v2{
     position:relative;background:var(--panel);border:1px solid var(--hairline);
     border-radius:var(--radius);overflow:hidden;cursor:pointer;
@@ -770,7 +770,7 @@
     <nav class="tabs" id="tabs">
       <button class="tab-btn active" data-view="concesionario"><span class="num">01</span> Concesionario</button>
       <button class="tab-btn" data-view="pilotos"><span class="num">02</span> Pilotos</button>
-      <button class="tab-btn" data-view="calendario"><span class="num">03</span> Calendario</button>
+      <button class="tab-btn" data-view="calendario"><span class="num">03</span> Resultados</button>
       <button class="tab-btn" data-view="clasificacion"><span class="num">04</span> Clasificación</button>
       <button class="tab-btn" data-view="historial"><span class="num">05</span> Historial</button>
       <button class="login-header-btn login-nav-btn" id="btnIrLoginNav">Iniciar sesión</button>
@@ -831,8 +831,8 @@
   <section class="view" id="view-calendario">
     <div class="view-head">
       <div>
-        <h2>Calendario</h2>
-        <p>Circuitos de la temporada · pulsa una ficha para ver los resultados</p>
+        <h2>Resultados</h2>
+        <p>Circuitos de la temporada · pulsa una ficha para ver los resultados de cada ronda</p>
       </div>
     </div>
     <div class="calendario-grid" id="gridCalendario"><div class="empty-state"><span class="spinner"></span>Cargando datos, espere…</div></div>
