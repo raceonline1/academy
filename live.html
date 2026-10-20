@@ -254,7 +254,11 @@ const RX={
   players:/Server updated:\s*(\d+)\s*players/i,
   reset:/Starting RemoteGameServer/i,
   outplap:/Outplap split/,            // el primer piloto cruza la salida de boxes: aquí arranca el reloj de la sesión
-  exit:/OnExitGamemode/               // fin de sesión
+  exit:/OnExitGamemode/,              // fin de sesión
+  // changing session phase 4 -> 50   (50 = la carrera/sesión está en marcha; 60 = se acabó el tiempo; 70 = el líder ha acabado; 80 = fin)
+  phase:/changing session phase (\d+) -> (\d+)/,
+  // END_SESSION [WatingForOthers] Ending Lap for carId car   -> ese coche ha recibido la bandera a cuadros (acaba su vuelta final)
+  endsess:new RegExp(String.raw`END_SESSION (?:WatingForOthers )?Ending Lap for (${CID}) car`)
 };
 
 // ============================================================
@@ -310,17 +314,17 @@ if(!CFG.clock){CFG.clock=Date.now();saveCfg()}
 let PILOTOS=[],BY_STEAM={},BY_NAME={};
 const CARS={};            // carId -> estado
 const GB=[Infinity,Infinity,Infinity],GL={t:Infinity};   // mejores globales
-let HAS_CS=false;       // el servidor da los sectores con carId
+let HAS_CS=false;       // en ESTA sesión el servidor da los sectores con carId (las carreras sí; práctica/clasificación/warm-up no)
 const POOL=[[],[],[]];    // tiempos de sector aún sin dueño (la consola no dice a qué coche pertenecen)
-let PLAYERS=null,dirty=false;
+let PLAYERS=null,dirty=false,PHASE=0;
 
 // seg = sector en el que va el coche (0,1,2); segT = hora en que entró en él; ol = vuelta de salida de boxes aún sin avisos de sector (el mapa estima por tiempo)
 function newCar(id){
-  return{id,name:'',steam:'',model:'',laps:0,total:0,last:null,best:null,s:[null,null,null],sb:[Infinity,Infinity,Infinity],cur:[null,null,null],next:null,hist:[],lastInv:false,fin:false,prog:0,progT:0,pit:false,out:false,pits:0,pxT:0,seg:0,segT:null,ol:false,gone:false,piloto:null,upd:0,join:Date.now()};
+  return{id,name:'',steam:'',model:'',laps:0,total:0,last:null,best:null,s:[null,null,null],sb:[Infinity,Infinity,Infinity],cur:[null,null,null],next:null,hist:[],lastInv:false,fin:false,prog:0,progT:0,finT:0,lane:false,pit:false,out:false,pits:0,pxT:0,seg:0,segT:null,ol:false,gone:false,piloto:null,upd:0,join:Date.now()};
 }
 function getCar(id){return CARS[id]||(CARS[id]=newCar(id))}
 function resetStats(c){
-  Object.assign(c,{laps:0,total:0,last:null,best:null,s:[null,null,null],sb:[Infinity,Infinity,Infinity],cur:[null,null,null],next:null,hist:[],lastInv:false,fin:false,prog:0,progT:0,pit:false,out:false,pits:0,pxT:0,seg:0,segT:null,ol:false,gone:false,upd:0});
+  Object.assign(c,{laps:0,total:0,last:null,best:null,s:[null,null,null],sb:[Infinity,Infinity,Infinity],cur:[null,null,null],next:null,hist:[],lastInv:false,fin:false,prog:0,progT:0,finT:0,lane:false,pit:false,out:false,pits:0,pxT:0,seg:0,segT:null,ol:false,gone:false,upd:0});
 }
 function resetAll(){for(const k in CARS)delete CARS[k];GB.fill(Infinity);GL.t=Infinity;POOL.forEach(p=>p.length=0)}
 function linkPilot(c){
@@ -410,13 +414,10 @@ function applyResults(R){
   if(!R)return;
   const ty=R.type||R.session_type||R.session||'';
   dbg('[resultados] recibido · tipo '+(ty||'?')+' · '+((R.laps||[]).length)+' vueltas');
+  RESBUF.push({t:Date.now(),R});if(RESBUF.length>8)RESBUF.shift();
   if(FREEZE&&(!FREEZE.ver||FREEZE.failed)&&(!ty||sameType(FREEZE.type,ty))){
-    const n=applyResultsTo(R,FREEZE.cars,sameType(FREEZE.type,'Race')?1:2);
-    if(!n){dbg('[resultados] ninguna vuelta coincide con las de la consola: se ignora y se sigue esperando');return}
-    applyResultsTo(R,Object.values(CARS),0);
-    FREEZE.g=bests(FREEZE.cars);
-    FREEZE.ver=true;FREEZE.failed=false;FREEZE.until=Date.now()+(FREEZE.joined?JOINED_MS:FREEZE_MS);
-    toast('Vueltas verificadas','Clasificación actualizada',false,4000);dirty=true;return}
+    if(!verifyFreeze(R))dbg('[resultados] ninguna vuelta coincide con las de la consola: se ignora y se sigue esperando');
+    return}
   if(!CUR_SESS||(ty&&!sameType(CUR_SESS,ty)))return;
   const cars=Object.values(CARS);
   if(!applyResultsTo(R,cars,0))return;
@@ -424,15 +425,29 @@ function applyResults(R){
 }
 // ---- Fin de sesión: la clasificación se queda fija mientras se comprueban las vueltas y 1 minuto después ----
 let FREEZE=null;const FREEZE_MS=60000,VERIFY_MS=60000,JOINED_MS=15000;
+// El servidor escribe el JSON de resultados cuando acaba la sesión, hasta un par de minutos ANTES de «OnExitGamemode».
+// Por eso se guardan los resultados que llegan y, al congelar la clasificación, se aplican los que ya estaban.
+const RESBUF=[];
+function verifyFreeze(R){
+  const n=applyResultsTo(R,FREEZE.cars,sameType(FREEZE.type,'Race')?1:2);
+  if(!n)return false;
+  applyResultsTo(R,Object.values(CARS),0);
+  FREEZE.g=bests(FREEZE.cars);
+  FREEZE.ver=true;FREEZE.failed=false;FREEZE.until=Date.now()+(FREEZE.joined?JOINED_MS:FREEZE_MS);
+  toast('Vueltas verificadas','Clasificación actualizada',false,4000);dirty=true;return true;
+}
 // Se congela la clasificación cuando acaba la sesión (ended=true) o cuando el servidor se queda sin pilotos (ended=false: aún no ha llegado el fin de sesión).
 // Entran también los desconectados (filas en gris). Si ya hay una ventana abierta, solo se anota que la sesión ha terminado.
 function startFreeze(ended){
-  if(FREEZE){if(ended){FREEZE.ended=true;FREEZE.t0=Date.now()}return}
+  if(FREEZE){if(ended){FREEZE.ended=true;FREEZE.t0=Date.now();if(FREEZE.ver&&FREEZE.until)FREEZE.until=Math.max(FREEZE.until,Date.now()+FREEZE_MS)}return}
   const cars=Object.values(CARS).filter(c=>c.laps>0).map(c=>Object.assign({},c,{hist:c.hist.map(h=>Object.assign({},h)),s:c.s.slice(),sb:c.sb.slice(),cur:[null,null,null],pit:false}));
   if(!cars.length)return;
   FREEZE={type:CUR_SESS,cars,ended:!!ended,ver:false,failed:false,t0:Date.now(),until:null,g:bests(cars),
           track:TR[CUR_SESS]?TR[CUR_SESS]+(LY[CUR_SESS]?' '+LY[CUR_SESS]:''):'',server:SERVER_NAME};
   toast(ended?'Sesión finalizada':'Sin pilotos en el servidor','Comprobando vueltas…',true);dirty=true;
+  // ¿ya había llegado el JSON de esta sesión? (se escribe antes del fin de sesión)
+  const rb=RESBUF.slice().reverse().find(x=>{const ty=x.R.type||x.R.session_type||x.R.session||'';return(!ty||sameType(FREEZE.type,ty))&&Date.now()-x.t<10*60000});
+  if(rb&&verifyFreeze(rb.R))dbg('[resultados] aplicados los que ya habían llegado antes del fin de sesión');
 }
 function tickFreeze(){
   const bar=$('fzBar');
@@ -614,13 +629,16 @@ function onLine(raw){
     for(const k in CARS){   // los desconectados eran de la sesión anterior: fuera; los que siguen conectados empiezan de cero
       if(CARS[k].gone){if(ROWS[k]){ROWS[k].tr.remove();delete ROWS[k]}delete CARS[k]}else resetStats(CARS[k])}
     GB.fill(Infinity);GL.t=Infinity;POOL.forEach(p=>p.length=0);
+    HAS_CS=false;PHASE=0;
     SESS_START=null;dirty=true;applySess();return}
+  if(m=msg.match(RX.phase)){PHASE=+m[2];if(PHASE===50&&SESS_START==null)SESS_START=tnow;dirty=true;return}   // carrera: el reloj arranca aquí (tras la cuenta atrás)
   if(RX.outplap.test(msg)){
-    if(SESS_START==null)SESS_START=tnow;
+    if(SESS_START==null&&CUR_SESS!=='Race')SESS_START=tnow;
     // Si la línea trae el coche y ese coche va en su vuelta de salida, se reajusta su reloj al cruzar la salida de boxes
     const om=msg.match(new RegExp(CID));
     if(om&&CARS[om[0]]&&CARS[om[0]].ol){CARS[om[0]].seg=0;CARS[om[0]].segT=tnow}
     return}
+  if(m=msg.match(RX.endsess)){const c=CARS[m[1]];if(c&&!c.fin){c.fin=true;c.finT=tnow}dirty=true;return}
   if(RX.exit.test(msg)){startFreeze(true);return}
   if(parseConfig(msg))return;
   if(m=msg.match(RX.players)){PLAYERS=+m[1];dirty=true;return}
@@ -642,10 +660,16 @@ function onLine(raw){
   if(m=msg.match(RX.pit)){
     const c=CARS[m[1]];if(!c)return;
     const st=(m[2].match(/pit_step:\s*(\w+)/)||[])[1];
-    if(st==='Steady'){if(c.out){c.pits++;c.out=false}c.pit=true}
+    // Entering = entra en el carril de boxes; Steady = parado en su box; OutOfTolerance = sale del box.
+    // Se cuenta una parada por entrada (c.lane evita contarla dos veces) y nunca tras recibir la bandera: al acabar la sesión
+    // el servidor mete a todos los coches en sus boxes y eso no son paradas.
+    if(st==='Entering'){if(!c.lane&&!c.fin){c.pits++;c.lane=true}}
+    else if(st==='Steady'){
+      if(c.out&&!c.lane&&!c.fin){c.pits++;c.lane=true}   // práctica/clasificación: vuelve a su box tras haber salido (ahí no hay "Entering")
+      c.pit=true;c.out=false}
     else if(st==='OutOfTolerance'){
-      c.pit=false;
-      if(!c.out){           // sale de su box: el mapa lo coloca en la línea de meta y lo hace avanzar por tiempo hasta que lleguen avisos de sector
+      c.pit=false;c.lane=false;
+      if(!c.out){           // sale de su box (o de la parrilla): el mapa lo coloca en la línea de meta y lo hace avanzar por tiempo hasta que lleguen avisos de sector
         c.pxT=tnow;c.seg=0;c.segT=tnow;c.ol=true;c.next=0;c.cur=[null,null,null]}
       c.out=true}
     dirty=true;return}
@@ -654,9 +678,12 @@ function onLine(raw){
     HAS_CS=true;
     const c=getCar(m[1]),t=+m[2],k=+m[3],lapN=+m[4];
     if(k===0)c.cur=[null,null,null];            // empieza vuelta nueva
-    if(k<3){c.cur[k]=t;c.next=k===2?0:k+1;c.seg=(k+1)%3;c.segT=tnow;c.ol=false}
+    if(k<3){c.cur[k]=t>=600000?null:t;   // la salida de carrera trae un tiempo absurdo (el cronómetro de toda la sesión): no se enseña
+      c.next=k===2?0:k+1;c.seg=(k+1)%3;c.segT=tnow;c.ol=false}
     // Progreso en carrera: nº de vuelta que da el servidor + sector. Sube en cada sector y no baja con las paradas en boxes.
-    c.prog=lapN*3+k;c.progT=tnow;c.upd=Date.now();dirty=true;return}
+    // Cuando el coche recibe la bandera (END_SESSION) su posición se congela: lo que haga después (vuelta de enfriamiento) no cuenta.
+    if(!c.fin){c.prog=lapN*3+k;c.progT=tnow}
+    c.upd=Date.now();dirty=true;return}
   // --- sectores (sin carId): se muestran en cuanto se completan ---
   if(m=msg.match(RX.split)){
     if(HAS_CS)return;   // con "Split completed for car" ya sabemos de quién es cada sector
@@ -677,25 +704,29 @@ function onLine(raw){
   // --- vuelta de salida de boxes: se descarta ---
   if(m=msg.match(RX.bad)){POOL[2].pop();
     const c=CARS[m[1]];
-    if(c){c.cur=[null,null,null];c.next=0;c.seg=0;c.segT=tnow;c.ol=false}   // acaba de cruzar la meta: el mapa se recoloca en ella
+    if(c){c.cur=[null,null,null];c.next=0;c.seg=0;c.segT=tnow;c.ol=false;if(!c.pit)c.lane=false}   // acaba de cruzar la meta: el mapa se recoloca en ella
     dirty=true;return}
   // --- vuelta completada ---
   if(m=msg.match(RX.lap)){
     const ms=parseLap(m[2]);if(ms==null)return;
     const c=getCar(m[1]);linkPilot(c);c.upd=Date.now();
+    // Salida de carrera: al coche le llega un sector con un tiempo absurdo (se descarta). Si falta solo uno, se deduce del tiempo de vuelta.
+    if(HAS_CS){const nn=c.cur.filter(x=>x==null).length;
+      if(nn===1){const i=c.cur.findIndex(x=>x==null),rest=ms-c.cur.reduce((a,x)=>a+(x||0),0);if(rest>5000&&rest<600000)c.cur[i]=rest}}
     let sec=null;
-    if(c.cur.every(x=>x!=null)&&c.cur[0]+c.cur[1]+c.cur[2]===ms){
+    if(c.cur.every(x=>x!=null)&&(HAS_CS||c.cur[0]+c.cur[1]+c.cur[2]===ms)){   // con carId la atribución es segura (la 1ª vuelta de carrera incluye la salida y no suma)
       sec=c.cur.slice();
       sec.forEach((v,i)=>{const j=POOL[i].lastIndexOf(v);if(j>=0)POOL[i].splice(j,1)});
     }else sec=matchSectors(ms);
     if(sec)sec.forEach((v,i)=>setSector(c,i,v));else c.s=[null,null,null];
     c.laps++;c.total+=ms;c.last=ms;c.lastInv=false;c.hist.push({t:ms,s:sec,inv:false,m:false});
-    // Bandera de cuadros: al completar las vueltas de la carrera, o al cruzar la meta una vez agotado el tiempo
-    if(CUR_SESS==='Race'){const d=SESS.Race||{},t=tnow;
-      if((d.laps>0&&c.laps>=d.laps)||(!(d.laps>0)&&d.ms&&SESS_START!=null&&t>=SESS_START+d.ms+(CFG.adj||0)*1000))c.fin=true}
     if(c.best==null||ms<c.best)c.best=ms;
     if(ms<GL.t)GL.t=ms;
-    if(!HAS_CS){c.prog=c.laps*3;c.progT=tnow}
+    if(!HAS_CS&&!c.fin){c.prog=c.laps*3;c.progT=tnow}
+    // Bandera de cuadros: la da END_SESSION; si el servidor no la diera, al completar las vueltas o al cruzar la meta con el tiempo agotado
+    if(CUR_SESS==='Race'&&!c.fin){const d=SESS.Race||{},t=tnow;
+      if((d.laps>0&&c.laps>=d.laps)||(!(d.laps>0)&&d.ms&&SESS_START!=null&&t>=SESS_START+d.ms+(CFG.adj||0)*1000)){c.fin=true;c.finT=tnow}}
+    if(!c.pit)c.lane=false;
     c.cur=[null,null,null];c.next=0;c.seg=0;c.segT=tnow;c.ol=false;
     dirty=true}
 }
@@ -748,7 +779,7 @@ function paintRows(){
     linkPilot(c);
     const r=ensureRow(c.id),x=r.cells,pl=c.piloto;
     const posCls=i===0?'p1':i===1?'p2':i===2?'p3':'';
-    setCell(x.pos,`<span class="pos-badge ${posCls}">${i+1}</span>${c.fin?'<span class="flag" title="Ha acabado la carrera">🏁</span>':''}`);
+    setCell(x.pos,`<span class="pos-badge ${posCls}">${i+1}</span>${race&&c.fin?'<span class="flag" title="Ha acabado la carrera">🏁</span>':''}`);
     const cls=pl?getVal(pl,'Clase'):'';
     setCell(x.cls,cls?`<span class="class-tag">${esc(cls)}</span>`:'');
     setCell(x.drv,esc(pl?(getVal(pl,'Nombre_Piloto')||c.name):(c.name||'Coche #'+c.id.slice(0,4)))+(c.gone?'<span class="off-tag">desconectado</span>':''));
@@ -826,7 +857,7 @@ function setLive(on){$('liveBadge').classList.toggle('off',!on)}
 function blankAll(){
   resetAll();
   for(const k in SESS)delete SESS[k];for(const k in TR)delete TR[k];for(const k in LY)delete LY[k];
-  CUR_DEF='';CUR_SESS='';TC=false;SESS_START=null;PLAYERS=null;SERVER_NAME='';FREEZE=null;$('toast').style.display='none';dirty=true;
+  CUR_DEF='';CUR_SESS='';TC=false;SESS_START=null;PLAYERS=null;SERVER_NAME='';FREEZE=null;RESBUF.length=0;PHASE=0;HAS_CS=false;$('toast').style.display='none';dirty=true;
   applySess();tickClock();paintRows();
 }
 let ES=null,SIMON=false;   // SIMON: simulador activo (el relay real se ignora)
