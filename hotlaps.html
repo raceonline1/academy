@@ -383,7 +383,20 @@
   // extra del Sheet en cada petición.
   const REFRESH_MS = 15000;
 
+  // JSON estático (publicado por el Apps Script de index) con la pestaña CochesLogos
+  // dentro de data.cochesLogos. Se usa para rellenar Clase y Marca a partir de "Specs".
+  const STATIC_DATA_URL = 'https://cdn.jsdelivr.net/gh/raceonline1/academy@main/data/race-data.json';
+  // Campo de cada coche con la columna T (nombre del coche tal y como lo manda el servidor ACE).
+  const CAMPO_T = 'Nombre_ACE';
+  // Campo de cada coche con la columna A (nombre del coche).
+  const CAMPO_A = 'Coche';
+  const COCHES_REFRESH_MS = 5 * 60 * 1000; // el JSON es pesado (logos base64): se recarga cada 5 min
+  const UMBRAL_PARECIDO = 0.5;
+
   let DB = { clasificacion: [] };
+  let COCHES = [];
+  let ultimaCargaCoches = 0;
+  const CACHE_BUSQUEDA = new Map();
 
   // ------------------------------------------------------------
   // UTILIDADES (mismas que index.html)
@@ -426,20 +439,113 @@
     return partes[0] + ' ' + partes[1];
   }
 
-  // Logo de marca (columna "Marca" = URL) con forzado a blanco según la columna
-  // "Forzar logo blanco" (Sí/No) de la MISMA fila — a diferencia del index.html
-  // principal, aquí no hace falta cruzar con ninguna pestaña de logos aparte,
-  // porque esta hoja ya trae el Sí/No fila a fila.
+  // ------------------------------------------------------------
+  // CRUCE CON LA PESTAÑA CochesLogos (vía JSON estático)
+  // ------------------------------------------------------------
+  function tokens_(s){
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean);
+  }
+
+  // 0..1. 1 = igual; si uno contiene al otro puntúa alto; si no, solapamiento de palabras.
+  function puntuarParecido_(a, b){
+    const na = normKey_(a), nb = normKey_(b);
+    if(!na || !nb) return 0;
+    if(na === nb) return 1;
+    const corto = na.length <= nb.length ? na : nb;
+    const largo = na.length <= nb.length ? nb : na;
+    if(corto.length >= 4 && largo.includes(corto)) return 0.6 + 0.4 * (corto.length / largo.length);
+    const ta = new Set(tokens_(a)), tb = new Set(tokens_(b));
+    let inter = 0;
+    ta.forEach(t => { if(tb.has(t)) inter++; });
+    const union = ta.size + tb.size - inter;
+    return union ? inter / union : 0;
+  }
+
+  // Orden: T exacto -> T parecido -> A exacto -> A parecido
+  function buscarCoche_(spec){
+    if(!spec || !COCHES.length) return null;
+    const clave = normKey_(spec);
+    if(CACHE_BUSQUEDA.has(clave)) return CACHE_BUSQUEDA.get(clave);
+
+    let resultado = null;
+    for(const campo of [CAMPO_T, CAMPO_A]){
+      const candidatos = COCHES.filter(c => c[campo]);
+      if(!candidatos.length) continue;
+
+      const exacto = candidatos.find(c => normKey_(c[campo]) === clave);
+      if(exacto){ resultado = exacto; break; }
+
+      let mejor = null, mejorP = 0;
+      candidatos.forEach(c => {
+        const p = puntuarParecido_(spec, c[campo]);
+        if(p > mejorP){ mejorP = p; mejor = c; }
+      });
+      if(mejor && mejorP >= UMBRAL_PARECIDO){ resultado = mejor; break; }
+    }
+    CACHE_BUSQUEDA.set(clave, resultado);
+    return resultado;
+  }
+
+  function esVerdadero_(v){
+    if(v === true) return true;
+    return ['si', 'sí', 'true', '1'].includes(String(v || '').trim().toLowerCase());
+  }
+
+  // Rellena fila.cx = { clase, marca, forzarBlanco } a partir de "Specs".
+  // Si el coche no se encuentra, usa lo que venga del Sheet de clasificación como respaldo.
+  function enriquecerConCoches_(lista){
+    lista.forEach(fila => {
+      const coche = buscarCoche_(getVal(fila, 'Specs'));
+      fila.cx = {
+        clase: coche && coche.Clase ? String(coche.Clase).trim() : String(getVal(fila, 'Clase') || '').trim(),
+        marca: coche && coche.Logo ? String(coche.Logo).trim() : String(getVal(fila, 'Marca') || '').trim(),
+        forzarBlanco: coche ? esVerdadero_(coche.Forzar_Blanco) : esVerdadero_(getVal(fila, 'Forzar logo blanco'))
+      };
+    });
+  }
+
+  async function cargarCoches_(){
+    if(COCHES.length && Date.now() - ultimaCargaCoches < COCHES_REFRESH_MS) return;
+    try{
+      const res = await fetch(STATIC_DATA_URL);
+      const json = await res.json();
+      const data = json && json.data ? json.data : {};
+      let lista = null;
+
+      if(Array.isArray(data.cochesLogos) && data.cochesLogos.length){
+        // Formato nuevo: pestaña CochesLogos completa (A, B, F, R, T)
+        lista = data.cochesLogos;
+      }else if(Array.isArray(data.coches) && data.coches.length){
+        // Respaldo: si el JSON aún no trae cochesLogos, se usa la pestaña Coches,
+        // adaptada al mismo formato (sin columna T, solo se podrá cruzar por nombre).
+        lista = data.coches.map(c => ({
+          Coche: c.Nombre_Coche,
+          Clase: c.Categoria,
+          Logo: c.Logo_Marca_URL,
+          Forzar_Blanco: c.Logo_Forzar_Blanco
+        }));
+        console.warn('race-data.json no trae "cochesLogos": usando "coches" como respaldo.');
+      }
+
+      if(lista){
+        COCHES = lista;
+        ultimaCargaCoches = Date.now();
+        CACHE_BUSQUEDA.clear();
+      }
+    }catch(err){
+      console.error('Error cargando coches:', err.message); // se sigue con lo que hubiera
+    }
+  }
+
+  // Logo de marca con forzado a blanco según el cruce con CochesLogos (fila.cx).
   function marcaLogoHtml_(fila){
-    const val = String(getVal(fila, 'Marca') || '').trim();
+    const val = (fila.cx && fila.cx.marca) || '';
     if(!val) return '';
     const esUrl = val.startsWith('http://') || val.startsWith('https://') || val.startsWith('data:image');
     if(!esUrl) return val;
 
-    const forzarRaw = String(getVal(fila, 'Forzar logo blanco') || '').trim().toLowerCase();
-    const forzarBlanco = (forzarRaw === 'si' || forzarRaw === 'sí' || forzarRaw === 'true' || forzarRaw === '1');
-    const claseImg = forzarBlanco ? 'logo-forzado-blanco' : '';
-
+    const claseImg = (fila.cx && fila.cx.forzarBlanco) ? 'logo-forzado-blanco' : '';
     return `<img src="${val}" alt="Marca" class="${claseImg}" style="height:24px; max-width:60px; object-fit:contain; vertical-align:middle;">`;
   }
 
@@ -496,13 +602,13 @@
     });
   }
 
-    // Agrupa la clasificación por "Clase" (respeta el orden de aparición, que ya
+  // Agrupa la clasificación por "Clase" (respeta el orden de aparición, que ya
   // viene ordenado globalmente por Pos.) y renumera la posición dentro de cada clase.
   function agruparPorClase_(lista){
     const grupos = [];
     const indice = {};
     lista.forEach(fila => {
-      const clase = String(getVal(fila, 'Clase') || '').trim();
+      const clase = (fila.cx && fila.cx.clase) || '';
       if(!(clase in indice)){
         indice[clase] = grupos.length;
         grupos.push([]);
@@ -571,7 +677,7 @@
   // ------------------------------------------------------------
   // RENDER: TABLA
   // ------------------------------------------------------------
-    function renderTabla_(){
+  function renderTabla_(){
     const tbody = document.getElementById('tablaHotlaps');
     const ordenada = ordenarPorPos_(DB.clasificacion);
 
@@ -608,7 +714,7 @@
       return `
         <tr>
           <td><span class="pos-badge ${posBadgeClass}">${posClase}</span></td>
-          <td><span class="class-tag">${getVal(fila, 'Clase')}</span></td>
+          <td><span class="class-tag">${(fila.cx && fila.cx.clase) || ''}</span></td>
           <td>${nombre}</td>
           <td>${licHtml}</td>
           <td style="text-align:center;">${marcaLogoHtml_(fila)}</td>
@@ -643,8 +749,10 @@
   // ------------------------------------------------------------
   async function cargarHotlaps(){
     try{
-      const data = await apiGetHotlaps();
+      // cargarCoches_ gestiona sus propios errores, así que nunca rompe la carga de la clasificación
+      const [data] = await Promise.all([apiGetHotlaps(), cargarCoches_()]);
       DB.clasificacion = Array.isArray(data.clasificacion) ? data.clasificacion : [];
+      enriquecerConCoches_(DB.clasificacion);
       actualizarTituloClasificacion_(data.circuito);
       renderPodio_();
       renderTabla_();
@@ -658,8 +766,8 @@
 
   document.getElementById('chkCombinarClasesHotlaps').addEventListener('change', renderTabla_);
 
-cargarHotlaps();
-setInterval(cargarHotlaps, REFRESH_MS);
+  cargarHotlaps();
+  setInterval(cargarHotlaps, REFRESH_MS);
 </script>
 
 </body>
