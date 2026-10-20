@@ -2246,7 +2246,7 @@ function renderMiGaraje(){
               <td>${esc(getVal(h, 'Fase'))}</td>
               <td>${esc(getVal(h, 'Ronda'))}</td>
               <td>${esc(getVal(h, 'Circuito'))}</td>
-              <td style="text-align:center;">${marcaLogoHtmlCarreras(getVal(h, 'Logo'))}</td>
+              <td style="text-align:center;">${marcaLogoPorSpecs_(getVal(h, 'Specs'), getVal(h, 'Logo'))}</td>
               <td>${esc(getVal(h, 'Specs'))}</td>
               <td><span class="pos-badge ${posBadgeClass}">${esc(pos || '')}</span></td>
             </tr>`;
@@ -2384,6 +2384,83 @@ function marcaLogoHtmlCarreras(valorMarca){
   const claseImg = forzarBlanco ? 'logo-forzado-blanco' : '';
   return `<img src="${esc(val)}" alt="Marca" class="${claseImg}" style="height:24px; max-width:60px; object-fit:contain; vertical-align:middle;">`;
 }
+
+// ------------------------------------------------------------
+// LOGO DE MARCA DE "ÚLTIMAS CARRERAS" CRUZANDO CON CochesLogos (JSON estático)
+// ------------------------------------------------------------
+// Busca el valor de "Specs" en DB.cochesLogos y devuelve el logo (columna F).
+// Orden: columna T exacta -> columna T por parecido -> columna A exacta -> columna A por parecido.
+// Si no encuentra nada, se usa el logo que ya traía la tabla (columna Logo del Historial).
+const CAMPO_COCHES_T = 'Nombre_ACE'; // columna T de CochesLogos
+const CAMPO_COCHES_A = 'Coche';      // columna A de CochesLogos
+const UMBRAL_PARECIDO_COCHES = 0.5;
+let cacheBusquedaCochesLogos = new Map();
+let cacheBusquedaCochesLogosRef = null;
+
+function tokensCoche_(s){
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean);
+}
+
+// 0..1. 1 = igual; si uno contiene al otro puntúa alto; si no, solapamiento de palabras.
+function puntuarParecidoCoche_(a, b){
+  const na = normKey_(a), nb = normKey_(b);
+  if(!na || !nb) return 0;
+  if(na === nb) return 1;
+  const corto = na.length <= nb.length ? na : nb;
+  const largo = na.length <= nb.length ? nb : na;
+  if(corto.length >= 4 && largo.includes(corto)) return 0.6 + 0.4 * (corto.length / largo.length);
+  const ta = new Set(tokensCoche_(a)), tb = new Set(tokensCoche_(b));
+  let inter = 0;
+  ta.forEach(t => { if(tb.has(t)) inter++; });
+  const union = ta.size + tb.size - inter;
+  return union ? inter / union : 0;
+}
+
+function buscarCocheLogos_(specs){
+  const lista = DB.cochesLogos;
+  if(!specs || !Array.isArray(lista) || lista.length === 0) return null;
+
+  // Si DB se ha recargado (nuevo array), se vacía la caché de búsquedas.
+  if(cacheBusquedaCochesLogosRef !== lista){
+    cacheBusquedaCochesLogos = new Map();
+    cacheBusquedaCochesLogosRef = lista;
+  }
+
+  const clave = normKey_(specs);
+  if(cacheBusquedaCochesLogos.has(clave)) return cacheBusquedaCochesLogos.get(clave);
+
+  let resultado = null;
+  for(const campo of [CAMPO_COCHES_T, CAMPO_COCHES_A]){
+    const candidatos = lista.filter(c => c[campo]);
+    if(!candidatos.length) continue;
+
+    const exacto = candidatos.find(c => normKey_(c[campo]) === clave);
+    if(exacto){ resultado = exacto; break; }
+
+    let mejor = null, mejorP = 0;
+    candidatos.forEach(c => {
+      const p = puntuarParecidoCoche_(specs, c[campo]);
+      if(p > mejorP){ mejorP = p; mejor = c; }
+    });
+    if(mejor && mejorP >= UMBRAL_PARECIDO_COCHES){ resultado = mejor; break; }
+  }
+
+  cacheBusquedaCochesLogos.set(clave, resultado);
+  return resultado;
+}
+
+function marcaLogoPorSpecs_(specs, logoRespaldo){
+  const coche = buscarCocheLogos_(specs);
+  if(coche && coche.Logo){
+    const f = coche.Forzar_Blanco;
+    const forzarBlanco = f === true || ['si', 'sí', 'true', '1'].includes(String(f || '').trim().toLowerCase());
+    const claseImg = forzarBlanco ? 'logo-forzado-blanco' : '';
+    return `<img src="${esc(coche.Logo)}" alt="Marca" class="${claseImg}" style="height:24px; max-width:60px; object-fit:contain; vertical-align:middle;">`;
+  }
+  return marcaLogoHtmlCarreras(logoRespaldo);
+}
+
 
 let rondaModalActual = null;
 
