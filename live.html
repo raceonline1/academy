@@ -160,6 +160,10 @@ main>#simPanel{display:none;background:var(--panel);border:1px dashed var(--ambe
 /* Piloto desconectado que ya marcó tiempo: su fila se queda en la tabla, en gris */
 tr.gone td{opacity:.42;filter:grayscale(1)}
 .off-tag{margin-left:8px;font-size:9.5px;letter-spacing:.6px;text-transform:uppercase;color:var(--text-dim);border:1px solid var(--hairline);border-radius:5px;padding:1px 6px}
+/* Pits: solo en carrera */
+table.nopits th:nth-child(14),
+table.nopits td:nth-child(14){display:none}
+
 </style>
 </head>
 <body>
@@ -867,6 +871,7 @@ function paintRows(){
   for(const id in ROWS)if(!list.some(c=>c.id===id)){ROWS[id].tr.remove();delete ROWS[id]}
   if(!list.length){if(!tb.querySelector('.empty'))tb.innerHTML='<tr><td colspan="'+NCOL+'" class="empty">Esperando pilotos en el servidor…</td></tr>';updHeader([]);MAPA.setList([]);return}
   const race=FZ?sameType(FREEZE.type,'Race'):CFG.type==='Race';
+  document.querySelector('.table-wrap table').classList.toggle('nopits',!race);
   list.sort((a,b)=>{
     if(race)return raceCmp(a,b);
     if(a.best==null&&b.best==null)return a.join-b.join;if(a.best==null)return 1;if(b.best==null)return-1;return a.best-b.best;
