@@ -74,15 +74,18 @@ td.live-cell.flash{animation:flash 1.3s ease-out}
 #raw{display:none;margin-top:14px;background:#050607;border:1px solid var(--hairline);border-radius:var(--radius);padding:12px;height:180px;overflow:auto;font:11.5px 'JetBrains Mono',monospace;color:var(--text-dim);white-space:pre-wrap}
 @media(max-width:640px){table{font-size:12.5px}.stat .v{font-size:21px}}
 .flag{margin-left:6px;font-size:16px}
-#fzBar{display:none;align-items:center;justify-content:space-between;gap:12px;margin:0 0 10px;padding:10px 14px;border:1px solid var(--amber);border-radius:10px;background:rgba(255,176,0,.08);font-weight:600}
+/* Ventana emergente de vueltas eliminadas (5 s) */
 #fzModal{display:none;position:fixed;left:50%;top:84px;transform:translateX(-50%);z-index:60;width:min(560px,calc(100vw - 24px));max-height:70vh;overflow:auto;padding:14px 16px;border-radius:14px;background:#161a22;border:1px solid var(--amber);box-shadow:0 12px 40px rgba(0,0,0,.6)}
-#fzModal .hd{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:700;margin-bottom:8px}
-#fzModal table{width:100%;border-collapse:collapse;font-size:13px}#fzModal td{padding:5px 6px;border-top:1px solid var(--hairline)}#fzModal tr.gone td{opacity:.5}
+#fzModal .hd{font-weight:700;margin-bottom:8px}
+#fzModal table{width:100%;border-collapse:collapse;font-size:13px}#fzModal td{padding:6px 6px;border-top:1px solid var(--hairline)}
+#fzModal td.arr{color:var(--text-dim);text-align:center;width:28px}
+#fzModal td.new{text-align:right}
+/* Aviso «Comprobando resultados…» abajo a la derecha */
 #toast{display:none;position:fixed;right:16px;bottom:16px;z-index:50;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;background:#1c212b;border:1px solid #2d3442;box-shadow:0 6px 24px rgba(0,0,0,.45);max-width:300px}
 #toast b{display:block;font-size:14px}#toast span{display:block;font-size:12px;color:var(--text-dim)}
 .spin{width:18px;height:18px;border:3px solid #3a4252;border-top-color:var(--amber);border-radius:50%;animation:rot .8s linear infinite;flex:none}
 @keyframes rot{to{transform:rotate(360deg)}}
-@media print{#toast,#raw,#settings,#btnSet,#btnPdf{display:none!important}header.topbar{position:static;backdrop-filter:none}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+@media print{#toast,#raw,#settings,#btnSet,#btnPdf,#fzModal{display:none!important}header.topbar{position:static;backdrop-filter:none}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 /* ===== MAPA DEL CIRCUITO ===== */
 #mapCard{display:none;background:var(--panel);border:1px solid var(--hairline);border-radius:var(--radius);margin-bottom:14px;padding:10px 14px 6px;position:relative}
 #mapCard h2{margin:0 0 2px;font-size:20px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase}
@@ -107,7 +110,7 @@ td.live-cell.flash{animation:flash 1.3s ease-out}
 /* ===== Pantalla completa: tabla sin márgenes laterales, sin scroll horizontal y mapa más pequeño ===== */
 .topbar-inner{max-width:none;padding-left:12px;padding-right:12px}
 main{max-width:none;padding:12px 0 80px}
-main>#settings,main>#fzBar,main>#raw{margin-left:12px;margin-right:12px}
+main>#settings,main>#raw{margin-left:12px;margin-right:12px}
 .table-wrap{border-left:0;border-right:0;border-radius:0}
 table{font-size:clamp(11.5px,.95vw,14px)}
 thead th{padding:9px clamp(4px,.55vw,10px);letter-spacing:.5px}
@@ -127,7 +130,7 @@ tbody td{padding:8px clamp(4px,.55vw,10px)}
 @media(min-width:1100px){
   .topbar-inner{padding-left:var(--padx);padding-right:var(--padx)}
   main{padding:12px var(--padx) 80px}
-  main>#settings,main>#fzBar,main>#raw,main>#simPanel{margin-left:0;margin-right:0}
+  main>#settings,main>#raw,main>#simPanel{margin-left:0;margin-right:0}
   .table-wrap{border-left:1px solid var(--hairline);border-right:1px solid var(--hairline);border-radius:var(--radius)}
   table{font-size:var(--tfont)}
   #layout.hasmap{display:grid;grid-template-columns:minmax(0,1fr) var(--mapw);gap:var(--lgap);align-items:start}
@@ -142,6 +145,7 @@ tbody td{padding:8px clamp(4px,.55vw,10px)}
   .stat .k{font-size:var(--h-key)}
   .stype{font-size:var(--h-val);padding:2px 8px}
   .live,.brand span.sub{font-size:var(--h-live)}
+  #btnPdf{padding:4px 8px;font-size:11px}
 }
 /* ===== Simulador (solo ?admin=1) ===== */
 main>#simPanel{display:none;background:var(--panel);border:1px dashed var(--amber);border-radius:var(--radius);padding:12px 14px;margin:0 12px 12px}
@@ -171,12 +175,12 @@ tr.gone td{opacity:.42;filter:grayscale(1)}
     <div class="stat"><div class="k">Temp. ambiente</div><div class="v mono" id="hTemp"></div></div>
     <div class="stat"><div class="k">Asfalto inicial</div><div class="v" id="hGrip"></div></div>
     <button class="btn" id="btnSet">⚙ Ajustes</button>
+    <button class="btn" id="btnPdf">⬇ PDF</button>
   </div>
 </div></header>
 
 <main>
-  <div id="fzModal"><div class="hd"><span id="fzMTxt"></span><span style="display:flex;gap:8px"><button class="btn" id="fzPdf">⬇ PDF</button><button class="btn" id="fzClose">✕ Cerrar</button></span></div><table><tbody id="fzMTb"></tbody></table></div>
-  <div id="fzBar"><span id="fzTxt"></span><button class="btn" id="btnPdf">⬇ Descargar PDF</button></div>
+  <div id="fzModal"><div class="hd" id="fzMTxt">Vueltas eliminadas</div><table><tbody id="fzMTb"></tbody></table></div>
   <div id="settings">
     <label>Circuito<input id="sTrack" placeholder="Brands Hatch GP"></label>
     <label>Sesión<select id="sType"><option value="Practice">Practice</option><option value="Qualify">Qualifying</option><option value="Race">Race</option></select></label>
@@ -192,7 +196,7 @@ tr.gone td{opacity:.42;filter:grayscale(1)}
   <div id="simPanel">
     <h3>🧪 SIMULADOR (admin)</h3>
     <div class="row"><input type="file" id="simFiles" multiple accept=".log,.txt,.json,.csv,text/*,application/json">
-      <span style="font-size:11px;color:var(--text-dim)">Logs de la consola (.log/.txt) y JSON de resultados (con "laps"). Puedes añadir varios.</span></div>
+      <span style="font-size:11px;color:var(--text-dim)">Logs de la consola (.log/.txt). Al acabar la sesión simulada, las vueltas se comprueban con el Sheet (en simulación se ignora la fecha del fichero).</span></div>
     <div class="row" id="simList"></div>
     <div class="row">
       <label>Velocidad <select id="simSpd"><option>0.5</option><option selected>1</option><option>2</option><option>5</option><option>10</option><option>30</option><option>100</option></select>×</label>
@@ -201,7 +205,7 @@ tr.gone td{opacity:.42;filter:grayscale(1)}
     <div class="row">
       <button class="btn" id="simPlay">▶ Simular</button><button class="btn" id="simPause">⏸ Pausa</button>
       <button class="btn" id="simStop">⏹ Parar y limpiar</button><button class="btn" id="simAll">⏭ Todo de golpe</button>
-      <button class="btn" id="simJson">📄 Aplicar JSON ahora</button><button class="btn" id="simDemo">🎲 Demo</button>
+      <button class="btn" id="simDemo">🎲 Demo</button>
       <button class="btn" id="simLive">↺ Volver al relay real</button><span id="simStat"></span></div>
   </div>
 
@@ -229,6 +233,15 @@ tr.gone td{opacity:.42;filter:grayscale(1)}
 const API_URL='https://script.google.com/macros/s/AKfycbwO9vraqdENCW_UKLmlNZCGm8b1s5H_4Xyj6SumvOGQ2yLlbJITU2yu-K3KrIwW9xlZyA/exec';
 const STATIC_DATA_URL='https://raceonline1.github.io/academy/data/race-data.json';
 const DEFAULT_RELAY='https://relay-live-xf0l.onrender.com/stream';   // o ?relay=https://... en la URL
+
+// Sheet con las vueltas válidas: pestaña «Resultados» (mejor vuelta válida de cada piloto y sesión) y pestaña «Sincronizados» (columna A = ficheros ya volcados).
+// El Sheet tiene que estar compartido como «Cualquier persona con el enlace · Lector».
+const RES_SHEET_ID='1b9gzhNK7UfirsbXr-7QLnxVNu9EUK1mLK_Q1I6mWkDM';
+const POLL_MS=1500;       // cada cuánto se mira el Sheet tras acabar la sesión (empieza al acabar la sesión, overtime incluido, y se repite hasta encontrarla)
+const VERIFY_MS=300000;   // tiempo máximo esperando a que la sesión aparezca sincronizada: overtime (hasta ~2 min) + volcado al Sheet (si no, se enseña la clasificación sin verificar)
+const FREEZE_MS=60000;    // la clasificación final se queda fija este tiempo tras verificarla
+const JOINED_MS=15000;    // ...o este si entra un piloto
+const POPUP_MS=5000;      // duración de la ventana de vueltas eliminadas
 
 // Formato REAL de la consola de Assetto Corsa EVO (comprobado con un log del servidor).
 // Si el juego cambia el texto de alguna línea, ajusta SOLO esto (usa "Ver líneas crudas").
@@ -293,7 +306,7 @@ const CFG=Object.assign({track:'',type:'Race',laps:25,min:45,relay:'',clock:null
 if(qs.get('relay'))CFG.relay=qs.get('relay');
 const RELAY=CFG.relay||DEFAULT_RELAY;
 const TYPE_TXT={Race:'Race',Qualify:'Qualifying',Practice:'Practice',Warmup:'Warmup'};
-let SKEW=0,SESS_START=null;   // SKEW = hora del relay - hora de este navegador; SESS_START = hora (del relay) en que empezó la sesión
+let SKEW=0,SESS_START=null,SESS_CREATED=null;   // SKEW = hora del relay - hora de este navegador; SESS_START = hora (del relay) en que empezó la sesión; SESS_CREATED = hora en que se creó la sesión
 function applyCfg(){
   $('sTrack').value=CFG.track;$('sType').value=CFG.type;$('sLaps').value=CFG.laps;$('sMin').value=CFG.min;$('sRelay').value=CFG.relay;$('sDelay').value=CFG.adj;
   updProgLabel();
@@ -304,8 +317,6 @@ $('btnSet').onclick=()=>$('settings').classList.toggle('show');
 $('btnSave').onclick=()=>{CFG.track=$('sTrack').value;CFG.type=$('sType').value;CFG.laps=+$('sLaps').value||25;CFG.min=+$('sMin').value||45;CFG.relay=$('sRelay').value.trim();const dl=parseFloat($('sDelay').value);CFG.adj=isNaN(dl)?0:dl;saveCfg();location.reload()};
 $('btnClock').onclick=()=>{CFG.clock=Date.now();SESS_START=Date.now()+SKEW;saveCfg()};
 $('btnPdf').onclick=()=>downloadPDF();
-$('fzPdf').onclick=()=>downloadPDF($('fzModal'));
-$('fzClose').onclick=()=>{FREEZE=null;$('fzModal').style.display='none';dirty=true};
 $('btnRaw').onclick=()=>{const r=$('raw');r.style.display=r.style.display==='block'?'none':'block'};
 if(!CFG.clock){CFG.clock=Date.now();saveCfg()}
 
@@ -342,7 +353,7 @@ function adoptGone(c){
       delete CARS[id];dirty=true}}
 }
 function playerBack(){
-  // Entra un piloto mientras la ventana sigue abierta: la ventana pasa a ser un panel con botón de cerrar y la tabla de detrás muestra ya a los pilotos en vivo
+  // Entra un piloto mientras la clasificación final sigue fija: la tabla pasa a mostrar a los pilotos en vivo
   if(!FREEZE)return;
   FREEZE.joined=true;$('toast').style.display='none';
   if(FREEZE.until)FREEZE.until=Math.min(FREEZE.until,Date.now()+JOINED_MS);
@@ -374,103 +385,149 @@ function matchSectors(lap){
   }
   return null;
 }
-// Vueltas inválidas: la consola no lo dice; llega del JSON de resultados del servidor (lo lee el relay) y se aplica por tiempo de vuelta.
 const sameType=(a,b)=>String(a||'').toLowerCase().slice(0,4)===String(b||'').toLowerCase().slice(0,4);
 function bests(cars){const gb=[Infinity,Infinity,Infinity];let gl=Infinity;
   cars.forEach(c=>{if(c.best!=null&&c.best<gl)gl=c.best;c.sb.forEach((v,k)=>{if(v<gb[k])gb[k]=v})});return{gb,gl}}
-// Filas de vueltas del JSON. Admite el formato del relay ({p,t,v}) y el JSON del servidor tal cual (driver_key + drivers[], time, flags: 1 = inválida).
-function resRows(R){
-  const who={};(R.drivers||[]).forEach(d=>{if(d&&d.guid)who[d.guid.a+':'+d.guid.b]=String(d.player_id||'')});
-  return(R.laps||[]).map(l=>{
-    const tv=l.t!=null?l.t:l.time;
-    return{
-      p:String(l.p!=null?l.p:((l.driver_key&&who[l.driver_key.a+':'+l.driver_key.b])||l.steam||l.steam_id||l.player_id||'')),
-      n:norm(String(l.name||l.driver||l.player||'').replace(/#\d+$/,'')),
-      t:typeof tv==='string'?parseLap(tv):+tv,
-      v:l.v!=null?!!l.v:(l.flags!=null?!(l.flags&1):(l.valid!=null?!!l.valid:(l.invalid!=null?!l.invalid:true)))};
-  });
-}
-// Marca las vueltas inválidas y recalcula mejores. Devuelve cuántas vueltas ha casado con las de la consola (por SteamID o, si no, por nombre).
-// mode 0 = en directo (la última vuelta inválida se ve en rojo) · 1 = clasificación final de carrera (igual) · 2 = clasificación final de práctica/clasificación:
-// las vueltas inválidas desaparecen y cada piloto se queda SOLO con su mejor vuelta válida (tiempo y sectores).
-function applyResultsTo(R,cars,mode){
-  const rows=resRows(R);let hit=0;
-  for(const c of cars){
-    let rl=rows.filter(l=>l.p&&l.p===c.steam);
-    if(!rl.length){const cn=norm(c.name);rl=cn?rows.filter(l=>l.n&&l.n===cn):[]}
-    if(!rl.length)continue;
-    c.hist.forEach(h=>{h.m=false});
-    rl.forEach(l=>{const h=c.hist.find(h=>!h.m&&Math.abs(h.t-l.t)<=1);if(h){h.m=true;h.inv=!l.v;hit++}});
-    const ok=c.hist.filter(h=>!h.inv);
-    c.best=ok.length?Math.min(...ok.map(h=>h.t)):null;
-    for(let k=0;k<3;k++){const v=ok.filter(h=>h.s).map(h=>h.s[k]);c.sb[k]=v.length?Math.min(...v):Infinity}
-    if(mode===2){
-      const bl=ok.length?ok.reduce((a,b)=>b.t<a.t?b:a):null;
-      c.last=bl?bl.t:null;c.s=bl&&bl.s?bl.s.slice():[null,null,null];c.lastInv=false;
-    }else{const lh=c.hist[c.hist.length-1];c.lastInv=!!(lh&&lh.inv)}
-  }
-  return hit;
-}
-function applyResults(R){
-  if(!R)return;
-  const ty=R.type||R.session_type||R.session||'';
-  dbg('[resultados] recibido · tipo '+(ty||'?')+' · '+((R.laps||[]).length)+' vueltas');
-  RESBUF.push({t:Date.now(),R});if(RESBUF.length>8)RESBUF.shift();
-  if(FREEZE&&(!FREEZE.ver||FREEZE.failed)&&(!ty||sameType(FREEZE.type,ty))){
-    if(!verifyFreeze(R))dbg('[resultados] ninguna vuelta coincide con las de la consola: se ignora y se sigue esperando');
-    return}
-  if(!CUR_SESS||(ty&&!sameType(CUR_SESS,ty)))return;
-  const cars=Object.values(CARS);
-  if(!applyResultsTo(R,cars,0))return;
-  const g=bests(cars);GL.t=g.gl;for(let k=0;k<3;k++)GB[k]=g.gb[k];dirty=true;
-}
-// ---- Fin de sesión: la clasificación se queda fija mientras se comprueban las vueltas y 1 minuto después ----
-let FREEZE=null;const FREEZE_MS=60000,VERIFY_MS=60000,JOINED_MS=15000;
-// El servidor escribe el JSON de resultados cuando acaba la sesión, hasta un par de minutos ANTES de «OnExitGamemode».
-// Por eso se guardan los resultados que llegan y, al congelar la clasificación, se aplican los que ya estaban.
-const RESBUF=[];
-function verifyFreeze(R){
-  const n=applyResultsTo(R,FREEZE.cars,sameType(FREEZE.type,'Race')?1:2);
-  if(!n)return false;
-  applyResultsTo(R,Object.values(CARS),0);
-  FREEZE.g=bests(FREEZE.cars);
-  FREEZE.ver=true;FREEZE.failed=false;FREEZE.until=Date.now()+(FREEZE.joined?JOINED_MS:FREEZE_MS);
-  toast('Vueltas verificadas','Clasificación actualizada',false,4000);dirty=true;return true;
-}
-// Se congela la clasificación cuando acaba la sesión (ended=true) o cuando el servidor se queda sin pilotos (ended=false: aún no ha llegado el fin de sesión).
-// Entran también los desconectados (filas en gris). Si ya hay una ventana abierta, solo se anota que la sesión ha terminado.
-function startFreeze(ended){
-  if(FREEZE){if(ended){FREEZE.ended=true;FREEZE.t0=Date.now();if(FREEZE.ver&&FREEZE.until)FREEZE.until=Math.max(FREEZE.until,Date.now()+FREEZE_MS)}return}
-  const cars=Object.values(CARS).filter(c=>c.laps>0).map(c=>Object.assign({},c,{hist:c.hist.map(h=>Object.assign({},h)),s:c.s.slice(),sb:c.sb.slice(),cur:[null,null,null],pit:false}));
-  if(!cars.length)return;
-  FREEZE={type:CUR_SESS,cars,ended:!!ended,ver:false,failed:false,t0:Date.now(),until:null,g:bests(cars),
-          track:TR[CUR_SESS]?TR[CUR_SESS]+(LY[CUR_SESS]?' '+LY[CUR_SESS]:''):'',server:SERVER_NAME};
-  toast(ended?'Sesión finalizada':'Sin pilotos en el servidor','Comprobando vueltas…',true);dirty=true;
-  // ¿ya había llegado el JSON de esta sesión? (se escribe antes del fin de sesión)
-  const rb=RESBUF.slice().reverse().find(x=>{const ty=x.R.type||x.R.session_type||x.R.session||'';return(!ty||sameType(FREEZE.type,ty))&&Date.now()-x.t<10*60000});
-  if(rb&&verifyFreeze(rb.R))dbg('[resultados] aplicados los que ya habían llegado antes del fin de sesión');
-}
-function tickFreeze(){
-  const bar=$('fzBar');
-  if(!FREEZE){bar.style.display='none';$('fzModal').style.display='none';return}
-  if(!FREEZE.ver&&Date.now()-FREEZE.t0>VERIFY_MS){
-    FREEZE.ver=true;FREEZE.failed=true;FREEZE.until=Date.now()+(FREEZE.joined?JOINED_MS:FREEZE_MS);
-    toast('No se pudieron verificar las vueltas','Se muestra la clasificación sin comprobar',false,6000)}
-  if(FREEZE.until&&Date.now()>=FREEZE.until){FREEZE=null;bar.style.display='none';$('fzModal').style.display='none';dirty=true;return}
-  const left=FREEZE.until?Math.max(0,Math.ceil((FREEZE.until-Date.now())/1000)):null;
-  const stTxt=('🏁 Clasificación final · '+FREEZE.type+(FREEZE.ver?(FREEZE.failed?' (sin verificar)':' (verificada)'):' · comprobando vueltas…')+(left!=null?' · cambia en '+Math.floor(left/60)+':'+p2(left%60):''));
-  if(FREEZE.joined){bar.style.display='none';$('fzModal').style.display='block';$('fzMTxt').textContent=stTxt;
-    const rk=FREEZE.cars.slice().sort((a,b)=>sameType(FREEZE.type,'Race')?raceCmp(a,b):((a.best==null)-(b.best==null)||a.best-b.best));
-    const h=rk.map((c,i)=>'<tr'+(c.gone?' class="gone"':'')+'><td>'+(i+1)+'</td><td>'+esc(c.name||'—')+'</td><td class="t">'+fmt(c.best)+'</td><td class="t">'+(c.laps||0)+' v.</td></tr>').join('');
-    if($('fzMTb').dataset.h!==h){$('fzMTb').innerHTML=h;$('fzMTb').dataset.h=h}
-    return}
-  $('fzModal').style.display='none';bar.style.display='flex';
-  $('fzTxt').textContent='🏁 Clasificación final · '+FREEZE.type+(FREEZE.ver?(FREEZE.failed?' (sin verificar)':' (verificada)'):' · comprobando vueltas…')+(left!=null?' · cambia en '+Math.floor(left/60)+':'+p2(left%60):'');
-}
-let toastT=null;
+
+// ============================================================
+// FIN DE SESIÓN: comprobación de vueltas válidas con el Sheet
+// ============================================================
+// Al acabar la sesión la clasificación se queda fija, sale abajo a la izquierda «Comprobando resultados…» y se lee el Sheet:
+//  · «Sincronizados» (col. A) dice qué ficheros de sesión ya están volcados;
+//  · «Resultados» trae la mejor vuelta VÁLIDA de cada piloto (cols. A–R: Fichero, Fecha, Circuito, Trazado, Tipo Sesión, Posición, Piloto, SteamID, Nación, Coche, Nº, Vueltas,
+//    Tiempo Total, Mejor Vuelta, Mejor Vuelta (ms), Sector 1/2/3 (ms)).
+// Se cruza por SteamID: si la mejor vuelta del live es más rápida que la del Sheet, esa vuelta era inválida y se sustituye. Solo esos pilotos salen en la ventana de 5 s.
+let FREEZE=null,elimT=null;
 function toast(t1,t2,spin,ms){
   const el=$('toast');el.innerHTML=(spin?'<i class="spin"></i>':'')+'<div><b>'+esc(t1)+'</b><span>'+esc(t2||'')+'</span></div>';
-  el.style.display='flex';clearTimeout(toastT);if(ms)toastT=setTimeout(()=>el.style.display='none',ms);
+  el.style.display='flex';clearTimeout(toast.t);if(ms)toast.t=setTimeout(()=>el.style.display='none',ms);
+}
+const sheetUrl=n=>'https://docs.google.com/spreadsheets/d/'+RES_SHEET_ID+'/gviz/tq?tqx=out:csv&sheet='+encodeURIComponent(n)+'&_='+Date.now();
+async function readSheet(n){
+  const r=await fetch(sheetUrl(n),{cache:'no-store'});
+  if(!r.ok)throw new Error('pestaña '+n+': HTTP '+r.status);
+  const t=await r.text();
+  if(/^\s*<(!doctype|html)/i.test(t))throw new Error('pestaña '+n+': el Sheet no está compartido con «cualquiera con el enlace»');
+  return csvRows(t);
+}
+const fileKey=s=>String(s||'').trim().replace(/\.json$/i,'').toLowerCase();
+const fileTs=n=>{const m=String(n).match(/results_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/);return m?Date.UTC(+m[1],m[2]-1,+m[3],+m[4],+m[5],+m[6]):0};
+const fileType=n=>(String(n).match(/_([a-z]+)$/i)||[])[1]||'';
+const numMs=v=>{const s=String(v==null?'':v).trim().replace(',','.');if(!s)return null;const n=Number(s);return isFinite(n)?n:null};
+const skey=s=>{s=String(s==null?'':s).trim();const n=Number(s);return s&&isFinite(n)?String(n):s};   // el SteamID puede llegar del Sheet en notación científica
+const cname=c=>(c.piloto&&getVal(c.piloto,'Nombre_Piloto'))||c.name||'—';
+function parseSheet(res,sinc){
+  const synced=new Set(sinc.map(r=>fileKey(r[0])).filter(Boolean));
+  const files={};
+  res.forEach(r=>{
+    const k=fileKey(r[0]);if(!k||k==='fichero'||!synced.has(k))return;   // solo ficheros ya sincronizados
+    const f=files[k]||(files[k]={name:k,type:String(r[4]||'')||fileType(k),ts:fileTs(k),rows:[],bySteam:{},byName:{}});
+    const row={steam:skey(r[7]),name:String(r[6]||''),ms:numMs(r[14]),s:[numMs(r[15]),numMs(r[16]),numMs(r[17])]};
+    f.rows.push(row);if(row.steam)f.bySteam[row.steam]=row;if(norm(row.name))f.byName[norm(row.name)]=row;
+  });
+  return files;
+}
+const rowFor=(f,c)=>(c.steam&&f.bySteam[skey(c.steam)])||(c.name&&f.byName[norm(c.name)])||null;
+// Elige la sesión del Sheet que corresponde a la que acaba de terminar: mismo tipo, creada tras empezar esta sesión y con pilotos en común (gana la que más coincide, y la más reciente)
+function pickFile(files,F){
+  const cars=F.cars.filter(c=>c.laps>0);
+  const lo=(F.created||F.t0-4*3600000)-10*60000,hi=Date.now()+10*60000;
+  let best=null;
+  for(const f of Object.values(files)){
+    if(!sameType(f.type,F.type))continue;
+    if(!SIMON&&!(f.ts>=lo&&f.ts<=hi))continue;   // en simulación se ignora la fecha (los logs de prueba son antiguos)
+    const hits=cars.filter(c=>rowFor(f,c)).length;
+    if(!hits)continue;
+    if(!best||hits>best.hits||(hits===best.hits&&f.ts>best.f.ts))best={f,hits};
+  }
+  return best&&best.f;
+}
+// Aplica la mejor vuelta válida del Sheet a cada coche. Devuelve los pilotos a los que se les ha eliminado su mejor vuelta del live.
+function applySheetTo(f,cars,race){
+  const out=[];
+  for(const c of cars){
+    if(!c.laps)continue;
+    const r=rowFor(f,c),old=c.best;
+    if(!r||r.ms==null){
+      // Práctica/clasificación: si el piloto no aparece en el Sheet no tiene ninguna vuelta válida. En carrera no se toca (la clasificación va por vueltas).
+      if(race||old==null)continue;
+      c.hist.forEach(h=>{h.inv=true});
+      c.best=null;c.last=null;c.s=[null,null,null];c.sb=[Infinity,Infinity,Infinity];c.lastInv=false;
+      out.push({name:cname(c),old,nw:null});continue;
+    }
+    const ms=r.ms;
+    if(old!=null&&ms-old>1)out.push({name:cname(c),old,nw:ms});   // su mejor vuelta del live era inválida
+    c.hist.forEach(h=>{if(h.t<ms-1)h.inv=true});                  // toda vuelta más rápida que la mejor válida también lo era
+    c.best=ms;
+    let sec=r.s.map(x=>x>0?x:null);
+    const mi=sec.map((x,i)=>x==null?i:-1).filter(i=>i>=0);
+    if(mi.length===1){const rest=ms-sec.reduce((a,x)=>a+(x||0),0);if(rest>0)sec[mi[0]]=rest}
+    const ok=c.hist.filter(h=>!h.inv);
+    for(let k=0;k<3;k++){
+      const v=ok.filter(h=>h.s&&h.s[k]!=null).map(h=>h.s[k]);if(sec[k]!=null)v.push(sec[k]);
+      c.sb[k]=v.length?Math.min(...v):Infinity;
+    }
+    if(race){const lh=c.hist[c.hist.length-1];c.lastInv=!!(lh&&lh.inv)}
+    else{c.last=ms;c.s=sec;c.lastInv=false}   // práctica/clasificación: cada piloto se queda SOLO con su mejor vuelta válida
+  }
+  return out;
+}
+function showElim(list){
+  $('fzMTxt').textContent='Vueltas eliminadas';
+  $('fzMTb').innerHTML=list.map(e=>'<tr><td>'+esc(e.name)+'</td><td class="t inv" style="text-decoration:line-through">'+fmt(e.old)+'</td><td class="arr">→</td><td class="new t g">'+(e.nw!=null?fmt(e.nw):'-')+'</td></tr>').join('');
+  const m=$('fzModal');m.style.display='block';clearTimeout(elimT);elimT=setTimeout(()=>{m.style.display='none'},POPUP_MS);
+}
+function verifyFreeze(f){
+  const race=sameType(FREEZE.type,'Race');
+  const elim=applySheetTo(f,FREEZE.cars,race);
+  if(SESS_CREATED===FREEZE.created&&sameType(CUR_SESS,FREEZE.type)){   // la misma sesión sigue en pantalla: se actualiza también el estado en vivo
+    const live=Object.values(CARS);applySheetTo(f,live,race);
+    const g=bests(live);GL.t=g.gl;for(let k=0;k<3;k++)GB[k]=g.gb[k];
+  }
+  FREEZE.g=bests(FREEZE.cars);
+  FREEZE.ver=true;FREEZE.failed=false;FREEZE.until=Date.now()+(FREEZE.joined?JOINED_MS:FREEZE_MS)+(elim.length?POPUP_MS:0);
+  $('toast').style.display='none';
+  if(elim.length)showElim(elim);else toast('Vueltas verificadas','Ninguna vuelta eliminada',false,4000);
+  dirty=true;
+}
+async function checkSheet(F){
+  // Se mira primero «Sincronizados» (barato); «Resultados» solo se lee cuando ya aparece un fichero de este tipo y fecha
+  const sinc=await readSheet('Sincronizados');
+  if(FREEZE!==F||F.ver)return;
+  const lo=(F.created||F.t0-4*3600000)-10*60000;
+  const any=sinc.some(r=>{const k=fileKey(r[0]);return k&&k!=='fichero'&&sameType(fileType(k),F.type)&&(SIMON||fileTs(k)>=lo)});
+  if(!any){dbg('[sheet] aún no hay ninguna sesión '+F.type+' sincronizada');return}
+  const res=await readSheet('Resultados');
+  if(FREEZE!==F||F.ver)return;
+  const files=parseSheet(res,sinc);
+  const f=pickFile(files,F);
+  if(!f){dbg('[sheet] sincronizada, pero aún sin filas de esta sesión ('+Object.keys(files).length+' ficheros leídos)');return}
+  dbg('[sheet] sesión encontrada: '+f.name+' ('+f.rows.length+' pilotos)');
+  verifyFreeze(f);
+}
+// Se congela la clasificación cuando acaba la sesión (ended=true) o cuando el servidor se queda sin pilotos (ended=false: aún no ha llegado el fin de sesión).
+// Entran también los desconectados (filas en gris). Si ya está congelada, solo se anota que la sesión ha terminado.
+function startFreeze(ended){
+  if(FREEZE){if(ended){FREEZE.ended=true;FREEZE.t0=Date.now();if(FREEZE.ver&&FREEZE.until)FREEZE.until=Math.max(FREEZE.until,Date.now()+FREEZE_MS);else if(!FREEZE.ver&&!FREEZE.joined)toast('Sesión finalizada','Comprobando resultados…',true)}return}
+  const cars=Object.values(CARS).filter(c=>c.laps>0).map(c=>Object.assign({},c,{hist:c.hist.map(h=>Object.assign({},h)),s:c.s.slice(),sb:c.sb.slice(),cur:[null,null,null],pit:false}));
+  if(!cars.length)return;
+  FREEZE={type:CUR_SESS,created:SESS_CREATED,cars,ended:!!ended,ver:false,failed:false,t0:Date.now(),until:null,g:bests(cars),next:0,polling:false,
+          track:TR[CUR_SESS]?TR[CUR_SESS]+(LY[CUR_SESS]?' '+LY[CUR_SESS]:''):'',server:SERVER_NAME};
+  toast(ended?'Sesión finalizada':'Sin pilotos en el servidor','Comprobando resultados…',true);dirty=true;
+}
+function tickFreeze(){
+  if(!FREEZE)return;
+  const F=FREEZE;
+  if(!F.ver){
+    if(Date.now()-F.t0>VERIFY_MS){
+      F.ver=true;F.failed=true;F.until=Date.now()+(F.joined?JOINED_MS:FREEZE_MS);
+      toast('No se pudieron verificar las vueltas','Se muestra la clasificación sin comprobar',false,6000);dirty=true;
+    }else if(!F.polling&&Date.now()>=F.next){
+      F.polling=true;
+      checkSheet(F).catch(e=>dbg('[sheet] '+e.message)).finally(()=>{F.polling=false;F.next=Date.now()+POLL_MS});
+    }
+  }
+  if(F.until&&Date.now()>=F.until){FREEZE=null;dirty=true}
 }
 function sortCars(list,race){
   return list.slice().sort((a,b)=>{
@@ -481,8 +538,8 @@ function sortCars(list,race){
 function raceCmp(a,b){if(b.prog!==a.prog)return b.prog-a.prog;if(a.progT!==b.progT)return a.progT-b.progT;return a.join-b.join}
 // Descarga de TODA la web como PDF (una sola página larga, sin cortes). Usa html2canvas + jsPDF, que se cargan al pulsar el botón.
 const loadScript=src=>new Promise((ok,ko)=>{const e=document.createElement('script');e.src=src;e.onload=ok;e.onerror=()=>ko(new Error('No se pudo cargar '+src));document.head.appendChild(e)});
-async function downloadPDF(only){
-  const btn=only?$('fzPdf'):$('btnPdf'),old=btn.textContent;btn.disabled=true;btn.textContent='Generando PDF…';
+async function downloadPDF(){
+  const btn=$('btnPdf'),old=btn.textContent;btn.disabled=true;btn.textContent='Generando PDF…';
   try{
     if(!window.html2canvas)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
     if(!window.jspdf)await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
@@ -492,18 +549,8 @@ async function downloadPDF(only){
     const de=document.documentElement,tw=document.querySelector('.table-wrap');
     const W=Math.max(1100,de.scrollWidth,(tw?tw.scrollWidth:0)+40),H=Math.max(de.scrollHeight,300);
     const scale=Math.min(2,16000/H);   // límite de tamaño del canvas en los navegadores
-    if(only){   // panel flotante: se captura solo la clasificación congelada
-      only.style.maxHeight='none';only.style.overflow='visible';
-      const r=only.getBoundingClientRect(),W0=Math.ceil(r.width),H0=Math.ceil(r.height);
-      const c0=await html2canvas(only,{backgroundColor:'#161a22',scale:2,useCORS:true,logging:false,onclone:d=>{const m=d.getElementById('fzModal');m.style.position='static';m.style.transform='none';m.style.width=W0+'px';['fzPdf','fzClose'].forEach(i=>{const b=d.getElementById(i);if(b)b.style.display='none'})}});
-      only.style.maxHeight='';only.style.overflow='';
-      const pw=c0.width/2,ph=c0.height/2;
-      const p0=new window.jspdf.jsPDF({orientation:pw>ph?'l':'p',unit:'px',format:[pw,ph],hotfixes:['px_scaling'],compress:true});
-      p0.addImage(c0.toDataURL('image/jpeg',0.95),'JPEG',0,0,pw,ph);
-      p0.save('live-timing_'+(FREEZE?FREEZE.type.toLowerCase():'sesion')+'_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.pdf');
-      return}
     const cv=await html2canvas(document.body,{backgroundColor:'#0B0D10',scale,useCORS:true,logging:false,width:W,windowWidth:W,windowHeight:H,scrollX:0,scrollY:0,
-      ignoreElements:e=>e.id==='toast'||e.id==='raw'||e.id==='settings',
+      ignoreElements:e=>e.id==='toast'||e.id==='raw'||e.id==='settings'||e.id==='fzModal',
       onclone:d=>{
         d.documentElement.style.width=W+'px';d.body.style.width=W+'px';d.body.style.minWidth=W+'px';
         d.querySelectorAll('.table-wrap').forEach(t=>{t.style.overflow='visible'});
@@ -515,7 +562,7 @@ async function downloadPDF(only){
     const w=cv.width/scale,h=cv.height/scale;
     const pdf=new window.jspdf.jsPDF({orientation:w>h?'l':'p',unit:'px',format:[w,h],hotfixes:['px_scaling'],compress:true});
     pdf.addImage(cv.toDataURL('image/jpeg',0.95),'JPEG',0,0,w,h);
-    pdf.save('live-timing_'+(FREEZE?FREEZE.type.toLowerCase():'sesion')+'_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.pdf');
+    pdf.save('live-timing_'+(FREEZE?FREEZE.type.toLowerCase():(CUR_SESS||'sesion').toLowerCase())+'_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.pdf');
   }catch(e){
     console.error(e);toast('No se pudo generar el PDF','Se abre la impresión: elige "Guardar como PDF"',false,6000);
     setTimeout(()=>window.print(),300);
@@ -678,14 +725,14 @@ function onLine(raw){
   const box=$('raw');box.textContent+=line+'\n';if(box.textContent.length>40000)box.textContent=box.textContent.slice(-20000);box.scrollTop=box.scrollHeight;
   const msg=line.replace(RX.prefix,'');
   let m;
-  if(RX.reset.test(msg)){resetAll();SESS_START=null;dirty=true;return}
+  if(RX.reset.test(msg)){resetAll();SESS_START=null;SESS_CREATED=null;dirty=true;return}
   if(m=msg.match(RX.created)){
     CUR_SESS=m[1][0].toUpperCase()+m[1].slice(1).toLowerCase();
     for(const k in CARS){   // los desconectados eran de la sesión anterior: fuera; los que siguen conectados empiezan de cero
       if(CARS[k].gone){if(ROWS[k]){ROWS[k].tr.remove();delete ROWS[k]}delete CARS[k]}else resetStats(CARS[k])}
     GB.fill(Infinity);GL.t=Infinity;POOL.forEach(p=>p.length=0);
     HAS_CS=false;PHASE=0;
-    SESS_START=null;dirty=true;applySess();return}
+    SESS_START=null;SESS_CREATED=tnow;dirty=true;applySess();return}
   if(m=msg.match(RX.phase)){PHASE=+m[2];if(PHASE===50&&SESS_START==null)SESS_START=tnow;dirty=true;return}   // carrera: el reloj arranca aquí (tras la cuenta atrás)
   if(RX.outplap.test(msg)){
     if(SESS_START==null&&CUR_SESS!=='Race')SESS_START=tnow;
@@ -915,7 +962,8 @@ function setLive(on){$('liveBadge').classList.toggle('off',!on)}
 function blankAll(){
   resetAll();
   for(const k in SESS)delete SESS[k];for(const k in TR)delete TR[k];for(const k in LY)delete LY[k];
-  CUR_DEF='';CUR_SESS='';TC=false;SESS_START=null;PLAYERS=null;SERVER_NAME='';FREEZE=null;RESBUF.length=0;PHASE=0;HAS_CS=false;$('toast').style.display='none';dirty=true;
+  CUR_DEF='';CUR_SESS='';TC=false;SESS_START=null;SESS_CREATED=null;PLAYERS=null;SERVER_NAME='';FREEZE=null;PHASE=0;HAS_CS=false;
+  $('toast').style.display='none';$('fzModal').style.display='none';clearTimeout(elimT);dirty=true;
   applySess();tickClock();paintRows();
 }
 let ES=null,SIMON=false;   // SIMON: simulador activo (el relay real se ignora)
@@ -923,7 +971,6 @@ function connect(){
   const es=ES=new EventSource(RELAY);
   es.onopen=()=>{if(SIMON)return;setLive(false);blankAll()};   // el relay reenvía todo al conectar; el piloto verde "EN VIVO" solo si el servidor de juego está activo
   es.onmessage=e=>{if(!SIMON)onLine(e.data)};
-  es.addEventListener('results',e=>{if(SIMON)return;try{applyResults(JSON.parse(e.data))}catch(x){dbg('[resultados] no se pudo leer el evento del relay: '+x.message)}});
   es.addEventListener('status',e=>{if(SIMON)return;if(e.data==='online')setLive(true);else{setLive(false);blankAll()}});
   es.addEventListener('sync',e=>{if(!SIMON)SKEW=(+e.data)-Date.now()});
   es.onerror=()=>{if(SIMON){es.close();return}setLive(false);blankAll();es.close();setTimeout(connect,3000)};
@@ -1037,45 +1084,37 @@ MAPA.frame=ts=>{
 requestAnimationFrame(MAPA.frame);
 
 // ============================================================
-// ADMIN (?admin=1): simulador de logs y JSON de resultados
+// ADMIN (?admin=1): simulador de logs de la consola
 // ============================================================
 if(qs.get('admin'))(function(){
   $('simPanel').style.display='block';
-  const FILES=[];let Q=[],pos=0,timer=null,paused=false,JQ=[];
-  // Retraso (en ms REALES, no depende de la velocidad) entre el fin de sesión y la publicación del JSON por el "servidor".
-  // Mientras tanto la web muestra «Comprobando vueltas…». Si lo pones por encima de 60000, la web marca «sin verificar».
-  const SIM_JSON_MS=20000;
-  let jsonT=null;
-  const schedJson=()=>{if(JQ.length&&!jsonT)jsonT=setTimeout(()=>{jsonT=null;applyJson()},SIM_JSON_MS)};
+  const FILES=[];let Q=[],pos=0,timer=null,paused=false;
   const stat=t=>$('simStat').textContent=t||'';
   const spd=()=>+$('simSpd').value||1;
   const tsOf=l=>{const m=String(l).match(/^@(\d+) /);return m?+m[1]:null};
   function render(){
-    $('simList').innerHTML=FILES.length?FILES.map((f,i)=>esc(f.name)+' · '+(f.note?f.note:f.json?'JSON resultados ('+(f.json.laps||[]).length+' vueltas)':f.lines.length+' líneas')+' <b data-i="'+i+'">✕</b>').join('<br>'):'Sin archivos cargados';
+    $('simList').innerHTML=FILES.length?FILES.map((f,i)=>esc(f.name)+' · '+(f.note?f.note:f.lines.length+' líneas')+' <b data-i="'+i+'">✕</b>').join('<br>'):'Sin archivos cargados';
     $('simList').querySelectorAll('b').forEach(b=>b.onclick=()=>{FILES.splice(+b.dataset.i,1);render()});
   }
   render();
   $('simFiles').onchange=async e=>{
     for(const f of e.target.files){
       const txt=await f.text();let j=null;try{j=JSON.parse(txt)}catch(x){}
-      if(/\.csv$/i.test(f.name)){setCarRows(csvRows(txt),'CSV cargado ('+f.name+')');FILES.push({name:f.name,note:'tabla CochesLogos ('+CAR_ROWS.length+' coches)'});continue}
-      if(j&&!Array.isArray(j)&&Array.isArray(j.laps))FILES.push({name:f.name,json:j});
-      else if(Array.isArray(j)&&j.length&&j.every(x=>typeof x==='string'))FILES.push({name:f.name,lines:j});
-      else if(Array.isArray(j)&&j.length&&j.every(x=>x&&Array.isArray(x.laps)))j.forEach((x,i)=>FILES.push({name:f.name+' #'+(i+1),json:x}));
+      if(/\.csv$/i.test(f.name)){setCarRows(csvRows(txt),'CSV cargado ('+f.name+')');FILES.push({name:f.name,lines:[],note:'tabla CochesLogos ('+CAR_ROWS.length+' coches)'});continue}
+      if(j&&!Array.isArray(j)&&Array.isArray(j.laps)){FILES.push({name:f.name,lines:[],note:'JSON de resultados (ya no se usa: se comprueba con el Sheet)'});continue}
+      if(Array.isArray(j)&&j.length&&j.every(x=>typeof x==='string'))FILES.push({name:f.name,lines:j});
       else FILES.push({name:f.name,lines:txt.split(/\r?\n/).filter(l=>l.trim())});
     }
     e.target.value='';render();
   };
   function takeOver(){SIMON=true;try{ES&&ES.close()}catch(x){}SKEW=0}
   function emit(l){onLine('@'+Date.now()+' '+String(l).replace(/^@\d+ /,''))}
-  function applyJson(){const n=JQ.length;JQ.forEach(j=>applyResults(Object.assign({type:CUR_SESS},j)));JQ=[];if(n)stat('JSON aplicado ('+n+')')}
-  function clearTimer(){clearTimeout(timer);timer=null;clearTimeout(jsonT);jsonT=null}
-  function finish(){stat('Fin del log ('+Q.length+' líneas)');schedJson()}
+  function clearTimer(){clearTimeout(timer);timer=null}
+  function finish(){stat('Fin del log ('+Q.length+' líneas)')}
   function step(){
     if(paused||pos>=Q.length){if(pos>=Q.length)finish();return}
     let d=0,n=0;
     do{const l=Q[pos++];emit(l);
-      if(RX.exit.test(l))schedJson();
       const nx=Q[pos];d=120;if(nx!=null){const a=tsOf(l),b=tsOf(nx);if(a&&b)d=Math.max(0,b-a)}
       d/=spd();const cap=+$('simCap').value;if(cap>0)d=Math.min(d,cap*1000);
     }while(d<2&&pos<Q.length&&++n<400);
@@ -1083,14 +1122,13 @@ if(qs.get('admin'))(function(){
     if(pos>=Q.length){finish();return}
     timer=setTimeout(step,d);
   }
-  function load(){Q=[];FILES.forEach(f=>f.lines&&Q.push(...f.lines));JQ=FILES.filter(f=>f.json).map(f=>f.json);pos=0;paused=false;clearTimer();
-    if(!Q.length&&!JQ.length){stat('Carga algún archivo primero');return false}
+  function load(){Q=[];FILES.forEach(f=>f.lines&&Q.push(...f.lines));pos=0;paused=false;clearTimer();
+    if(!Q.length){stat('Carga algún archivo primero');return false}
     takeOver();blankAll();setLive(true);return true}
-  $('simPlay').onclick=()=>{if(load()&&Q.length)step();else if(JQ.length)stat('Solo hay JSON: usa «Aplicar JSON ahora» con una sesión activa')};
+  $('simPlay').onclick=()=>{if(load())step()};
   $('simAll').onclick=()=>{if(!load())return;while(pos<Q.length)emit(Q[pos++]);finish()};
   $('simPause').onclick=()=>{if(!Q.length)return;paused=!paused;$('simPause').textContent=paused?'▶ Seguir':'⏸ Pausa';if(!paused)step();else stat('En pausa · línea '+pos+' / '+Q.length)};
   $('simStop').onclick=()=>{clearTimer();Q=[];pos=0;paused=false;takeOver();blankAll();setLive(false);$('simPause').textContent='⏸ Pausa';stat('Parado')};
-  $('simJson').onclick=()=>{JQ=FILES.filter(f=>f.json).map(f=>f.json);if(!JQ.length){stat('No hay JSON cargado');return}clearTimeout(jsonT);jsonT=null;applyJson()};
   $('simDemo').onclick=()=>{clearTimer();Q=[];takeOver();blankAll();demo()};
   $('simLive').onclick=()=>location.reload();
 })();
