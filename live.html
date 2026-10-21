@@ -239,8 +239,7 @@ const DEFAULT_RELAY='https://relay-live-xf0l.onrender.com/stream';   // o ?relay
 const RES_SHEET_ID='1b9gzhNK7UfirsbXr-7QLnxVNu9EUK1mLK_Q1I6mWkDM';
 const POLL_MS=1500;       // cada cuánto se mira el Sheet tras acabar la sesión (empieza al acabar la sesión, overtime incluido, y se repite hasta encontrarla)
 const VERIFY_MS=300000;   // tiempo máximo esperando a que la sesión aparezca sincronizada: overtime (hasta ~2 min) + volcado al Sheet (si no, se enseña la clasificación sin verificar)
-const FREEZE_MS=60000;    // la clasificación final se queda fija este tiempo tras verificarla
-const JOINED_MS=15000;    // ...o este si entra un piloto
+const FREEZE_MS=10000;    // tras la ventana de vueltas eliminadas, la tabla actualizada se queda fija este tiempo extra (aunque ya haya empezado la sesión siguiente); luego se resetea todo
 const POPUP_MS=5000;      // duración de la ventana de vueltas eliminadas
 
 // Formato REAL de la consola de Assetto Corsa EVO (comprobado con un log del servidor).
@@ -352,13 +351,6 @@ function adoptGone(c){
       if(ROWS[id]){ROWS[id].tr.remove();delete ROWS[id]}
       delete CARS[id];dirty=true}}
 }
-function playerBack(){
-  // Entra un piloto mientras la clasificación final sigue fija: la tabla pasa a mostrar a los pilotos en vivo
-  if(!FREEZE)return;
-  FREEZE.joined=true;$('toast').style.display='none';
-  if(FREEZE.until)FREEZE.until=Math.min(FREEZE.until,Date.now()+JOINED_MS);
-  dirty=true;
-}
 function setSector(c,i,ms){
   c.s[i]=ms;
   if(ms<c.sb[i])c.sb[i]=ms;
@@ -428,15 +420,16 @@ function parseSheet(res,sinc){
   return files;
 }
 const rowFor=(f,c)=>(c.steam&&f.bySteam[skey(c.steam)])||(c.name&&f.byName[norm(c.name)])||null;
-// Elige la sesión del Sheet que corresponde a la que acaba de terminar: mismo tipo, creada tras empezar esta sesión y con pilotos en común (gana la que más coincide, y la más reciente)
+// Elige la sesión del Sheet que corresponde a la que acaba de terminar. NO depende de la hora (el nombre del fichero y la columna Fecha van en UTC y la hora del servidor puede diferir):
+// mismo tipo de sesión y, sobre todo, la mejor vuelta válida del Sheet tiene que ser una de las vueltas que el live vio de ese piloto (mismo SteamID).
+// Gana la sesión con más pilotos que coinciden; a igualdad, la más reciente.
+const lapSeen=(c,ms)=>ms!=null&&c.hist.some(h=>Math.abs(h.t-ms)<=2);
 function pickFile(files,F){
   const cars=F.cars.filter(c=>c.laps>0);
-  const lo=(F.created||F.t0-4*3600000)-10*60000,hi=Date.now()+10*60000;
   let best=null;
   for(const f of Object.values(files)){
     if(!sameType(f.type,F.type))continue;
-    if(!SIMON&&!(f.ts>=lo&&f.ts<=hi))continue;   // en simulación se ignora la fecha (los logs de prueba son antiguos)
-    const hits=cars.filter(c=>rowFor(f,c)).length;
+    const hits=cars.filter(c=>{const r=rowFor(f,c);return r&&lapSeen(c,r.ms)}).length;
     if(!hits)continue;
     if(!best||hits>best.hits||(hits===best.hits&&f.ts>best.f.ts))best={f,hits};
   }
@@ -485,49 +478,50 @@ function verifyFreeze(f){
     const g=bests(live);GL.t=g.gl;for(let k=0;k<3;k++)GB[k]=g.gb[k];
   }
   FREEZE.g=bests(FREEZE.cars);
-  FREEZE.ver=true;FREEZE.failed=false;FREEZE.until=Date.now()+(FREEZE.joined?JOINED_MS:FREEZE_MS)+(elim.length?POPUP_MS:0);
+  FREEZE.ver=true;FREEZE.failed=false;FREEZE.until=Date.now()+FREEZE_MS+(elim.length?POPUP_MS:0);
   $('toast').style.display='none';
   if(elim.length)showElim(elim);else toast('Vueltas verificadas','Ninguna vuelta eliminada',false,4000);
   dirty=true;
 }
 async function checkSheet(F){
-  // Se mira primero «Sincronizados» (barato); «Resultados» solo se lee cuando ya aparece un fichero de este tipo y fecha
+  // Se mira primero «Sincronizados» (barato). «Resultados» se lee en la primera pasada, cada vez que aparece un fichero nuevo en Sincronizados y, por si las filas llegan después, cada ~15 s.
   const sinc=await readSheet('Sincronizados');
   if(FREEZE!==F||F.ver)return;
-  const lo=(F.created||F.t0-4*3600000)-10*60000;
-  const any=sinc.some(r=>{const k=fileKey(r[0]);return k&&k!=='fichero'&&sameType(fileType(k),F.type)&&(SIMON||fileTs(k)>=lo)});
-  if(!any){dbg('[sheet] aún no hay ninguna sesión '+F.type+' sincronizada');return}
+  const keys=new Set(sinc.map(r=>fileKey(r[0])).filter(k=>k&&k!=='fichero'));
+  const changed=!F.seen||keys.size!==F.seen.size||[...keys].some(k=>!F.seen.has(k));
+  F.seen=keys;F.n=(F.n||0)+1;
+  if(!changed&&F.n%10!==0)return;
   const res=await readSheet('Resultados');
   if(FREEZE!==F||F.ver)return;
   const files=parseSheet(res,sinc);
   const f=pickFile(files,F);
-  if(!f){dbg('[sheet] sincronizada, pero aún sin filas de esta sesión ('+Object.keys(files).length+' ficheros leídos)');return}
+  if(!f){dbg('[sheet] aún no aparece esta sesión ('+Object.keys(files).length+' ficheros sincronizados leídos)');return}
   dbg('[sheet] sesión encontrada: '+f.name+' ('+f.rows.length+' pilotos)');
   verifyFreeze(f);
 }
 // Se congela la clasificación cuando acaba la sesión (ended=true) o cuando el servidor se queda sin pilotos (ended=false: aún no ha llegado el fin de sesión).
 // Entran también los desconectados (filas en gris). Si ya está congelada, solo se anota que la sesión ha terminado.
 function startFreeze(ended){
-  if(FREEZE){if(ended){FREEZE.ended=true;FREEZE.t0=Date.now();if(FREEZE.ver&&FREEZE.until)FREEZE.until=Math.max(FREEZE.until,Date.now()+FREEZE_MS);else if(!FREEZE.ver&&!FREEZE.joined)toast('Sesión finalizada','Comprobando resultados…',true)}return}
+  if(FREEZE){if(ended){FREEZE.ended=true;FREEZE.t0=Date.now();if(FREEZE.ver&&FREEZE.until)FREEZE.until=Math.max(FREEZE.until,Date.now()+FREEZE_MS);else if(!FREEZE.ver)toast('Sesión finalizada','Comprobando resultados…',true)}return}
   const cars=Object.values(CARS).filter(c=>c.laps>0).map(c=>Object.assign({},c,{hist:c.hist.map(h=>Object.assign({},h)),s:c.s.slice(),sb:c.sb.slice(),cur:[null,null,null],pit:false}));
   if(!cars.length)return;
-  FREEZE={type:CUR_SESS,created:SESS_CREATED,cars,ended:!!ended,ver:false,failed:false,t0:Date.now(),until:null,g:bests(cars),next:0,polling:false,
+  FREEZE={type:CUR_SESS,created:SESS_CREATED,present:new Set(Object.values(CARS).filter(c=>!c.gone&&c.steam).map(c=>String(c.steam))),cars,ended:!!ended,ver:false,failed:false,t0:Date.now(),until:null,g:bests(cars),next:0,polling:false,
           track:TR[CUR_SESS]?TR[CUR_SESS]+(LY[CUR_SESS]?' '+LY[CUR_SESS]:''):'',server:SERVER_NAME};
-  toast(ended?'Sesión finalizada':'Sin pilotos en el servidor','Comprobando resultados…',true);dirty=true;
+  toast(ended?'Sesión finalizada':'Sin pilotos en el servidor','Comprobando resultados…',true);dirty=true;applySess();
 }
 function tickFreeze(){
   if(!FREEZE)return;
   const F=FREEZE;
   if(!F.ver){
     if(Date.now()-F.t0>VERIFY_MS){
-      F.ver=true;F.failed=true;F.until=Date.now()+(F.joined?JOINED_MS:FREEZE_MS);
+      F.ver=true;F.failed=true;F.until=Date.now()+FREEZE_MS;
       toast('No se pudieron verificar las vueltas','Se muestra la clasificación sin comprobar',false,6000);dirty=true;
     }else if(!F.polling&&Date.now()>=F.next){
       F.polling=true;
       checkSheet(F).catch(e=>dbg('[sheet] '+e.message)).finally(()=>{F.polling=false;F.next=Date.now()+POLL_MS});
     }
   }
-  if(F.until&&Date.now()>=F.until){FREEZE=null;dirty=true}
+  if(F.until&&Date.now()>=F.until){FREEZE=null;dirty=true;applySess()}   // fin de la espera: la tabla se resetea y empieza la sesión actual de cero
 }
 function sortCars(list,race){
   return list.slice().sort((a,b)=>{
@@ -682,8 +676,9 @@ function applySess(){
   $('hGrip').textContent=d0.grip?(GRIP[d0.grip]||nice(d0.grip)):'';
   const t={Practice:'Practice',Qualifying:'Qualify',Warmup:'Warmup',Race:'Race'}[CUR_SESS];
   if(t)CFG.type=t;
-  const e=$('hType');e.textContent=CUR_SESS||'';e.className='stype '+(CUR_SESS?CFG.type:'');
-  $('hTrack').textContent=TR[CUR_SESS]?TR[CUR_SESS]+(LY[CUR_SESS]?' '+LY[CUR_SESS]:''):'';
+  const e=$('hType'),HS=FREEZE?FREEZE.type:CUR_SESS,ht={Practice:'Practice',Qualifying:'Qualify',Warmup:'Warmup',Race:'Race'}[HS];
+  e.textContent=HS||'';e.className='stype '+(HS?(ht||CFG.type):'');
+  $('hTrack').textContent=FREEZE?FREEZE.track:(TR[CUR_SESS]?TR[CUR_SESS]+(LY[CUR_SESS]?' '+LY[CUR_SESS]:''):'');
   updProgLabel();
 }
 function updProgLabel(){
@@ -747,8 +742,8 @@ function onLine(raw){
   // --- pilotos que entran y salen ---
   if(m=msg.match(RX.preset)){const c=getCar(m[1]);c.preset=m[2];c.piloto=null;dirty=true;return}
   if(m=msg.match(RX.join)){
-    const c=getCar(m[1]);c.steam=m[3];c.name=m[2].replace(/#\d+$/,'').trim();c.gone=false;c.piloto=null;linkPilot(c);adoptGone(c);playerBack();dirty=true;return}
-  if(m=msg.match(RX.model)){const c=getCar(m[3]);c.steam=m[1];c.model=m[2];c.gone=false;c.piloto=null;linkPilot(c);adoptGone(c);playerBack();dirty=true;return}
+    const c=getCar(m[1]);c.steam=m[3];c.name=m[2].replace(/#\d+$/,'').trim();c.gone=false;c.piloto=null;linkPilot(c);adoptGone(c);dirty=true;return}
+  if(m=msg.match(RX.model)){const c=getCar(m[3]);c.steam=m[1];c.model=m[2];c.gone=false;c.piloto=null;linkPilot(c);adoptGone(c);dirty=true;return}
   if(m=msg.match(RX.leave)){
     const c=CARS[m[1]];
     if(c){
@@ -858,7 +853,7 @@ function ensureRow(id){
 }
 const DASH='<span class="t" style="color:var(--text-dim)">—</span>';
 function paintRows(){
-  const FZ=FREEZE&&!FREEZE.joined;
+  const FZ=!!FREEZE;
   const list=FZ?FREEZE.cars.slice():Object.values(CARS);
   // El morado es de UN solo piloto por sector (y uno para la mejor vuelta): quien tenga el mejor tiempo ahora mismo,
   // contando los sectores que se están haciendo en este momento. Si otro piloto lo mejora, el anterior pasa a verde
