@@ -226,7 +226,6 @@ tr.gone td{opacity:.42;filter:grayscale(1)}
 // ============================================================
 // CONFIGURACIÓN
 // ============================================================
-const RESULTADOS_ID='1lnJP56cv3VCFBc6YZaVqtTksT6WlDWfroigAiB9DQ_s';
 const API_URL='https://script.google.com/macros/s/AKfycbwO9vraqdENCW_UKLmlNZCGm8b1s5H_4Xyj6SumvOGQ2yLlbJITU2yu-K3KrIwW9xlZyA/exec';
 const STATIC_DATA_URL='https://raceonline1.github.io/academy/data/race-data.json';
 const DEFAULT_RELAY='https://relay-live-xf0l.onrender.com/stream';   // o ?relay=https://... en la URL
@@ -258,6 +257,8 @@ const RX={
   // changing session phase 4 -> 50   (50 = la carrera/sesión está en marcha; 60 = se acabó el tiempo; 70 = el líder ha acabado; 80 = fin)
   phase:/changing session phase (\d+) -> (\d+)/,
   // END_SESSION [WatingForOthers] Ending Lap for carId car   -> ese coche ha recibido la bandera a cuadros (acaba su vuelta final)
+  // [RemoteGameServer][carId] RequestPlayerCar preset_695b_mech_1   -> el coche (preset) que pide el piloto; es el nombre que está en la columna S de CochesLogos
+  preset:new RegExp(String.raw`(?:\[RemoteGameServer\])?\[(${CID})\] RequestPlayerCar (\S+)`),
   endsess:new RegExp(String.raw`END_SESSION (?:WatingForOthers )?Ending Lap for (${CID}) car`)
 };
 
@@ -320,7 +321,7 @@ let PLAYERS=null,dirty=false,PHASE=0;
 
 // seg = sector en el que va el coche (0,1,2); segT = hora en que entró en él; ol = vuelta de salida de boxes aún sin avisos de sector (el mapa estima por tiempo)
 function newCar(id){
-  return{id,name:'',steam:'',model:'',laps:0,total:0,last:null,best:null,s:[null,null,null],sb:[Infinity,Infinity,Infinity],cur:[null,null,null],next:null,hist:[],lastInv:false,fin:false,prog:0,progT:0,finT:0,lane:false,pit:false,out:false,pits:0,pxT:0,seg:0,segT:null,ol:false,gone:false,piloto:null,upd:0,join:Date.now()};
+  return{id,name:'',steam:'',model:'',preset:'',laps:0,total:0,last:null,best:null,s:[null,null,null],sb:[Infinity,Infinity,Infinity],cur:[null,null,null],next:null,hist:[],lastInv:false,fin:false,prog:0,progT:0,finT:0,lane:false,pit:false,out:false,pits:0,pxT:0,seg:0,segT:null,ol:false,gone:false,piloto:null,upd:0,join:Date.now()};
 }
 function getCar(id){return CARS[id]||(CARS[id]=newCar(id))}
 function resetStats(c){
@@ -521,25 +522,52 @@ async function downloadPDF(only){
   }finally{btn.disabled=false;btn.textContent=old}
 }
 // Coches: el modelo que da el servidor (ks_xxx) se cruza con la pestaña CochesLogos (nombre = Specs, logo, forzar blanco)
-let CAR_ROWS=[];const NOLINK=new Set();
+// ---- Coches ----
+// El coche se identifica por el PRESET que pide el piloto al servidor (línea «RequestPlayerCar preset_695b_mech_1») y se cruza con la pestaña CochesLogos:
+//   A = nombre del coche · F = logo de marca · R = forzar logo blanco (Sí/No) · S = nombre del preset en el servidor · T = nombre que se enseña en «Espec.»
+// Si el preset no está en la columna S, se busca por parecido en S, T y A (y, como último recurso, con el id interno ks_xxx del coche).
+const COL={A:0,F:5,R:17,S:18,T:19};
+const CARS_SHEET_ID='1ttf8WFCBw-ov6xDejBCs8XsDzu9OSBVa1iF08kgZtqA';
+let CAR_ROWS=[],STATIC=null,CARS_SRC='';const NOLINK=new Set();
 const ctok=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/^ks_/,'').split(/[^a-z0-9]+/).filter(t=>t&&t!=='ks');
 function prettyCar(m){return ctok(m).map(t=>t.length>3&&/^[a-z]+$/.test(t)?t[0].toUpperCase()+t.slice(1):t.toUpperCase()).join(' ')}
 const ccmp=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/^ks_/,'').replace(/[^a-z0-9]/g,'');
-function carInfo(model){
-  if(!model||!CAR_ROWS.length)return null;
-  const raw=String(model).trim().toLowerCase(),idc=ccmp(model),ids=new Set(ctok(model));
+const presetCore=p=>ccmp(String(p||'').replace(/^preset_?/i,'').replace(/_?mech.*$/i,''));   // preset_240z_mech_1 -> 240z
+// Siglas de un nombre: iniciales de las palabras y las palabras con números enteras (Mini John Cooper S -> mjcs · Renault 5 GT Turbo -> r5gtt · Abarth 695 Biposto -> a695b)
+const acronym=n=>ccmp(String(n||'').replace(/\(.*?\)/g,' ').split(/[^A-Za-z0-9\u00C0-\u00FF]+/).filter(Boolean).map(w=>/\d/.test(w)?w:w[0]).join(''));
+function makeCarRow(r){
+  const g=i=>String(r[i]==null?'':r[i]).trim();
+  const a=g(COL.A),t=g(COL.T),s=g(COL.S),logo=g(COL.F),white=/^si$/.test(norm(g(COL.R)));
+  if(!a&&!t&&!s)return null;
+  const names=[t,a].filter(Boolean),forms=new Set(),acr=new Set();
+  names.forEach(n=>{forms.add(ccmp(n));forms.add(ccmp(n.replace(/\(.*?\)/g,'')));acr.add(acronym(n))});
+  return{a,t,s,logo,white,name:t||a,sraw:s.toLowerCase(),sc:ccmp(s),forms:[...forms].filter(f=>f.length>=3),acr:[...acr].filter(f=>f.length>=3),tokens:ctok(t||a),cells:r};
+}
+function carInfo(c){
+  if(!c||!CAR_ROWS.length)return null;
+  const preset=String(c.preset||'').trim().toLowerCase(),model=String(c.model||'').trim().toLowerCase();
+  if(!preset&&!model)return null;
+  const pc=ccmp(preset),core=presetCore(preset),mc=ccmp(model),ids=new Set(ctok(model));
+  // 1) exacto: columna S = preset del servidor
+  if(preset){const r=CAR_ROWS.find(r=>r.s&&(r.sraw===preset||r.sc===pc));if(r)return r}
+  // 1b) exacto en cualquier otra celda de la fila (preset o id ks_xxx puesto a mano)
+  const hit=CAR_ROWS.find(r=>r.cells.some(v=>{const x=String(v).trim().toLowerCase();return x&&(x===preset||x===model)}));if(hit)return hit;
+  // 2) por parecido (segunda opción)
   let best=null,bs=0;
   for(const r of CAR_ROWS){
-    if(r.cells.some(v=>String(v).trim().toLowerCase()===raw))return r;      // coincidencia exacta con el id interno, si lo has puesto en alguna columna
     let sc=0;
-    // 1) nombre "pegado" (sin espacios ni símbolos) igual o contenido en el id, con o sin el paréntesis final
-    for(const f of r.forms){if(idc===f)sc=Math.max(sc,1000);else if(idc.includes(f))sc=Math.max(sc,500+f.length);else if(idc.length>=6&&f.includes(idc))sc=Math.max(sc,400)}
-    // 2) por palabras: coinciden si son iguales o una empieza por la otra
-    if(!sc){
-      const com=r.tokens.filter(t=>ids.has(t)||[...ids].some(i=>i.length>=3&&t.length>=3&&(i.startsWith(t)||t.startsWith(i)))).length;
-      const cover=r.tokens.length?com/r.tokens.length:0,prec=ids.size?com/ids.size:0;
-      if(com>=2&&cover>=0.6)sc=cover*60+prec*40;
+    if(core.length>=3){
+      if(r.sc&&r.sc.includes(core))sc=Math.max(sc,900);                     // otra variante del preset en la columna S
+      else if(r.forms.some(f=>f.includes(core)))sc=Math.max(sc,700);         // 240z dentro de «Datsun 240Z (S30)» (columnas T o A)
+      else if(r.acr.some(f=>f.includes(core)))sc=Math.max(sc,500);           // siglas: jcs -> Mini John Cooper S · r5gt -> Renault 5 GT
     }
+    if(mc){   // último recurso: el id interno ks_xxx comparado con los nombres
+      for(const f of r.forms){if(mc===f)sc=Math.max(sc,450);else if(f.length>=6&&mc.includes(f))sc=Math.max(sc,300+f.length/100)}
+      const com=r.tokens.filter(t=>ids.has(t)||[...ids].some(i=>i.length>=3&&t.length>=3&&(i.startsWith(t)||t.startsWith(i)))).length;
+      const cover=r.tokens.length?com/r.tokens.length:0;
+      if(com>=2&&cover>=0.6)sc=Math.max(sc,200+cover*50);
+    }
+    if(sc)sc+=(r.logo?1:0)-r.name.length/1000;   // a igualdad: el que tiene logo y el de nombre más corto (240Z, no «240Z G-Nose Tune»)
     if(sc>bs){bs=sc;best=r}
   }
   return best;
@@ -550,22 +578,49 @@ function csvRows(t){const out=[];let row=[],f='',q=false;for(let i=0;i<t.length;
   else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;row.push(f);out.push(row);row=[];f=''}
   else f+=ch}
   if(f||row.length){row.push(f);out.push(row)}return out}
-async function loadCoches(){
-  let rows=null;
-  try{const r=await fetch(API_URL+'?action=cochesLogos');const j=await r.json();if(j&&j.ok&&Array.isArray(j.data))rows=j.data}catch(e){}
-  if(!rows)try{const r=await fetch('https://docs.google.com/spreadsheets/d/'+RESULTADOS_ID+'/gviz/tq?tqx=out:csv&sheet=CochesLogos');if(r.ok)rows=csvRows(await r.text())}catch(e){}
-  if(!rows||!rows.length)return;
-  const head=rows[0].map(x=>norm(x));
-  let nc=head.findIndex(x=>x.includes('spec'));if(nc<0)nc=0;
-  const hasHead=!/^(https?:|data:image)/.test(String(rows[0][2]||'').trim());
-  CAR_ROWS=[];
-  rows.slice(hasHead?1:0).forEach(r=>{
-    const name=String(r[nc]||'').trim();if(!name)return;
-    const logo=String(r[2]||'').trim(),white=/^si$/.test(norm(r[4]));
-    if(logo&&white)FORZAR[logo]=true;
-    CAR_ROWS.push({name,tokens:ctok(name),forms:[...new Set([ccmp(name),ccmp(name.replace(/\(.*?\)/g,''))])].filter(f=>f.length>=4),logo,white,cells:r});
+// Orígenes de CochesLogos, por orden: 1) el JSON estático (si trae «cochesLogos») · 2) Apps Script (?action=cochesLogos) · 3) la hoja de Google en CSV (solo si se comparte) ·
+// 4) respaldo: los coches de la tienda del JSON estático (sin preset: solo por parecido)
+function setCarRows(rows,src){
+  const out=[];
+  rows.forEach((r,i)=>{
+    const isObj=!Array.isArray(r);
+    if(isObj){   // JSON estático: objetos {Coche, Clase, Logo, Forzar_Blanco, Nombre_ACE, ...} -> columnas por posición (A, F, R, S, T)
+      const o=r||{};r=[];
+      r[COL.A]=o.Coche;r[COL.F]=o.Logo;
+      r[COL.R]=(o.Forzar_Blanco===true||/^(si|true|1)$/.test(norm(o.Forzar_Blanco)))?'Sí':'No';
+      r[COL.S]=o.Nombre_Log||Object.values(o).find(v=>/^(preset_|ks_)/i.test(String(v==null?'':v).trim()))||'';
+      r[COL.T]=o.Nombre_ACE;
+    }else if(i===0&&!/^preset_/i.test(String(r[COL.S]||'').trim())&&!/^(https?:|data:image)/.test(String(r[COL.F]||'').trim()))return;   // fila de cabeceras del CSV
+    const row=makeCarRow(r);if(row)out.push(row);
   });
+  CAR_ROWS=out;CARS_SRC=src;NOLINK.clear();
+  out.forEach(r=>{if(r.logo&&r.white)FORZAR[r.logo]=true});
+  dbg('[coches] '+out.length+' coches desde '+src+' · '+out.filter(r=>r.s).length+' con preset en la columna S');
   dirty=true;
+}
+const CARS_CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTj6EPkQIjEoaOeO2CwWOLsvz3oZ4h3g0nh4hHsTNkkzjmtC-5tso0-vzybkDiT-d3H2DHgbptEPF7O/pub?gid=1681497486&single=true&output=csv';
+const tieneColS=L=>Array.isArray(L)&&L.some(o=>Object.values(o||{}).some(v=>/^(preset_|ks_)/i.test(String(v==null?'':v).trim())));
+async function loadCoches(){
+  let rows=null,src='';
+  // 1) JSON estático: solo si ya trae la columna S (nombre del preset en el servidor)
+  if(STATIC&&tieneColS(STATIC.cochesLogos)){rows=STATIC.cochesLogos;src='race-data.json (cochesLogos)'}
+  // 2) hoja publicada en la web (CSV)
+  if(!rows)try{const r=await fetch(CARS_CSV_URL);
+    if(r.ok){const t=await r.text();if(!/<html|<!doctype/i.test(t.slice(0,200))){rows=csvRows(t);src='hoja publicada (CSV)'}}}catch(e){}
+  // 3) hoja de Google compartida (gviz)
+  if(!rows)try{const r=await fetch('https://docs.google.com/spreadsheets/d/'+CARS_SHEET_ID+'/gviz/tq?tqx=out:csv&sheet=CochesLogos');
+    if(r.ok){const t=await r.text();if(!/<html|<!doctype/i.test(t.slice(0,200))){rows=csvRows(t);src='hoja de Google (CSV)'}}}catch(e){}
+  // 4) respaldo: JSON estático sin columna S (solo por parecido)
+  if(!rows&&STATIC&&Array.isArray(STATIC.cochesLogos)&&STATIC.cochesLogos.length){
+    rows=STATIC.cochesLogos;src='RESPALDO: race-data.json sin columna S (solo por parecido)';
+    dbg('[coches] el JSON estático aún no trae la columna S de CochesLogos y no he podido leer el CSV');
+  }
+  // 5) último respaldo: coches de la tienda
+  if(!rows&&STATIC&&Array.isArray(STATIC.coches)&&STATIC.coches.length){
+    rows=STATIC.coches.map(c=>{const r=[];r[COL.A]=c.Nombre_Coche;r[COL.T]=c.Nombre_Coche;r[COL.F]=c.Logo_Marca_URL;r[COL.R]=c.Logo_Forzar_Blanco===true?'Sí':'No';return r});
+    src='RESPALDO: coches de la tienda (sin columnas S/T: solo por parecido)';
+  }
+  if(rows)setCarRows(rows,src);else dbg('[coches] sin datos de coches: Marca vacía y Espec. con el nombre del preset');
 }
 const SESS={},TR={},LY={};let CUR_DEF='',CUR_SESS='',TC=false;
 let SERVER_NAME='';
@@ -643,6 +698,7 @@ function onLine(raw){
   if(parseConfig(msg))return;
   if(m=msg.match(RX.players)){PLAYERS=+m[1];dirty=true;return}
   // --- pilotos que entran y salen ---
+  if(m=msg.match(RX.preset)){const c=getCar(m[1]);c.preset=m[2];c.piloto=null;dirty=true;return}
   if(m=msg.match(RX.join)){
     const c=getCar(m[1]);c.steam=m[3];c.name=m[2].replace(/#\d+$/,'').trim();c.gone=false;c.piloto=null;linkPilot(c);adoptGone(c);playerBack();dirty=true;return}
   if(m=msg.match(RX.model)){const c=getCar(m[3]);c.steam=m[1];c.model=m[2];c.gone=false;c.piloto=null;linkPilot(c);adoptGone(c);playerBack();dirty=true;return}
@@ -785,10 +841,11 @@ function paintRows(){
     setCell(x.drv,esc(pl?(getVal(pl,'Nombre_Piloto')||c.name):(c.name||'Coche #'+c.id.slice(0,4)))+(c.gone?'<span class="off-tag">desconectado</span>':''));
     r.tr.classList.toggle('gone',!!c.gone);
     setCell(x.lic,licHtml(pl?getVal(pl,'Licencia'):''));
-    const ci=carInfo(c.model);
-    if(!ci&&c.model&&CAR_ROWS.length&&!NOLINK.has(c.model)){NOLINK.add(c.model);const bx=$('raw');bx.textContent+='[coche sin enlazar con CochesLogos] '+c.model+'\n'}
+    const ci=carInfo(c);
+    const ckey=(c.preset||c.model);
+    if(!ci&&ckey&&CAR_ROWS.length&&!NOLINK.has(ckey)){NOLINK.add(ckey);dbg('[coche sin enlazar con CochesLogos] preset='+(c.preset||'?')+' · ks='+(c.model||'?'))}
     setCell(x.mk,marcaHtml(ci?ci.logo:''));
-    setCell(x.car,esc(ci?ci.name:prettyCar(c.model)));
+    setCell(x.car,esc(ci?ci.name:(c.model?prettyCar(c.model):prettyCar(String(c.preset||'').replace(/^preset_?/i,'').replace(/_?mech.*$/i,'')))));
     const live=c.cur.some(v=>v!=null);
     for(let k=0;k<3;k++){
       const v=live?c.cur[k]:c.s[k];
@@ -843,6 +900,7 @@ async function loadPilotos(){
   try{const r=await fetch(STATIC_DATA_URL,{cache:'no-store'});if(r.ok){const j=await r.json();if(j&&j.ok)data=j.data}}catch(e){}
   if(!data)try{const r=await fetch(API_URL);const j=await r.json();if(j.ok)data=j.data}catch(e){}
   if(!data)return;
+  STATIC=data;
   PILOTOS=data.pilotos||[];
   FORZAR=Object.assign({},data.logosForzarBlancoPorUrl||{},data.logosForzarBlancoCarreras||{});
   PILOTOS.forEach(p=>{
@@ -993,13 +1051,14 @@ if(qs.get('admin'))(function(){
   const spd=()=>+$('simSpd').value||1;
   const tsOf=l=>{const m=String(l).match(/^@(\d+) /);return m?+m[1]:null};
   function render(){
-    $('simList').innerHTML=FILES.length?FILES.map((f,i)=>esc(f.name)+' · '+(f.json?'JSON resultados ('+(f.json.laps||[]).length+' vueltas)':f.lines.length+' líneas')+' <b data-i="'+i+'">✕</b>').join('<br>'):'Sin archivos cargados';
+    $('simList').innerHTML=FILES.length?FILES.map((f,i)=>esc(f.name)+' · '+(f.note?f.note:f.json?'JSON resultados ('+(f.json.laps||[]).length+' vueltas)':f.lines.length+' líneas')+' <b data-i="'+i+'">✕</b>').join('<br>'):'Sin archivos cargados';
     $('simList').querySelectorAll('b').forEach(b=>b.onclick=()=>{FILES.splice(+b.dataset.i,1);render()});
   }
   render();
   $('simFiles').onchange=async e=>{
     for(const f of e.target.files){
       const txt=await f.text();let j=null;try{j=JSON.parse(txt)}catch(x){}
+      if(/\.csv$/i.test(f.name)){setCarRows(csvRows(txt),'CSV cargado ('+f.name+')');FILES.push({name:f.name,note:'tabla CochesLogos ('+CAR_ROWS.length+' coches)'});continue}
       if(j&&!Array.isArray(j)&&Array.isArray(j.laps))FILES.push({name:f.name,json:j});
       else if(Array.isArray(j)&&j.length&&j.every(x=>typeof x==='string'))FILES.push({name:f.name,lines:j});
       else if(Array.isArray(j)&&j.length&&j.every(x=>x&&Array.isArray(x.laps)))j.forEach((x,i)=>FILES.push({name:f.name+' #'+(i+1),json:x}));
@@ -1037,7 +1096,7 @@ if(qs.get('admin'))(function(){
 })();
 
 applyCfg();if(!qs.get('admin'))$('btnSet').style.display='none';
-loadPilotos();loadCoches();loadTracks();
+loadPilotos().then(loadCoches);loadTracks();
 if(qs.get('demo'))demo();else connect();
 </script>
 </body>
