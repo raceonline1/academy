@@ -687,6 +687,24 @@
     .search-input, .select-input{max-width:100%;}
   }
 
+    /* Slider "Contraer clas.": solo existe en móvil */
+  .switches-row{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+  .switch-row.solo-mobile{display:none;}
+  @media (max-width:760px){
+    .switch-row.solo-mobile{display:flex;}
+
+    /* Clasificación de pilotos: solo Pos. (1), Piloto (3), Marca (6) y Puntos (8) */
+    #view-clasificacion.contraer table.clas-pilotos th:not(:nth-child(1)):not(:nth-child(3)):not(:nth-child(6)):not(:nth-child(8)),
+    #view-clasificacion.contraer table.clas-pilotos td:not(:nth-child(1)):not(:nth-child(3)):not(:nth-child(6)):not(:nth-child(8)){
+      display:none;
+    }
+    /* Clasificación por equipos: solo Pos. (1), Pilotos (2) y Puntos (4) */
+    #view-clasificacion.contraer table.clas-equipos th:not(:nth-child(1)):not(:nth-child(2)):not(:nth-child(4)),
+    #view-clasificacion.contraer table.clas-equipos td:not(:nth-child(1)):not(:nth-child(2)):not(:nth-child(4)){
+      display:none;
+    }
+  }
+
   /* ============================================================
      AJUSTES SOLO MÓVIL — a partir de aquí, todo queda igual en desktop
      ============================================================ */
@@ -844,22 +862,32 @@
         <h2>Clasificación de pilotos</h2>
         <p>Clasificación general del campeonato por piloto y carrera</p>
       </div>
-            <label class="switch-row" for="chkCombinarClasesPilotos">
-        <span class="switch">
-          <input type="checkbox" id="chkCombinarClasesPilotos">
-          <span class="track"></span>
-          <span class="knob"></span>
-        </span>
-        Combinar clases
-      </label>
+                  <div class="switches-row">
+        <label class="switch-row" for="chkCombinarClasesPilotos">
+          <span class="switch">
+            <input type="checkbox" id="chkCombinarClasesPilotos">
+            <span class="track"></span>
+            <span class="knob"></span>
+          </span>
+          Combinar clases
+        </label>
+        <label class="switch-row solo-mobile" for="chkContraerClas">
+          <span class="switch">
+            <input type="checkbox" id="chkContraerClas">
+            <span class="track"></span>
+            <span class="knob"></span>
+          </span>
+          Contraer clas.
+        </label>
+      </div>
     </div>
     <div class="checkered-divider"></div>
     <div class="table-wrap">
-      <table>
+        <table class="clas-pilotos">
         <thead>
           <tr>
             <th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th>Equipo</th><th>Marca</th>
-            <th>Espec.</th><th>Puntos</th><th>R1</th><th>R2</th><th>R3</th><th>R4</th><th>Pen.</th>
+            <th>Espec.</th><th>Ptos.</th><th>R1</th><th>R2</th><th>R3</th><th>R4</th><th>Pen.</th>
           </tr>
         </thead>
         <tbody id="tablaClasificacion"><tr><td colspan="13" style="color:var(--text-dim);text-align:center;"><span class="spinner"></span>Cargando datos, espere…</td></tr></tbody>
@@ -874,7 +902,7 @@
     </div>
     <div class="checkered-divider"></div>
     <div class="table-wrap">
-      <table>
+        <table class="clas-equipos">
         <thead>
           <tr>
             <th>Pos.</th><th>Pilotos</th><th>Equipo</th><th>Puntos</th>
@@ -2343,7 +2371,7 @@ function renderCalendario(){
     grid.innerHTML = '<div class="empty-state">Todavía no hay carreras programadas en el calendario.</div>';
     return;
   }
-  grid.innerHTML = DB.calendario.map(item=>{
+  grid.innerHTML = DB.calendario.slice(0, 4).map(item=>{
     const ronda = getVal(item, 'Ronda');
     const circuito = getVal(item, 'Circuito');
     const fecha = getVal(item, 'Fecha');
@@ -2597,6 +2625,10 @@ function renderClasificacion(){
 }
 
 document.getElementById('chkCombinarClasesPilotos').addEventListener('change', renderClasificacion);
+// Contraer clas. (solo móvil): el CSS oculta las columnas cuando #view-clasificacion tiene la clase "contraer"
+document.getElementById('chkContraerClas').addEventListener('change', e => {
+  document.getElementById('view-clasificacion').classList.toggle('contraer', e.target.checked);
+});
 
 function renderClasTeam(){
   const tbody = document.getElementById('tablaClasTeam');
