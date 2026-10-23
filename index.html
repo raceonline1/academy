@@ -705,6 +705,24 @@
     }
   }
 
+
+  /* ===== Pilotos: selector de vista (iconos / lista) y vista lista ===== */
+  .view-toggle{display:flex;border:1px solid var(--hairline);border-radius:8px;overflow:hidden;background:var(--panel);}
+  .view-toggle button{background:transparent;border:none;color:var(--text-dim);padding:8px 11px;cursor:pointer;display:flex;align-items:center;}
+  .view-toggle button + button{border-left:1px solid var(--hairline);}
+  .view-toggle button.active{background:var(--panel-2);color:var(--cyan);}
+  .view-toggle svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .class-tag.cat-bronce{color:#CD7F32;}
+  .class-tag.cat-plata{color:#C0C0C0;}
+  .class-tag.cat-oro{color:#FFD700;}
+  tr.fila-piloto{cursor:pointer;}
+  .avatar-lista{
+    width:38px;height:38px;border-radius:50%;
+    background:var(--panel-2) center/95% no-repeat;
+    border:1px solid var(--hairline);
+  }
+  .td-garaje{white-space:normal;min-width:220px;color:var(--text-dim);font-size:13px;}
+
   /* ============================================================
      AJUSTES SOLO MÓVIL — a partir de aquí, todo queda igual en desktop
      ============================================================ */
@@ -831,6 +849,20 @@
       <div>
         <h2>Pilotos & Garajes</h2>
         <p>Saldo actual y coche principal de cada piloto de la parrilla</p>
+      </div>
+      <div class="filters-bar">
+        <select class="select-input" id="filterCategoriaPilotos">
+          <option value="todas">Todas las categorías</option>
+        </select>
+        <input class="search-input" id="searchPilotos" placeholder="Buscar piloto…">
+        <div class="view-toggle" id="viewTogglePilotos">
+          <button type="button" class="active" data-vista="iconos" title="Vista iconos" aria-label="Vista iconos">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+          </button>
+          <button type="button" data-vista="lista" title="Vista lista" aria-label="Vista lista">
+            <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+        </div>
       </div>
     </div>
     <div class="pilotos-grid" id="listaPilotos"><div class="empty-state"><span class="spinner"></span>Cargando datos, espere…</div></div>
@@ -1576,13 +1608,31 @@ function aplicarActualizacionLocal_(res){
   actualizarPilotoHeaderPill();
 }
 
+// Orden de categorías, de arriba abajo. Para añadir una categoría nueva,
+// basta con meterla en su sitio en esta lista. Las que no estén aquí van al final.
+const ORDEN_CATEGORIAS = ['GT3','GT2','GT4','ORO 1','ORO 2','PLATA 1','PLATA 2','BRONCE 3','BRONCE 2','BRONCE 1'];
+
+function normCat_(s){
+  return String(s || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+}
+function ordenCategoria_(cat){
+  const i = ORDEN_CATEGORIAS.indexOf(normCat_(cat));
+  return i === -1 ? 999 : i;
+}
+
 function poblarCategorias(){
-  const selectCat = document.getElementById('filterCategoriaCoches');
   if (!Array.isArray(DB.coches)) return;
-  
-  const categorias = [...new Set(DB.coches.map(c => c.Categoria).filter(Boolean))].sort();
-  selectCat.innerHTML = '<option value="todas">Todas las categorías</option>' + 
+  const categorias = [...new Set(DB.coches.map(c => c.Categoria).filter(Boolean))]
+    .sort((a, b) => (ordenCategoria_(a) - ordenCategoria_(b)) || normCat_(a).localeCompare(normCat_(b), 'es'));
+  const opts = '<option value="todas">Todas las categorías</option>' +
     categorias.map(cat => `<option value="${esc(cat)}">${esc(cat)}</option>`).join('');
+  const selCoches = document.getElementById('filterCategoriaCoches');
+  const selPilotos = document.getElementById('filterCategoriaPilotos');
+  selCoches.innerHTML = opts;
+  selPilotos.innerHTML = opts;
+  // Conserva la selección actual si la web se refresca en segundo plano
+  selCoches.value = cocheCategoriaFilter;
+  selPilotos.value = pilotosCategoriaFilter;
 }
 
 // NUEVA LÓGICA DE FILTRADO (ROBUSTA)
@@ -1810,6 +1860,12 @@ function renderCoches(){
     const q = coches_query.trim().toLowerCase();
     list = list.filter(c => String(c.Nombre_Coche).toLowerCase().includes(q) || String(c.Categoria).toLowerCase().includes(q));
   }
+
+  // Orden: categoría (GT3 > GT2 > GT4 > ORO > PLATA > BRONCE) y, dentro, por nombre
+  list.sort((a, b) =>
+    (ordenCategoria_(a.Categoria) - ordenCategoria_(b.Categoria)) ||
+    String(a.Nombre_Coche || '').localeCompare(String(b.Nombre_Coche || ''), 'es', { sensitivity: 'base' })
+  );
 
   if(list.length === 0){
     grid.innerHTML = '<div class="empty-state">No hay coches que coincidan con este filtro.</div>';
@@ -2039,13 +2095,106 @@ function principalCocheId(piloto){
   return misCoches[0].coche.ID_Coche;
 }
 
+let pilotosCategoriaFilter = 'todas';
+let pilotos_query = '';
+let pilotosVista = 'iconos'; // 'iconos' | 'lista'
+
+// Datos de ordenación: coche principal del piloto y su categoría.
+function infoOrdenPiloto_(p){
+  const idPrincipal = principalCocheId(p);
+  const coche = idPrincipal ? DB.coches.find(c => String(c.ID_Coche) === String(idPrincipal)) : null;
+  return {
+    p, coche,
+    categoria: coche ? (coche.Categoria || '') : '',
+    nombreCoche: coche ? String(coche.Nombre_Coche || '') : ''
+  };
+}
+
+// Categoría -> mismo coche juntos -> orden alfabético por piloto.
+// Los pilotos sin coche van al final.
+function compararPilotos_(a, b){
+  const oa = ordenCategoria_(a.categoria), ob = ordenCategoria_(b.categoria);
+  if(oa !== ob) return oa - ob;
+  if(oa === 999){
+    const sinA = !a.coche, sinB = !b.coche;
+    if(sinA !== sinB) return sinA ? 1 : -1;
+    const c = normCat_(a.categoria).localeCompare(normCat_(b.categoria), 'es');
+    if(c) return c;
+  }
+  const cc = a.nombreCoche.localeCompare(b.nombreCoche, 'es', { sensitivity: 'base' });
+  if(cc) return cc;
+  return String(a.p.Nombre_Piloto || '').localeCompare(String(b.p.Nombre_Piloto || ''), 'es', { sensitivity: 'base' });
+}
+
 function renderPilotos(){
   const cont = document.getElementById('listaPilotos');
   if(!Array.isArray(DB.pilotos) || DB.pilotos.length === 0){
+    cont.className = 'pilotos-grid';
     cont.innerHTML = '<div class="empty-state">Todavía no hay pilotos registrados.</div>';
     return;
   }
-  cont.innerHTML = DB.pilotos.map(p=>{
+
+  let lista = DB.pilotos.map(infoOrdenPiloto_);
+
+  if(pilotosCategoriaFilter !== 'todas'){
+    lista = lista.filter(x => normCat_(x.categoria) === normCat_(pilotosCategoriaFilter));
+  }
+  if(pilotos_query.trim()){
+    const q = normKey_(pilotos_query);
+    lista = lista.filter(x => normKey_(x.p.Nombre_Piloto).includes(q));
+  }
+  lista.sort(compararPilotos_);
+
+  if(lista.length === 0){
+    cont.className = 'pilotos-grid';
+    cont.innerHTML = '<div class="empty-state">No hay pilotos que coincidan con este filtro.</div>';
+    return;
+  }
+
+  // ---------- Vista lista ----------
+  if(pilotosVista === 'lista'){
+    cont.className = '';
+    cont.innerHTML = `
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th></th><th>Cat.</th><th>Piloto</th><th>Lic.</th><th>Marca</th>
+              <th>Coche</th><th>Saldo</th><th>Coins</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lista.map(({p, coche, categoria}) => {
+              const misCoches = cochesDelPiloto(p.ID_Piloto);
+              const saldo = Number(p.Saldo_OC ?? p.Saldo_EC ?? 0);
+              const coins = coinsDePiloto(p);
+              const licencia = getVal(p, 'Licencia') || getVal(p, 'Lic.') || getVal(p, 'Lic');
+              const logoUrl = coche ? logoMarcaUrl(coche) : '';
+              const forzarBlanco = coche ? logoForzarBlanco(coche) : false;
+              const marcaHtml = logoUrl
+                ? `<img src="${esc(logoUrl)}" alt="Marca" class="${forzarBlanco ? 'logo-forzado-blanco' : ''}" style="height:24px;max-width:60px;object-fit:contain;vertical-align:middle;">`
+                : '';
+              return `
+              <tr class="fila-piloto" onclick="abrirModalPiloto('${esc(p.ID_Piloto)}')">
+                <td><div class="avatar-lista" style="background-image:url('${esc(p.Foto_Avatar_URL || '')}')"></div></td>
+                <td>${categoria ? `<span class="class-tag ${catTagClass(categoria)}">${esc(categoria)}</span>` : ''}</td>
+                <td><b>${esc(p.Nombre_Piloto || '')}</b></td>
+                <td>${licenciaBadgeHtml(licencia)}</td>
+                <td style="text-align:center;">${marcaHtml}</td>
+                <td>${esc(coche ? coche.Nombre_Coche : '—')}</td>
+                <td class="amount" style="color:var(--amber);">${saldo.toLocaleString()} OC</td>
+                <td><span class="coin-badge">${COIN_EMOJI} ${coins.toLocaleString()}</span></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+    return;
+  }
+
+  // ---------- Vista iconos (la de siempre) ----------
+  cont.className = 'pilotos-grid';
+  cont.innerHTML = lista.map(({p})=>{
     const misCoches = cochesDelPiloto(p.ID_Piloto);
     const totalUnidades = misCoches.reduce((s,x)=> s + x.cantidad, 0);
     const saldo = Number(p.Saldo_OC ?? p.Saldo_EC ?? 0);
@@ -2095,6 +2244,23 @@ function renderPilotos(){
       </div>`;
   }).join('');
 }
+
+document.getElementById('filterCategoriaPilotos').addEventListener('change', e => {
+  pilotosCategoriaFilter = e.target.value;
+  renderPilotos();
+});
+document.getElementById('searchPilotos').addEventListener('input', e => {
+  pilotos_query = e.target.value;
+  renderPilotos();
+});
+document.getElementById('viewTogglePilotos').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-vista]');
+  if(!btn) return;
+  document.querySelectorAll('#viewTogglePilotos button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  pilotosVista = btn.dataset.vista;
+  renderPilotos();
+});
 
 function abrirModalPiloto(idPiloto){
   const p = DB.pilotos.find(p => String(p.ID_Piloto) === String(idPiloto));
