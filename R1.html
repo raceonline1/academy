@@ -73,10 +73,15 @@
   .lic-PAM{background:rgba(232,195,60,0.16);color:#F5D34A;}
   .lic-PRO{background:#050607;color:#F0F0F0;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.22);}
   .lic-default{background:var(--panel-2);color:var(--text-dim);}
-  /* Clasificación: 14 columnas -> más compacta para que ELO y SR no queden fuera de pantalla */
-  #panel-clasificacion thead th, #panel-clasificacion tbody td{padding-left:7px;padding-right:7px;}
-  #panel-clasificacion tbody td:nth-child(5), #panel-clasificacion tbody td:nth-child(7){white-space:normal;min-width:90px;}
-  #panel-clasificacion thead th:nth-child(n+13), #panel-clasificacion tbody td:nth-child(n+13){text-align:center;padding-left:10px;padding-right:10px;}
+  /* Tablas a todo lo ancho que necesiten, siempre en una línea (sin ancho máximo; si la pantalla es menor, scroll horizontal) */
+  main{max-width:none;}
+  table{width:auto;min-width:100%;}
+  thead th, tbody td{white-space:nowrap;}
+  #panel-clasificacion thead th:nth-child(n+15), #panel-clasificacion tbody td:nth-child(n+15){text-align:center;}
+  .rtag{display:inline-flex;align-items:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px;letter-spacing:.3px;white-space:nowrap;line-height:1.2;}
+  .rtag-elo{background:rgba(240,28,38,0.18);color:#FF7A80;}
+  .rtag-sr{background:var(--green-dim);color:var(--green);}
+  .rtag-vacio{background:transparent;color:var(--text-dim);font-weight:500;padding-left:0;padding-right:0;}
   .vr-up{color:var(--green);}
   .vr-down{color:var(--danger);}
 
@@ -155,9 +160,9 @@
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th>Equipo</th><th>Marca</th><th>Espec.</th><th>Tiempo</th><th>Gap</th><th>Pen.</th><th>Mejor V.</th><th>Pits</th><th>ELO</th><th>SR</th></tr>
+          <tr><th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th>ELO</th><th>SR</th><th>Equipo</th><th>Marca</th><th>Espec.</th><th>Tiempo</th><th>Gap</th><th>Pen.</th><th>Mejor V.</th><th>Pits</th><th>&Delta;ELO</th><th>&Delta;SR</th></tr>
         </thead>
-        <tbody id="tablaClasificacion"><tr><td colspan="14" style="color:var(--text-dim);"><span class="spinner"></span>Cargando…</td></tr></tbody>
+        <tbody id="tablaClasificacion"><tr><td colspan="16" style="color:var(--text-dim);"><span class="spinner"></span>Cargando…</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -605,6 +610,15 @@ function vratingDeRonda_(steamId){
   if(fechaCal) return candidatas.find(v => normFechaVR_(v.Fecha) === fechaCal) || null;
   return candidatas[candidatas.length-1];
 }
+// ELO / SR ACTUALES del piloto (columnas ELO y SR de la pestaña Pilotos), como tag
+function ratingTagCarrera_(tipo, pilotoSheet){
+  const esElo = tipo === 'elo';
+  const bruto = pilotoSheet ? getVal(pilotoSheet, esElo ? 'ELO' : 'SR') : '';
+  const n = Number(bruto);
+  if(bruto === '' || bruto === null || bruto === undefined || isNaN(n)) return '<span class="rtag rtag-vacio">—</span>';
+  const txt = esElo ? String(Math.round(n)) : n.toFixed(2).replace('.', ',');
+  return `<span class="rtag ${esElo ? 'rtag-elo' : 'rtag-sr'}">${txt}</span>`;
+}
 function vrDeltaHtml_(valor, dec){
   const n = Number(valor);
   if(valor === null || valor === undefined || valor === '' || isNaN(n)) return '<span style="color:var(--text-dim);">—</span>';
@@ -650,7 +664,7 @@ document.getElementById('raceTabs').addEventListener('click', e=>{
 // ------------------------------------------------------------
 function renderClasificacion_(){
   const tbody = document.getElementById('tablaClasificacion');
-  if(!RESULTS.length){ tbody.innerHTML = '<tr><td colspan="14" style="color:var(--text-dim);">Sin datos.</td></tr>'; return; }
+  if(!RESULTS.length){ tbody.innerHTML = '<tr><td colspan="16" style="color:var(--text-dim);">Sin datos.</td></tr>'; return; }
   tbody.innerHTML = RESULTS.map(r=>{
     const posClass = r.posicion===1?'p1':(r.posicion===2?'p2':(r.posicion===3?'p3':''));
     const esMejorGlobal = r.bestOwn===GLOBAL_BEST.time && r.key===GLOBAL_BEST.key;
@@ -660,6 +674,8 @@ function renderClasificacion_(){
         <td>${r.clase?`<span class="class-tag">${esc(r.clase)}</span>`:''}</td>
         <td>${esc(r.nombre)}</td>
         <td>${licenciaBadgeHtml(r.licencia)}</td>
+        <td style="text-align:center;">${ratingTagCarrera_('elo', r.pilotoSheet)}</td>
+        <td style="text-align:center;">${ratingTagCarrera_('sr', r.pilotoSheet)}</td>
         <td>${esc(r.equipo)}</td>
         <td style="text-align:center;">${marcaHtml(r.marca)}</td>
         <td>${esc(r.vehiculo)}</td>
