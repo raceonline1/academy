@@ -118,7 +118,7 @@
     display:flex;align-items:center;gap:6px;flex:none;
     background:transparent;border:1px solid rgba(255,71,87,0.4);color:var(--text);
     padding:5px 10px;border-radius:8px;font-size:12px;font-weight:500;
-    font-family:'Inter',sans-serif;white-space:nowrap;max-width:230px;
+    font-family:'Inter',sans-serif;white-space:nowrap;max-width:none;
   }
   .piloto-header-avatar{
     width:22px;height:22px;border-radius:50%;background:var(--panel-2) center/cover;
@@ -379,6 +379,43 @@
   .lic-PAM{background:rgba(232,195,60,0.16);color:#F5D34A;}
   .lic-PRO{background:#050607;color:#F0F0F0;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.22);}
   .lic-default{background:var(--panel-2);color:var(--text-dim);}
+
+  /* vRating: etiquetas ELO (habilidad, rojo) y SR (limpieza, verde). Mismo estilo de
+     "tag" que la licencia, pero con colores propios que no chocan con SIL/AMA/PAM/PRO. */
+  .rtag{display:inline-flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px;letter-spacing:.3px;white-space:nowrap;line-height:1.2;}
+  .rtag .k{font-size:.78em;font-weight:600;opacity:.72;letter-spacing:.5px;}
+  .rtag-elo{background:rgba(240,28,38,0.18);color:#FF7A80;}
+  .rtag-sr{background:var(--green-dim);color:var(--green);}
+  .pilot-lic-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:2px 0 5px;}
+  .pilot-lic-row .badge{font-size:10px;padding:2px 8px;}
+  .pilot-lic-row .dot{width:5px;height:5px;margin-right:4px;}
+  .pilot-lic-row .rtag{font-size:10px;padding:2px 8px;}
+  .pilot-coin-row{margin:0 0 6px;}
+  .pilot-topbar-info .name.name-fila{display:flex;align-items:center;flex-wrap:wrap;gap:4px 6px;}
+  .pilot-topbar-info .name.name-fila .rtag{margin-left:0;}
+  .rtag-vacio{background:transparent;color:var(--text-dim);font-weight:500;padding-left:0;padding-right:0;}
+  .rtag-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:calc(-1 * clamp(2px,1vw,8px)) 0 clamp(8px,3vw,16px);}
+  .carnet-piloto .rtag{font-size:clamp(10px,2.8vw,13px);padding:2px clamp(7px,2vw,10px);}
+  .piloto-header-pill .rtag{font-size:9px;padding:2px 6px;gap:3px;}
+  /* Columnas de etiqueta en tablas: lo más estrechas posible y centradas */
+  th.col-min, td.col-min{width:1%;white-space:nowrap;text-align:center;}
+  .pilot-topbar-info .name .rtag, #pilotoModalNombre .rtag{
+    font-size:10px;padding:2px 8px;margin-left:4px;vertical-align:middle;position:relative;top:-1px;
+  }
+  .gpt{cursor:pointer;}
+  .gpt-dot{transition:r .12s, stroke .12s, stroke-width .12s, filter .12s;}
+  .gpt:hover .gpt-dot{r:6;stroke:var(--c);stroke-width:3;filter:drop-shadow(0 0 5px var(--c)) drop-shadow(0 0 10px var(--c));}
+  .gpt-tip{opacity:0;transition:opacity .12s;}
+  .gpt:hover .gpt-tip{opacity:1;}
+  .rgraf-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;}
+  .rgraf-card{background:var(--panel);border:1px solid var(--hairline);border-radius:var(--radius);padding:14px 16px 8px;min-width:0;}
+  .rgraf-card h4{margin:0 0 6px;font-family:'Teko',sans-serif;font-size:20px;font-weight:600;letter-spacing:.3px;}
+  @media (max-width:640px){ .rgraf-grid{grid-template-columns:1fr;} }
+  .rcell{display:inline-flex;flex-direction:column;align-items:center;gap:3px;}
+  .rdelta{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;line-height:1;}
+  .rdelta.up{color:var(--green);}
+  .rdelta.down{color:var(--danger);}
+  .rdelta.zero{color:var(--text-dim);}
   .coche-principal-bar{
     display:flex;align-items:center;gap:12px;flex-wrap:wrap;
     background:var(--panel);border:1px solid var(--hairline);border-radius:var(--radius);padding:16px;
@@ -693,9 +730,9 @@
   @media (max-width:760px){
     .switch-row.solo-mobile{display:flex;}
 
-    /* Clasificación de pilotos: solo Pos. (1), Piloto (3), Marca (6) y Puntos (8) */
-    #view-clasificacion.contraer table.clas-pilotos th:not(:nth-child(1)):not(:nth-child(3)):not(:nth-child(6)):not(:nth-child(8)),
-    #view-clasificacion.contraer table.clas-pilotos td:not(:nth-child(1)):not(:nth-child(3)):not(:nth-child(6)):not(:nth-child(8)){
+    /* Clasificación de pilotos: solo Pos. (1), Piloto (3), Marca (8) y Puntos (10) */
+    #view-clasificacion.contraer table.clas-pilotos th:not(:nth-child(1)):not(:nth-child(3)):not(:nth-child(8)):not(:nth-child(10)),
+    #view-clasificacion.contraer table.clas-pilotos td:not(:nth-child(1)):not(:nth-child(3)):not(:nth-child(8)):not(:nth-child(10)){
       display:none;
     }
     /* Clasificación por equipos: solo Pos. (1), Pilotos (2) y Puntos (4) */
@@ -815,6 +852,8 @@
         <div class="piloto-header-avatar" id="pilotoHeaderAvatar"></div>
         <span class="piloto-header-nombre" id="pilotoHeaderNombre"></span>
         <span class="badge" id="pilotoHeaderLic"></span>
+        <span class="rtag rtag-elo" id="pilotoHeaderElo" style="display:none;"></span>
+        <span class="rtag rtag-sr" id="pilotoHeaderSr" style="display:none;"></span>
         <span class="piloto-header-saldo" id="pilotoHeaderSaldo"></span>
       </div>
     </nav>
@@ -918,11 +957,11 @@
         <table class="clas-pilotos">
         <thead>
           <tr>
-            <th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th>Equipo</th><th>Marca</th>
+            <th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th class="col-min">ELO</th><th class="col-min">SR</th><th>Equipo</th><th>Marca</th>
             <th>Espec.</th><th>Ptos.</th><th>R1</th><th>R2</th><th>R3</th><th>R4</th><th>Pen.</th>
           </tr>
         </thead>
-        <tbody id="tablaClasificacion"><tr><td colspan="13" style="color:var(--text-dim);text-align:center;"><span class="spinner"></span>Cargando datos, espere…</td></tr></tbody>
+        <tbody id="tablaClasificacion"><tr><td colspan="15" style="color:var(--text-dim);text-align:center;"><span class="spinner"></span>Cargando datos, espere…</td></tr></tbody>
       </table>
     </div>
 
@@ -1455,6 +1494,14 @@ function actualizarPilotoHeaderPill(){
   licEl.className = 'badge' + (licencia ? ' ' + licInfoHeader.badgeClass : '');
   licEl.style.display = licencia ? '' : 'none';
 
+  const eloEl = document.getElementById('pilotoHeaderElo');
+  const srEl = document.getElementById('pilotoHeaderSr');
+  const eloTxt = fmtElo_(getVal(p, 'ELO')), srTxt = fmtSr_(getVal(p, 'SR'));
+  eloEl.innerHTML = '<span class="k">ELO</span>' + esc(eloTxt);
+  eloEl.style.display = eloTxt ? '' : 'none';
+  srEl.innerHTML = '<span class="k">SR</span>' + esc(srTxt);
+  srEl.style.display = srTxt ? '' : 'none';
+
   document.getElementById('pilotoHeaderSaldo').textContent = saldo.toLocaleString() + ' OC';
 
   pill.style.display = '';
@@ -1848,6 +1895,191 @@ function carrerasDePiloto(piloto, limite){
   return limite ? lista.slice(0, limite) : lista;
 }
 
+// ------------------------------------------------------------
+// vRATING: ELO (habilidad) y SR (limpieza) de cada piloto.
+// Valores actuales: Pilotos, columnas Y y Z -> getVal(p,'ELO') / getVal(p,'SR').
+// Detalle por carrera: DB.vratingLog (backend: obtenerVRatingLog_ en code.gs).
+// ------------------------------------------------------------
+function fmtElo_(v){
+  if(v === '' || v === null || v === undefined) return '';
+  const n = Number(v);
+  return isNaN(n) ? '' : String(Math.round(n));
+}
+function fmtSr_(v){
+  if(v === '' || v === null || v === undefined) return '';
+  const n = Number(v);
+  return isNaN(n) ? '' : n.toFixed(2).replace('.', ',');
+}
+// +24, −8, +0,10, −0,25 ... (0 si no hay cambio)
+function fmtDelta_(v, decimales){
+  if(v === '' || v === null || v === undefined) return '';
+  const n = Number(v);
+  if(isNaN(n)) return '';
+  if(n === 0) return '0';
+  const abs = decimales ? Math.abs(n).toFixed(decimales).replace('.', ',') : String(Math.abs(Math.round(n)));
+  return (n > 0 ? '+' : '−') + abs;
+}
+
+// Etiqueta de ELO o SR de un piloto. conEtiqueta=true añade el texto "ELO"/"SR" dentro
+// (para Mi garaje y la cabecera); en tablas va solo el número, para ocupar lo mínimo.
+function ratingTagHtml_(tipo, piloto, conEtiqueta){
+  const esElo = tipo === 'elo';
+  const txt = piloto ? (esElo ? fmtElo_(getVal(piloto, 'ELO')) : fmtSr_(getVal(piloto, 'SR'))) : '';
+  if(!txt) return conEtiqueta ? '' : '<span class="rtag rtag-vacio">—</span>';
+  const k = conEtiqueta ? `<span class="k">${esElo ? 'ELO' : 'SR'}</span>` : '';
+  return `<span class="rtag ${esElo ? 'rtag-elo' : 'rtag-sr'}">${k}${esc(txt)}</span>`;
+}
+
+// Fila con las dos etiquetas (ELO a la izquierda, SR a la derecha) para Mi garaje.
+function ratingRowHtml_(piloto){
+  const elo = ratingTagHtml_('elo', piloto, true);
+  const sr = ratingTagHtml_('sr', piloto, true);
+  return (elo || sr) ? `<div class="rtag-row">${elo}${sr}</div>` : '';
+}
+
+// La tabla Clasificacion no trae Steam id de serie: se cruza por Steam id si existe una
+// columna "SteamID" y, si no, por el nombre del piloto (ignorando mayúsculas y acentos).
+function pilotoDeFilaClasificacion_(fila){
+  if(!Array.isArray(DB.pilotos)) return null;
+  const steam = String(getVal(fila, 'SteamID') || '').trim();
+  if(steam){
+    const porSteam = DB.pilotos.find(pp => steamIdDePiloto(pp) === steam);
+    if(porSteam) return porSteam;
+  }
+  const nombre = normKey_(getVal(fila, 'Piloto'));
+  if(!nombre) return null;
+  return DB.pilotos.find(pp => normKey_(pp.Nombre_Piloto || '') === nombre) || null;
+}
+
+// Fila del vRating_Log (tipo CARRERA) de este piloto en esta carrera (cruce por Steam id + fase + ronda).
+function vratingDeCarrera_(piloto, filaCarrera){
+  const steamId = steamIdDePiloto(piloto);
+  if(!steamId || !Array.isArray(DB.vratingLog)) return null;
+  const fase = normKey_(getVal(filaCarrera, 'Fase'));
+  const ronda = normKey_(getVal(filaCarrera, 'Ronda'));
+  return DB.vratingLog.find(v =>
+    String(v.SteamID).trim() === steamId && normKey_(v.Fase) === fase && normKey_(v.Ronda) === ronda
+  ) || null;
+}
+
+// Celda de "Últimas carreras": etiqueta con el valor tras la carrera y debajo lo ganado/perdido.
+function ratingCellHtml_(tipo, rv){
+  if(!rv) return '<span class="rtag rtag-vacio">—</span>';
+  const esElo = tipo === 'elo';
+  const valor = esElo ? fmtElo_(rv.ELO) : fmtSr_(rv.SR);
+  const bruto = esElo ? rv.dELO : rv.dSR;
+  const n = Number(bruto);
+  const cls = n > 0 ? 'up' : (n < 0 ? 'down' : 'zero');
+  return `<span class="rcell"><span class="rtag ${esElo ? 'rtag-elo' : 'rtag-sr'}">${esc(valor)}</span><span class="rdelta ${cls}">${esc(fmtDelta_(bruto, esElo ? 0 : 2))}</span></span>`;
+}
+
+// ELO y SR seguidos, para ponerlos a la derecha de la licencia en las fichas de piloto.
+function ratingTagsInline_(piloto){
+  return ratingTagHtml_('elo', piloto, true) + ratingTagHtml_('sr', piloto, true);
+}
+
+// Código de carrera: Fase 1 Ronda 1 -> "F1R1" (si no hay números, se usa la fecha corta)
+function codigoCarrera_(h){
+  const f = String(getVal(h, 'Fase') || '').replace(/\D/g, '');
+  const r = String(getVal(h, 'Ronda') || '').replace(/\D/g, '');
+  if(f && r) return 'F' + f + 'R' + r;
+  return etiquetaFechaCorta_(getVal(h, 'Fecha'));
+}
+
+// "20/09/26" -> "20/09"
+function etiquetaFechaCorta_(f){
+  const m = String(f || '').match(/(\d{1,2})\D+(\d{1,2})/);
+  return m ? (m[1].padStart(2, '0') + '/' + m[2].padStart(2, '0')) : String(f || '');
+}
+
+function rgrafOver_(el){
+  const svg = el.ownerSVGElement; if(!svg) return;
+  const g = svg.querySelector('.gtip'); if(!g) return;
+  const cx = Number(el.dataset.x), cy = Number(el.dataset.y), col = el.dataset.c, W = Number(svg.dataset.w) || 420;
+  const h = g.querySelector('.gh'), r = g.querySelector('.gr'), t = g.querySelector('.gt');
+  g.style.display = '';
+  h.setAttribute('cx', cx); h.setAttribute('cy', cy); h.setAttribute('stroke', col);
+  h.style.filter = 'drop-shadow(0 0 3px ' + col + ') drop-shadow(0 0 8px ' + col + ')';
+  t.textContent = el.dataset.t;
+  const tw = t.getBBox().width + 16;
+  const tx = Math.max(0, Math.min(W - tw, cx - tw / 2));
+  const ty = (cy - 34 < 0) ? cy + 14 : cy - 34;
+  r.setAttribute('x', tx); r.setAttribute('y', ty); r.setAttribute('width', tw); r.setAttribute('stroke', col);
+  t.setAttribute('x', tx + tw / 2); t.setAttribute('y', ty + 14);
+}
+function rgrafOut_(el){
+  const svg = el.ownerSVGElement; if(!svg) return;
+  const g = svg.querySelector('.gtip'); if(g) g.style.display = 'none';
+}
+
+// Gráfica de líneas con puntos (SVG): eje X = código de carrera (F1R1...), eje Y = valor tras la carrera.
+// Al pasar el cursor por un punto se ilumina (trazo + brillo del color del punto) y sale F1R1 · valor.
+function graficaLineaSvg_(pts, color, dec){
+  if(!pts.length) return '<div class="empty-state" style="padding:24px 8px;">Sin datos todavía.</div>';
+  const W = 420, H = 230, mL = 40, mR = 16, mT = 22, mB = 30;
+  const vals = pts.map(p => p.v);
+  let min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+  const minSpan = dec ? 0.4 : 40;
+  if(max - min < minSpan){ const c = (max + min) / 2; min = c - minSpan / 2; max = c + minSpan / 2; }
+  const pad = (max - min) * 0.15; min -= pad; max += pad;
+  if(dec) min = Math.max(0, min);
+  const pw = W - mL - mR, ph = H - mT - mB;
+  const x = i => pts.length === 1 ? mL + pw / 2 : mL + pw * i / (pts.length - 1);
+  const y = v => mT + ph * (max - v) / (max - min);
+  const fv = v => dec ? v.toFixed(dec).replace('.', ',') : String(Math.round(v));
+  const FS = 7; // tamaño de fuente de los ejes (antes 10-10,5)
+
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" class="rgraf-svg" data-w="${W}" style="display:block;height:auto;font-family:'JetBrains Mono',monospace;overflow:visible;">`;
+  for(let i = 0; i <= 4; i++){
+    const v = min + (max - min) * i / 4, yy = y(v);
+    s += `<line x1="${mL}" y1="${yy}" x2="${W - mR}" y2="${yy}" stroke="#262B33" stroke-width="1"/>`;
+    s += `<text x="${mL - 6}" y="${yy + 2.5}" text-anchor="end" font-size="${FS}" fill="#8B93A1">${fv(v)}</text>`;
+  }
+  const paso = pts.length > 12 ? 2 : 1;
+  pts.forEach((p, i) => {
+    if(i % paso !== 0 && i !== pts.length - 1) return;
+    s += `<text x="${x(i)}" y="${H - 10}" text-anchor="middle" font-size="${FS - 0.5}" fill="#8B93A1">${esc(p.etq)}</text>`;
+  });
+  if(pts.length > 1){
+    s += `<polyline points="${pts.map((p, i) => x(i) + ',' + y(p.v)).join(' ')}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+  pts.forEach((p, i) => {
+    const cx = x(i), cy = y(p.v);
+    s += `<circle cx="${cx}" cy="${cy}" r="4.5" fill="${color}" stroke="#14171C" stroke-width="1.5" pointer-events="none"/>`;
+  });
+  // Capa de detección (círculos invisibles más grandes) encima de todo
+  pts.forEach((p, i) => {
+    const cx = x(i), cy = y(p.v);
+    s += `<circle cx="${cx}" cy="${cy}" r="12" fill="#000" fill-opacity="0" pointer-events="all" style="cursor:pointer;" data-x="${cx}" data-y="${cy}" data-c="${color}" data-t="${esc(p.etq)} · ${fv(p.v)}" onmouseenter="rgrafOver_(this)" onmouseleave="rgrafOut_(this)" ontouchstart="rgrafOver_(this)"/>`;
+  });
+  // Capa de leyenda + halo (oculta hasta que se pasa el cursor)
+  s += `<g class="gtip" style="display:none;" pointer-events="none">
+    <circle class="gh" r="7" fill="none" stroke-width="3"/>
+    <rect class="gr" rx="5" height="20" fill="#0E1014" stroke-width="1"/>
+    <text class="gt" font-size="9.5" font-weight="700" fill="#fff" text-anchor="middle"></text>
+  </g>`;
+  return s + '</svg>';
+}
+
+// Dos gráficas (ELO y SR) con las mismas carreras que la tabla de "Últimas carreras", de más antigua a más reciente.
+function ratingGraficasHtml_(piloto, carreras){
+  const orden = carreras.slice().reverse();
+  const elo = [], sr = [];
+  orden.forEach(h => {
+    const rv = vratingDeCarrera_(piloto, h);
+    if(!rv) return;
+    const etq = codigoCarrera_(h);
+    const e = Number(rv.ELO), s = Number(rv.SR);
+    if(rv.ELO !== '' && !isNaN(e)) elo.push({ etq: etq, v: e });
+    if(rv.SR !== '' && !isNaN(s)) sr.push({ etq: etq, v: s });
+  });
+  if(!elo.length && !sr.length) return '';
+  return `<div class="rgraf-grid">
+    <div class="rgraf-card"><h4>Evolución ELO</h4>${graficaLineaSvg_(elo, '#FF6B73', 0)}</div>
+    <div class="rgraf-card"><h4>Evolución SR</h4>${graficaLineaSvg_(sr, '#00E5C7', 2)}</div>
+  </div>`;
+}
+
 function renderCoches(){
   const grid = document.getElementById('gridCoches');
   if (!Array.isArray(DB.coches)) return;
@@ -2159,7 +2391,7 @@ function renderPilotos(){
         <table>
           <thead>
             <tr>
-              <th></th><th>Cat.</th><th>Piloto</th><th>Lic.</th><th>Marca</th>
+              <th></th><th>Cat.</th><th>Piloto</th><th>Lic.</th><th class="col-min">ELO</th><th class="col-min">SR</th><th>Marca</th>
               <th>Coche</th><th>Saldo</th><th>Coins</th>
             </tr>
           </thead>
@@ -2180,6 +2412,8 @@ function renderPilotos(){
                 <td>${categoria ? `<span class="class-tag ${catTagClass(categoria)}">${esc(categoria)}</span>` : ''}</td>
                 <td><b>${esc(p.Nombre_Piloto || '')}</b></td>
                 <td>${licenciaBadgeHtml(licencia)}</td>
+                <td class="col-min">${ratingTagHtml_('elo', p)}</td>
+                <td class="col-min">${ratingTagHtml_('sr', p)}</td>
                 <td style="text-align:center;">${marcaHtml}</td>
                 <td>${esc(coche ? coche.Nombre_Coche : '—')}</td>
                 <td class="amount" style="color:var(--amber);">${saldo.toLocaleString()} OC</td>
@@ -2230,10 +2464,8 @@ function renderPilotos(){
         <div class="pilot-topbar">
           <div class="pilot-avatar-sm" style="background-image:url('${esc(p.Foto_Avatar_URL || '')}')"></div>
           <div class="pilot-topbar-info">
-            <div class="name-coins-row">
-              <p class="name">${esc(p.Nombre_Piloto || '')} ${licencia ? `<span class="badge ${licInfo.badgeClass}"><span class="dot"></span>${esc(licencia)}</span>` : ''}</p>
-              <span class="coin-badge">${COIN_EMOJI} ${coins.toLocaleString()}</span>
-            </div>
+            <p class="name name-fila">${esc(p.Nombre_Piloto || '')}${licencia ? ` <span class="badge ${licInfo.badgeClass}"><span class="dot"></span>${esc(licencia)}</span>` : ''}${ratingTagsInline_(p)}</p>
+            <div class="pilot-coin-row"><span class="coin-badge">${COIN_EMOJI} ${coins.toLocaleString()}</span></div>
             <div class="pilot-topbar-stats">
               <span>Saldo: <b style="color:var(--amber);">${saldo.toLocaleString()} OC</b></span>
               <span>Garaje: <b>${totalUnidades}</b> coches</span>
@@ -2275,7 +2507,7 @@ function abrirModalPiloto(idPiloto){
   const idPrincipal = principalCocheId(p);
 
   document.getElementById('pilotoModalAvatar').style.backgroundImage = "url('" + esc(p.Foto_Avatar_URL || '') + "')";
-  document.getElementById('pilotoModalNombre').innerHTML = `${esc(p.Nombre_Piloto || '')} ${licencia ? `<span class="badge ${licInfo.badgeClass}"><span class="dot"></span>${esc(licencia)}</span>` : ''}`;
+  document.getElementById('pilotoModalNombre').innerHTML = `${esc(p.Nombre_Piloto || '')} ${licencia ? `<span class="badge ${licInfo.badgeClass}"><span class="dot"></span>${esc(licencia)}</span>` : ''}${ratingTagsInline_(p)}`;
   document.getElementById('pilotoModalCoins').textContent = `${COIN_EMOJI} ${coins.toLocaleString()}`;
   document.getElementById('pilotoModalStats').innerHTML = `
     <span class="stat oc">Saldo: <b>${saldo.toLocaleString()} OC</b></span>
@@ -2426,7 +2658,7 @@ function renderMiGaraje(){
         <thead>
           <tr>
             <th>Fecha</th><th>Fase</th><th>Ronda</th><th>Circuito</th>
-            <th>Marca</th><th>Specs</th><th>Posición</th>
+            <th>Marca</th><th>Specs</th><th class="col-min">POS.</th><th class="col-min">ELO</th><th class="col-min">SR</th>
           </tr>
         </thead>
         <tbody>
@@ -2434,6 +2666,7 @@ function renderMiGaraje(){
             const pos = getVal(h, 'Posicion');
             const posNum = Number(pos);
             const posBadgeClass = posNum === 1 ? 'p1' : (posNum === 2 ? 'p2' : (posNum === 3 ? 'p3' : ''));
+            const rv = vratingDeCarrera_(p, h);
             return `
             <tr>
               <td class="mono" style="color:var(--text-dim);font-size:12.5px;">${esc(getVal(h, 'Fecha'))}</td>
@@ -2442,7 +2675,9 @@ function renderMiGaraje(){
               <td>${esc(getVal(h, 'Circuito'))}</td>
               <td style="text-align:center;">${marcaLogoPorSpecs_(getVal(h, 'Specs'), getVal(h, 'Logo'))}</td>
               <td>${esc(getVal(h, 'Specs'))}</td>
-              <td><span class="pos-badge ${posBadgeClass}">${esc(pos || '')}</span></td>
+              <td class="col-min"><span class="pos-badge ${posBadgeClass}">${esc(pos || '')}</span></td>
+              <td class="col-min">${ratingCellHtml_('elo', rv)}</td>
+              <td class="col-min">${ratingCellHtml_('sr', rv)}</td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -2464,6 +2699,7 @@ function renderMiGaraje(){
           ${bandera}
           ${licencia ? `<span class="badge ${licInfo.badgeClass}"><span class="dot"></span>${esc(licencia)}</span>` : ''}
         </div>
+        ${ratingRowHtml_(p)}
         <div class="data-grid">
           <span class="k">Equipo:</span><span class="v">${esc(equipo || '—')}</span>
           <span class="k">Saldo:</span><span class="v" style="color:var(--amber);">${saldo.toLocaleString()} OC</span>
@@ -2483,6 +2719,7 @@ function renderMiGaraje(){
     <div class="mi-garaje-seccion">
       <h3>Últimas carreras</h3>
       ${ultimasCarrerasHtml}
+      ${ultimasCarreras.length ? ratingGraficasHtml_(p, ultimasCarreras) : ''}
     </div>
     <div class="checkered-divider"></div>
     <div class="mi-garaje-seccion">
@@ -2761,7 +2998,7 @@ function renderClasificacion(){
     : agruparPorClase_(DB.clasificacion);
 
   if(filas.length === 0){
-    tbody.innerHTML = '<tr><td colspan="13" style="color:var(--text-dim); text-align:center;">Todavía no hay clasificación registrada.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="15" style="color:var(--text-dim); text-align:center;">Todavía no hay clasificación registrada.</td></tr>';
     return;
   }
 
@@ -2770,6 +3007,7 @@ function renderClasificacion(){
     const pen = getVal(c, 'Pen.');
 
     const marcaHtml = marcaLogoHtml(getVal(c, 'Marca'));
+    const pr = pilotoDeFilaClasificacion_(c);
 
     return `
     <tr>
@@ -2777,6 +3015,8 @@ function renderClasificacion(){
       <td><span class="class-tag">${esc(getVal(c, 'Clase'))}</span></td>
       <td>${esc(getVal(c, 'Piloto'))}</td>
       <td>${licenciaBadgeHtml(getVal(c, 'Lic.'))}</td>
+      <td class="col-min">${ratingTagHtml_('elo', pr)}</td>
+      <td class="col-min">${ratingTagHtml_('sr', pr)}</td>
       <td>${esc(getVal(c, 'Equipo'))}</td>
       <td style="text-align:center;">${marcaHtml}</td>
       <td>${esc(getVal(c, 'Espec.'))}</td>

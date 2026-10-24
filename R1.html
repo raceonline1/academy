@@ -73,6 +73,12 @@
   .lic-PAM{background:rgba(232,195,60,0.16);color:#F5D34A;}
   .lic-PRO{background:#050607;color:#F0F0F0;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.22);}
   .lic-default{background:var(--panel-2);color:var(--text-dim);}
+  /* Clasificación: 14 columnas -> más compacta para que ELO y SR no queden fuera de pantalla */
+  #panel-clasificacion thead th, #panel-clasificacion tbody td{padding-left:7px;padding-right:7px;}
+  #panel-clasificacion tbody td:nth-child(5), #panel-clasificacion tbody td:nth-child(7){white-space:normal;min-width:90px;}
+  #panel-clasificacion thead th:nth-child(n+13), #panel-clasificacion tbody td:nth-child(n+13){text-align:center;padding-left:10px;padding-right:10px;}
+  .vr-up{color:var(--green);}
+  .vr-down{color:var(--danger);}
 
   .lap-invalida{color:var(--danger);}
   .lap-mejor{color:var(--amber);font-weight:700;}
@@ -149,9 +155,9 @@
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th>Equipo</th><th>Marca</th><th>Espec.</th><th>Tiempo</th><th>Gap</th><th>Pen.</th><th>Mejor V.</th><th>Pits</th></tr>
+          <tr><th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th>Equipo</th><th>Marca</th><th>Espec.</th><th>Tiempo</th><th>Gap</th><th>Pen.</th><th>Mejor V.</th><th>Pits</th><th>ELO</th><th>SR</th></tr>
         </thead>
-        <tbody id="tablaClasificacion"><tr><td colspan="12" style="color:var(--text-dim);"><span class="spinner"></span>Cargando…</td></tr></tbody>
+        <tbody id="tablaClasificacion"><tr><td colspan="14" style="color:var(--text-dim);"><span class="spinner"></span>Cargando…</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -247,6 +253,8 @@ let POSICIONES_POR_VUELTA = [];
 let PENALIZACIONES_POR_COCHE = {};
 let PILOTOS_POR_STEAM = {};
 let sectorActivo = 1;
+let VRATING_LOG = [];
+let RONDA_INFO = null;
 
 // ------------------------------------------------------------
 // UTILIDADES (mismas que index.html)
@@ -391,6 +399,7 @@ async function iniciar(){
     const dataPilotos = await cargarPilotos_();
     PILOTOS = dataPilotos.pilotos || [];
     CALENDARIO = dataPilotos.calendario || [];
+    VRATING_LOG = dataPilotos.vratingLog || [];
     // Se combinan los dos mapas de "forzar logo blanco" (el de la tienda y el
     // del Sheet externo de Resultados), por si la Marca viene de uno u otro.
     LOGOS_FORZAR_BLANCO = Object.assign({}, dataPilotos.logosForzarBlancoPorUrl||{}, dataPilotos.logosForzarBlancoCarreras||{});
@@ -399,6 +408,7 @@ async function iniciar(){
   }
 
   const rondaInfo = CALENDARIO.find(c => String(getVal(c,'Ronda')) === String(RONDA_NUMERO));
+  RONDA_INFO = rondaInfo || null;
   const jsonUrl = rondaInfo ? columnaG_(rondaInfo) : '';
 
   if(!jsonUrl){
@@ -572,9 +582,34 @@ function procesarCarrera_(){
       laps, numVueltas: laps.length, bestOwn, gapTexto,
       tiempoTotal: miTiempoTotal, tiempoBruto: tiempoBrutoPorClave[key],
       penalizaciones: penDe_(key), penMs: penMsDe_(key),
-      consistencia, ledLaps: ledCounts[key]||0
+      consistencia, ledLaps: ledCounts[key]||0,
+      vr: vratingDeRonda_(steamId)
     };
   });
+}
+
+// ------------------------------------------------------------
+// vRATING: delta de ELO y SR de cada piloto en ESTA carrera (pestaña vRating_Log).
+// Se cruza por Steam id + número de ronda + fecha (la fecha distingue la ronda 1 de
+// una fase de la ronda 1 de otra).
+function normFechaVR_(s){
+  const m = String(s||'').match(/(\d{1,2})\D+(\d{1,2})\D+(\d{2,4})/);
+  return m ? pad2(Number(m[1])) + pad2(Number(m[2])) + m[3].slice(-2) : '';
+}
+function vratingDeRonda_(steamId){
+  if(!steamId || !Array.isArray(VRATING_LOG)) return null;
+  const candidatas = VRATING_LOG.filter(v =>
+    String(v.SteamID).trim() === steamId && String(v.Ronda).replace(/\D/g,'') === String(RONDA_NUMERO));
+  if(!candidatas.length) return null;
+  const fechaCal = normFechaVR_(RONDA_INFO ? getVal(RONDA_INFO,'Fecha') : '');
+  if(fechaCal) return candidatas.find(v => normFechaVR_(v.Fecha) === fechaCal) || null;
+  return candidatas[candidatas.length-1];
+}
+function vrDeltaHtml_(valor, dec){
+  const n = Number(valor);
+  if(valor === null || valor === undefined || valor === '' || isNaN(n)) return '<span style="color:var(--text-dim);">—</span>';
+  const txt = n === 0 ? '0' : (n > 0 ? '+' : '−') + (dec ? Math.abs(n).toFixed(dec).replace('.', ',') : String(Math.abs(Math.round(n))));
+  return `<span class="${n > 0 ? 'vr-up' : (n < 0 ? 'vr-down' : '')}">${txt}</span>`;
 }
 
 // ------------------------------------------------------------
@@ -615,7 +650,7 @@ document.getElementById('raceTabs').addEventListener('click', e=>{
 // ------------------------------------------------------------
 function renderClasificacion_(){
   const tbody = document.getElementById('tablaClasificacion');
-  if(!RESULTS.length){ tbody.innerHTML = '<tr><td colspan="12" style="color:var(--text-dim);">Sin datos.</td></tr>'; return; }
+  if(!RESULTS.length){ tbody.innerHTML = '<tr><td colspan="14" style="color:var(--text-dim);">Sin datos.</td></tr>'; return; }
   tbody.innerHTML = RESULTS.map(r=>{
     const posClass = r.posicion===1?'p1':(r.posicion===2?'p2':(r.posicion===3?'p3':''));
     const esMejorGlobal = r.bestOwn===GLOBAL_BEST.time && r.key===GLOBAL_BEST.key;
@@ -633,6 +668,8 @@ function renderClasificacion_(){
         <td>${penHtml_(r.penMs)}</td>
         <td class="mono ${esMejorGlobal?'lap-mejor':''}">${fmtLap(r.bestOwn)}</td>
         <td style="color:var(--text-dim);">—</td>
+        <td>${vrDeltaHtml_(r.vr ? r.vr.dELO : null, 0)}</td>
+        <td>${vrDeltaHtml_(r.vr ? r.vr.dSR : null, 2)}</td>
       </tr>`;
   }).join('');
 }
