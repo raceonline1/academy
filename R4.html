@@ -80,8 +80,19 @@
   #panel-clasificacion thead th:nth-child(n+15), #panel-clasificacion tbody td:nth-child(n+15){text-align:center;}
   .rtag{display:inline-flex;align-items:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px;letter-spacing:.3px;white-space:nowrap;line-height:1.2;}
   .rtag-elo{background:rgba(240,28,38,0.18);color:#FF7A80;}
+  .rtag-elo-1{background:rgba(240,28,38,0.18);color:#FF7A80;}
+  .rtag-elo-2{background:rgba(240,28,38,0.18);color:#FF7A80;}
+  .rtag-elo-3{background:rgba(240,28,38,0.18);color:#FF7A80;}
+  .rtag-elo-4{background:rgba(240,28,38,0.18);color:#FF7A80;}
   .rtag-sr{background:var(--green-dim);color:var(--green);}
+  .rtag-sr-A{background:rgba(0,229,199,0.12);color:#00E5C7;}
+  .rtag-sr-B{background:rgba(0,229,199,0.12);color:#00E5C7;}
+  .rtag-sr-C{background:rgba(0,229,199,0.12);color:#00E5C7;}
+  .rtag-sr-D{background:rgba(0,229,199,0.12);color:#00E5C7;}
   .rtag-vacio{background:transparent;color:var(--text-dim);font-weight:500;padding-left:0;padding-right:0;}
+  .rank-titulo{font-size:15px;font-weight:700;margin:28px 0 10px;letter-spacing:.3px;}
+  .rank-wrap{display:inline-block;max-width:100%;}
+  .rank-wrap table{min-width:0;}
   .vr-up{color:var(--green);}
   .vr-down{color:var(--danger);}
 
@@ -123,6 +134,16 @@
     table{font-size:12.5px;}
     thead th, tbody td{padding:8px 8px;}
   }
+  /* Modo demo (guía Q&A) */
+  body.demo header.topbar{display:none;}
+  body.demo main{padding-top:10px;padding-bottom:0;margin-bottom:0;min-height:0;}
+  body.demo-cab #raceTabs + .checkered-divider{margin-bottom:0;}
+  body.demo-solo #infoSesion, body.demo-solo #raceTabs, body.demo-solo .checkered-divider{display:none;}
+  body.demo-cab .tab-panel{display:none !important;}
+  body.demo .overlay{position:static;display:block;background:none;opacity:1;visibility:visible;pointer-events:none;}
+  body.demo .overlay:not(.show){display:none;}
+  body.demo .overlay .modal{position:static;transform:none;opacity:1;margin:0 auto;max-height:none;}
+  body.demo #toasts{display:none;}
 </style>
 </head>
 <body>
@@ -163,6 +184,22 @@
           <tr><th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th>ELO</th><th>SR</th><th>Equipo</th><th>Marca</th><th>Espec.</th><th>Tiempo</th><th>Gap</th><th>Pen.</th><th>Mejor V.</th><th>Pits</th><th>&Delta;ELO</th><th>&Delta;SR</th></tr>
         </thead>
         <tbody id="tablaClasificacion"><tr><td colspan="16" style="color:var(--text-dim);"><span class="spinner"></span>Cargando…</td></tr></tbody>
+      </table>
+    </div>
+
+    <h3 class="rank-titulo">Clasificación ELO</h3>
+    <div class="table-wrap rank-wrap">
+      <table>
+        <thead><tr><th>Pos.</th><th>Piloto</th><th>Lic.</th><th>ELO</th></tr></thead>
+        <tbody id="tablaRankElo"></tbody>
+      </table>
+    </div>
+
+    <h3 class="rank-titulo">Clasificación SR</h3>
+    <div class="table-wrap rank-wrap">
+      <table>
+        <thead><tr><th>Pos.</th><th>Piloto</th><th>Lic.</th><th>SR</th></tr></thead>
+        <tbody id="tablaRankSr"></tbody>
       </table>
     </div>
   </div>
@@ -399,7 +436,79 @@ async function cargarRaceJson_(url){
   return j.race;
 }
 
+
+// ------------------------------------------------------------
+// MODO DEMO (solo para la guía Q&A de index.html): R1.html?demo=1&tab=...
+// Usa datos de ejemplo y dibuja el mismo HTML que la página real.
+// tab: cabecera | clasificacion | mejoresvueltas | consistencia | lideradas | sectores | posiciones | tiempos | penalizaciones | vueltas
+// ------------------------------------------------------------
+const DEMO_PARAMS = new URLSearchParams(location.search);
+const DEMO = DEMO_PARAMS.get('demo') === '1';
+const DEMO_TAB = DEMO_PARAMS.get('tab') || 'clasificacion';
+function datosDemo_(reales){
+  const nombres = [['Max','Verstappen','PAM'],['Lando','Norris','AMA'],['Charles','Leclerc','SIL'],['Lewis','Hamilton','AMA'],['Oscar','Piastri','SIL'],['Fernando','Alonso','PRO']];
+  const base = [135600,136200,136900,137400,138100,139000];
+  const extra = [900,0,120,60,200,30,90,0];
+  const elo = [1612,1548,1503,1471,1430,1688], srv = [3.4,3.1,2.6,2.2,1.8,4.1];
+  const dElo = [14,9,-3,-8,-12,11], dSr = [0.18,0.1,-0.05,-0.12,-0.2,0.25];
+  const modelos = ['Demo GT Rapido','Demo Turbo Cup','Demo Clasico','Demo Turbo Cup','Demo Clasico','Demo GT Rapido'];
+  const race = { session_type:'Race', track_name:'Circuito Demo', track_layout_name:'GP', drivers:[], cars:[], laps:[], driver_standings:[],
+    penalty_collection:{ session_penalties:[
+      { car_id:{a:2,b:3}, cleared_penalties:[{ penalty_data:{type:'PenaltyType_Time_Penalty_Seconds',penalty_time_ms:5000}, given_lap_count:5, investigation:'InvestigationType_Racecar_Cut' }], pending_penalties:[] },
+      { car_id:{a:2,b:4}, cleared_penalties:[], pending_penalties:[{ penalty_data:{type:'PenaltyType_Warning'}, given_lap_count:3, investigation:'InvestigationType_Racecar_Cut' }] }
+    ] } };
+  const pilotos = [], vr = [];
+  nombres.forEach((n,i)=>{
+    const sid = '7656119000000000' + (i+1);
+    race.drivers.push({ guid:{a:1,b:i}, player_id:sid, first_name:n[0], last_name:n[1] });
+    const real = reales && reales[i];
+    race.cars.push({ car_id:{a:2,b:i}, model_displayname: real ? String(getVal(real,'Coche_Principal')) : modelos[i] });
+    race.driver_standings.push({a:1,b:i});
+    for(let l=0;l<8;l++){
+      const t = base[i] + extra[l] + (l===0 ? 2500 : 0);
+      const s1 = Math.round(t*0.31), s2 = Math.round(t*0.36);
+      race.laps.push({ driver_key:{a:1,b:i}, car_key:{a:2,b:i}, time:t, flags:(i===3 && l===2) ? 1 : 2, split:[s1,s2,t-s1-s2] });
+    }
+    const base0 = { Equipo:'Demo Team '+(i%3+1), Clase:'BRONCE 1', Marca:'' };
+    pilotos.push(Object.assign(base0, real || {}, { Player_id:sid, Nombre_Piloto:n[0]+' '+n[1], Licencia:n[2], ELO:elo[i], SR:srv[i] }));
+    vr.push({ SteamID:sid, Fase:'1', Ronda:'1', Fecha:'20/09/26', ELO:elo[i], dELO:dElo[i], SR:srv[i], dSR:dSr[i] });
+  });
+  return { race, pilotos, vr };
+}
+async function iniciarDemo_(){
+  // Pilotos reales del JSON estático (su coche principal y el logo de su marca); si no carga, se usan marcadores.
+  let reales = [];
+  try{
+    const ctl = new AbortController(); const to = setTimeout(()=>ctl.abort(), 6000);
+    const res = await fetch(STATIC_DATA_URL, { signal: ctl.signal }); clearTimeout(to);
+    const j = await res.json();
+    const lista = ((j && j.data && j.data.pilotos) || []).filter(p => getVal(p,'Marca') && getVal(p,'Coche_Principal'));
+    const vistos = {};
+    lista.forEach(p => { const c = String(getVal(p,'Coche_Principal')); if(!vistos[c] && reales.length < 6){ vistos[c] = 1; reales.push(p); } });
+    lista.forEach(p => { if(reales.length < 6 && reales.indexOf(p) === -1) reales.push(p); });
+  }catch(e){}
+  const d = datosDemo_(reales);
+  PILOTOS = d.pilotos; VRATING_LOG = d.vr; RACE = d.race;
+  RONDA_INFO = { Fecha:'20/09/26' };
+  document.body.classList.add('demo');
+  document.body.classList.add(DEMO_TAB === 'cabecera' ? 'demo-cab' : 'demo-solo');
+  renderRankingsRating_();
+  procesarCarrera_(); renderCabecera_(); renderClasificacion_(); renderMejoresVueltas_(); renderConsistencia_(); renderLideradas_();
+  renderSectorTabs_(); renderSectorTabla_(1); renderPosiciones_(); renderTiempos_(); renderPenalizaciones_();
+  if(DEMO_TAB !== 'cabecera' && DEMO_TAB !== 'vueltas'){
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    const pn = document.getElementById('panel-' + DEMO_TAB); if(pn) pn.classList.add('active');
+  }
+  if(DEMO_TAB === 'vueltas'){
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    abrirModalVueltas(RESULTS[0].key);
+  }
+  const avisar = () => { try{ parent.postMessage({ qaDemo:DEMO_TAB, h:Math.ceil(Math.max.apply(null,[].map.call(document.querySelectorAll('main, .overlay.show'),function(e){return e.getBoundingClientRect().bottom+window.scrollY;}))+16) }, '*'); }catch(e){} };
+  setTimeout(avisar, 250); setTimeout(avisar, 900); window.addEventListener('resize', avisar);
+}
+
 async function iniciar(){
+  if(DEMO){ await iniciarDemo_(); return; }
   try{
     const dataPilotos = await cargarPilotos_();
     PILOTOS = dataPilotos.pilotos || [];
@@ -411,6 +520,7 @@ async function iniciar(){
   }catch(err){
     toast('No se pudieron cargar los pilotos: ' + err.message, 'err');
   }
+  renderRankingsRating_();
 
   const rondaInfo = CALENDARIO.find(c => String(getVal(c,'Ronda')) === String(RONDA_NUMERO));
   RONDA_INFO = rondaInfo || null;
@@ -611,13 +721,28 @@ function vratingDeRonda_(steamId){
   return candidatas[candidatas.length-1];
 }
 // ELO / SR ACTUALES del piloto (columnas ELO y SR de la pestaña Pilotos), como tag
+// ELO por niveles: 1 < 1450 · 2 de 1450 a 1549 · 3 de 1550 a 1649 · 4 desde 1650
+function eloClase_(v){
+  const n = Math.round(Number(v));
+  return 'rtag-elo-' + (n >= 1650 ? 4 : (n >= 1550 ? 3 : (n >= 1450 ? 2 : 1)));
+}
+// SR por categorías: A 4,00-4,99 · B 3,00-3,99 · C 2,00-2,99 · D 0-1,99
+function srCat_(v){
+  const n = Math.round(Number(v) * 100) / 100;
+  return n >= 4 ? 'A' : (n >= 3 ? 'B' : (n >= 2 ? 'C' : 'D'));
+}
+function srClase_(v){ return 'rtag-sr-' + srCat_(v); }
+function srTexto_(v){
+  if(v === '' || v === null || v === undefined || isNaN(Number(v))) return '';
+  return srCat_(v) + Number(v).toFixed(2).replace('.', ',');
+}
 function ratingTagCarrera_(tipo, pilotoSheet){
   const esElo = tipo === 'elo';
   const bruto = pilotoSheet ? getVal(pilotoSheet, esElo ? 'ELO' : 'SR') : '';
   const n = Number(bruto);
   if(bruto === '' || bruto === null || bruto === undefined || isNaN(n)) return '<span class="rtag rtag-vacio">—</span>';
-  const txt = esElo ? String(Math.round(n)) : n.toFixed(2).replace('.', ',');
-  return `<span class="rtag ${esElo ? 'rtag-elo' : 'rtag-sr'}">${txt}</span>`;
+  const txt = esElo ? String(Math.round(n)) : srTexto_(n);
+  return `<span class="rtag ${esElo ? 'rtag-elo ' + eloClase_(n) : 'rtag-sr ' + srClase_(n)}">${txt}</span>`;
 }
 function vrDeltaHtml_(valor, dec){
   const n = Number(valor);
@@ -662,6 +787,32 @@ document.getElementById('raceTabs').addEventListener('click', e=>{
 // ------------------------------------------------------------
 // CLASIFICACIÓN
 // ------------------------------------------------------------
+// Clasificaciones por ELO y por SR actuales (todos los pilotos con dato, de más a menos)
+function renderRankingsRating_(){
+  function pintar(idTbody, campo, tipo){
+    const tb = document.getElementById(idTbody);
+    if(!tb) return;
+    const lista = PILOTOS
+      .map(p => ({ p, v: Number(getVal(p, campo)), bruto: getVal(p, campo) }))
+      .filter(x => x.bruto !== '' && x.bruto !== null && x.bruto !== undefined && !isNaN(x.v))
+      .sort((a, b) => b.v - a.v || String(getVal(a.p,'Nombre_Piloto')).localeCompare(String(getVal(b.p,'Nombre_Piloto'))));
+    if(!lista.length){ tb.innerHTML = '<tr><td colspan="4" style="color:var(--text-dim);">Sin datos todavía.</td></tr>'; return; }
+    tb.innerHTML = lista.map((x, i) => {
+      const pos = i + 1;
+      const posClass = pos===1?'p1':(pos===2?'p2':(pos===3?'p3':''));
+      const txt = tipo === 'elo' ? String(Math.round(x.v)) : srTexto_(x.v);
+      return `<tr>
+        <td><span class="pos-badge ${posClass}">${pos}</span></td>
+        <td>${esc(getVal(x.p,'Nombre_Piloto') || '')}</td>
+        <td>${licenciaBadgeHtml(getVal(x.p,'Licencia'))}</td>
+        <td><span class="rtag ${tipo==='elo'?'rtag-elo ' + eloClase_(x.v):'rtag-sr ' + srClase_(x.v)}">${txt}</span></td>
+      </tr>`;
+    }).join('');
+  }
+  pintar('tablaRankElo', 'ELO', 'elo');
+  pintar('tablaRankSr', 'SR', 'sr');
+}
+
 function renderClasificacion_(){
   const tbody = document.getElementById('tablaClasificacion');
   if(!RESULTS.length){ tbody.innerHTML = '<tr><td colspan="16" style="color:var(--text-dim);">Sin datos.</td></tr>'; return; }

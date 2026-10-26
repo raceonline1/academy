@@ -80,15 +80,15 @@
   #panel-clasificacion thead th:nth-child(n+15), #panel-clasificacion tbody td:nth-child(n+15){text-align:center;}
   .rtag{display:inline-flex;align-items:center;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px;letter-spacing:.3px;white-space:nowrap;line-height:1.2;}
   .rtag-elo{background:rgba(240,28,38,0.18);color:#FF7A80;}
-  .rtag-elo-1{background:rgba(255,154,107,0.16);color:#FF9A6B;}
-  .rtag-elo-2{background:rgba(255,122,128,0.18);color:#FF7A80;}
-  .rtag-elo-3{background:rgba(255,77,90,0.22);color:#FF5560;}
-  .rtag-elo-4{background:rgba(200,16,46,0.30);color:#FF6B78;box-shadow:inset 0 0 0 1px rgba(255,77,90,0.5);}
+  .rtag-elo-1{background:rgba(240,28,38,0.18);color:#FF7A80;}
+  .rtag-elo-2{background:rgba(240,28,38,0.18);color:#FF7A80;}
+  .rtag-elo-3{background:rgba(240,28,38,0.18);color:#FF7A80;}
+  .rtag-elo-4{background:rgba(240,28,38,0.18);color:#FF7A80;}
   .rtag-sr{background:var(--green-dim);color:var(--green);}
-  .rtag-sr-A{background:rgba(0,229,199,0.14);color:#00E5C7;}
-  .rtag-sr-B{background:rgba(61,214,140,0.14);color:#3DD68C;}
-  .rtag-sr-C{background:rgba(44,184,230,0.15);color:#2CB8E6;}
-  .rtag-sr-D{background:rgba(91,155,255,0.15);color:#6FA8FF;}
+  .rtag-sr-A{background:rgba(0,229,199,0.12);color:#00E5C7;}
+  .rtag-sr-B{background:rgba(0,229,199,0.12);color:#00E5C7;}
+  .rtag-sr-C{background:rgba(0,229,199,0.12);color:#00E5C7;}
+  .rtag-sr-D{background:rgba(0,229,199,0.12);color:#00E5C7;}
   .rtag-vacio{background:transparent;color:var(--text-dim);font-weight:500;padding-left:0;padding-right:0;}
   .rank-titulo{font-size:15px;font-weight:700;margin:28px 0 10px;letter-spacing:.3px;}
   .rank-wrap{display:inline-block;max-width:100%;}
@@ -134,6 +134,16 @@
     table{font-size:12.5px;}
     thead th, tbody td{padding:8px 8px;}
   }
+  /* Modo demo (guía Q&A) */
+  body.demo header.topbar{display:none;}
+  body.demo main{padding-top:10px;padding-bottom:0;margin-bottom:0;min-height:0;}
+  body.demo-cab #raceTabs + .checkered-divider{margin-bottom:0;}
+  body.demo-solo #infoSesion, body.demo-solo #raceTabs, body.demo-solo .checkered-divider{display:none;}
+  body.demo-cab .tab-panel{display:none !important;}
+  body.demo .overlay{position:static;display:block;background:none;opacity:1;visibility:visible;pointer-events:none;}
+  body.demo .overlay:not(.show){display:none;}
+  body.demo .overlay .modal{position:static;transform:none;opacity:1;margin:0 auto;max-height:none;}
+  body.demo #toasts{display:none;}
 </style>
 </head>
 <body>
@@ -426,7 +436,79 @@ async function cargarRaceJson_(url){
   return j.race;
 }
 
+
+// ------------------------------------------------------------
+// MODO DEMO (solo para la guía Q&A de index.html): R1.html?demo=1&tab=...
+// Usa datos de ejemplo y dibuja el mismo HTML que la página real.
+// tab: cabecera | clasificacion | mejoresvueltas | consistencia | lideradas | sectores | posiciones | tiempos | penalizaciones | vueltas
+// ------------------------------------------------------------
+const DEMO_PARAMS = new URLSearchParams(location.search);
+const DEMO = DEMO_PARAMS.get('demo') === '1';
+const DEMO_TAB = DEMO_PARAMS.get('tab') || 'clasificacion';
+function datosDemo_(reales){
+  const nombres = [['Max','Verstappen','PAM'],['Lando','Norris','AMA'],['Charles','Leclerc','SIL'],['Lewis','Hamilton','AMA'],['Oscar','Piastri','SIL'],['Fernando','Alonso','PRO']];
+  const base = [135600,136200,136900,137400,138100,139000];
+  const extra = [900,0,120,60,200,30,90,0];
+  const elo = [1612,1548,1503,1471,1430,1688], srv = [3.4,3.1,2.6,2.2,1.8,4.1];
+  const dElo = [14,9,-3,-8,-12,11], dSr = [0.18,0.1,-0.05,-0.12,-0.2,0.25];
+  const modelos = ['Demo GT Rapido','Demo Turbo Cup','Demo Clasico','Demo Turbo Cup','Demo Clasico','Demo GT Rapido'];
+  const race = { session_type:'Race', track_name:'Circuito Demo', track_layout_name:'GP', drivers:[], cars:[], laps:[], driver_standings:[],
+    penalty_collection:{ session_penalties:[
+      { car_id:{a:2,b:3}, cleared_penalties:[{ penalty_data:{type:'PenaltyType_Time_Penalty_Seconds',penalty_time_ms:5000}, given_lap_count:5, investigation:'InvestigationType_Racecar_Cut' }], pending_penalties:[] },
+      { car_id:{a:2,b:4}, cleared_penalties:[], pending_penalties:[{ penalty_data:{type:'PenaltyType_Warning'}, given_lap_count:3, investigation:'InvestigationType_Racecar_Cut' }] }
+    ] } };
+  const pilotos = [], vr = [];
+  nombres.forEach((n,i)=>{
+    const sid = '7656119000000000' + (i+1);
+    race.drivers.push({ guid:{a:1,b:i}, player_id:sid, first_name:n[0], last_name:n[1] });
+    const real = reales && reales[i];
+    race.cars.push({ car_id:{a:2,b:i}, model_displayname: real ? String(getVal(real,'Coche_Principal')) : modelos[i] });
+    race.driver_standings.push({a:1,b:i});
+    for(let l=0;l<8;l++){
+      const t = base[i] + extra[l] + (l===0 ? 2500 : 0);
+      const s1 = Math.round(t*0.31), s2 = Math.round(t*0.36);
+      race.laps.push({ driver_key:{a:1,b:i}, car_key:{a:2,b:i}, time:t, flags:(i===3 && l===2) ? 1 : 2, split:[s1,s2,t-s1-s2] });
+    }
+    const base0 = { Equipo:'Demo Team '+(i%3+1), Clase:'BRONCE 1', Marca:'' };
+    pilotos.push(Object.assign(base0, real || {}, { Player_id:sid, Nombre_Piloto:n[0]+' '+n[1], Licencia:n[2], ELO:elo[i], SR:srv[i] }));
+    vr.push({ SteamID:sid, Fase:'1', Ronda:'1', Fecha:'20/09/26', ELO:elo[i], dELO:dElo[i], SR:srv[i], dSR:dSr[i] });
+  });
+  return { race, pilotos, vr };
+}
+async function iniciarDemo_(){
+  // Pilotos reales del JSON estático (su coche principal y el logo de su marca); si no carga, se usan marcadores.
+  let reales = [];
+  try{
+    const ctl = new AbortController(); const to = setTimeout(()=>ctl.abort(), 6000);
+    const res = await fetch(STATIC_DATA_URL, { signal: ctl.signal }); clearTimeout(to);
+    const j = await res.json();
+    const lista = ((j && j.data && j.data.pilotos) || []).filter(p => getVal(p,'Marca') && getVal(p,'Coche_Principal'));
+    const vistos = {};
+    lista.forEach(p => { const c = String(getVal(p,'Coche_Principal')); if(!vistos[c] && reales.length < 6){ vistos[c] = 1; reales.push(p); } });
+    lista.forEach(p => { if(reales.length < 6 && reales.indexOf(p) === -1) reales.push(p); });
+  }catch(e){}
+  const d = datosDemo_(reales);
+  PILOTOS = d.pilotos; VRATING_LOG = d.vr; RACE = d.race;
+  RONDA_INFO = { Fecha:'20/09/26' };
+  document.body.classList.add('demo');
+  document.body.classList.add(DEMO_TAB === 'cabecera' ? 'demo-cab' : 'demo-solo');
+  renderRankingsRating_();
+  procesarCarrera_(); renderCabecera_(); renderClasificacion_(); renderMejoresVueltas_(); renderConsistencia_(); renderLideradas_();
+  renderSectorTabs_(); renderSectorTabla_(1); renderPosiciones_(); renderTiempos_(); renderPenalizaciones_();
+  if(DEMO_TAB !== 'cabecera' && DEMO_TAB !== 'vueltas'){
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    const pn = document.getElementById('panel-' + DEMO_TAB); if(pn) pn.classList.add('active');
+  }
+  if(DEMO_TAB === 'vueltas'){
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    abrirModalVueltas(RESULTS[0].key);
+  }
+  const avisar = () => { try{ parent.postMessage({ qaDemo:DEMO_TAB, h:Math.ceil(Math.max.apply(null,[].map.call(document.querySelectorAll('main, .overlay.show'),function(e){return e.getBoundingClientRect().bottom+window.scrollY;}))+16) }, '*'); }catch(e){} };
+  setTimeout(avisar, 250); setTimeout(avisar, 900); window.addEventListener('resize', avisar);
+}
+
 async function iniciar(){
+  if(DEMO){ await iniciarDemo_(); return; }
   try{
     const dataPilotos = await cargarPilotos_();
     PILOTOS = dataPilotos.pilotos || [];

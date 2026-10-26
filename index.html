@@ -387,15 +387,15 @@
   .rtag{display:inline-flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px;letter-spacing:.3px;white-space:nowrap;line-height:1.2;}
   .rtag .k{font-size:.78em;font-weight:600;opacity:.72;letter-spacing:.5px;}
   .rtag-elo{background:rgba(240,28,38,0.18);color:#FF7A80;}
-  .rtag-elo-1{background:rgba(255,154,107,0.16);color:#FF9A6B;}
-  .rtag-elo-2{background:rgba(255,122,128,0.18);color:#FF7A80;}
-  .rtag-elo-3{background:rgba(255,77,90,0.22);color:#FF5560;}
-  .rtag-elo-4{background:rgba(200,16,46,0.30);color:#FF6B78;box-shadow:inset 0 0 0 1px rgba(255,77,90,0.5);}
+  .rtag-elo-1{background:rgba(240,28,38,0.18);color:#FF7A80;}
+  .rtag-elo-2{background:rgba(240,28,38,0.18);color:#FF7A80;}
+  .rtag-elo-3{background:rgba(240,28,38,0.18);color:#FF7A80;}
+  .rtag-elo-4{background:rgba(240,28,38,0.18);color:#FF7A80;}
   .rtag-sr{background:var(--green-dim);color:var(--green);}
-  .rtag-sr-A{background:rgba(0,229,199,0.14);color:#00E5C7;}
-  .rtag-sr-B{background:rgba(61,214,140,0.14);color:#3DD68C;}
-  .rtag-sr-C{background:rgba(44,184,230,0.15);color:#2CB8E6;}
-  .rtag-sr-D{background:rgba(91,155,255,0.15);color:#6FA8FF;}
+  .rtag-sr-A{background:rgba(0,229,199,0.12);color:#00E5C7;}
+  .rtag-sr-B{background:rgba(0,229,199,0.12);color:#00E5C7;}
+  .rtag-sr-C{background:rgba(0,229,199,0.12);color:#00E5C7;}
+  .rtag-sr-D{background:rgba(0,229,199,0.12);color:#00E5C7;}
   .pilot-lic-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:2px 0 5px;}
   .pilot-lic-row .badge{font-size:10px;padding:2px 8px;}
   .pilot-lic-row .dot{width:5px;height:5px;margin-right:4px;}
@@ -417,6 +417,30 @@
   .gpt:hover .gpt-dot{r:6;stroke:var(--c);stroke-width:3;filter:drop-shadow(0 0 5px var(--c)) drop-shadow(0 0 10px var(--c));}
   .gpt-tip{opacity:0;transition:opacity .12s;}
   .gpt:hover .gpt-tip{opacity:1;}
+  /* ===== Guía Q&A ===== */
+  .qa-wrap{display:grid;gap:18px;}
+  .qa-card{background:var(--surface,#14171C);border:1px solid var(--hairline,#262B33);border-radius:12px;padding:18px 20px;}
+  .qa-card h3{margin:0 0 6px;font-size:17px;}
+  .qa-card p,.qa-card li{color:var(--text-dim,#8B93A1);font-size:14px;line-height:1.55;margin:4px 0;}
+  .qa-card ul{padding-left:18px;margin:6px 0;}
+  .qa-toc{display:flex;flex-wrap:wrap;gap:8px;}
+  .qa-toc a{font-size:13px;padding:4px 10px;border:1px solid var(--hairline,#262B33);border-radius:999px;color:inherit;text-decoration:none;}
+  .qa-shot{margin:10px 0;padding:14px;border:1px dashed #3a414c;border-radius:10px;background:#0E1014;font-family:'JetBrains Mono',monospace;font-size:12px;overflow-x:auto;}
+  .qa-shot small{display:block;color:#6d7583;margin-top:8px;font-family:inherit;font-size:10.5px;}
+  .qa-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:5px 0;}
+  .qa-box{border:1px solid #262B33;border-radius:10px;padding:10px 12px;background:#14171C;min-width:170px;}
+  .qa-box b{display:block;margin-bottom:4px;color:#fff;}
+  .qa-n{display:inline-flex;width:18px;height:18px;border-radius:50%;background:#F01C26;color:#fff;font-size:10px;font-weight:700;align-items:center;justify-content:center;margin-right:4px;}
+  .qa-lic{padding:2px 8px;border-radius:6px;font-weight:700;font-size:11px;}
+  .qa-table{border-collapse:collapse;width:100%;}
+  .qa-table th,.qa-table td{padding:6px 10px;border-bottom:1px solid #262B33;text-align:left;white-space:nowrap;}
+  .qa-live{margin:10px 0 4px;padding:14px;border:1px dashed #3a414c;border-radius:12px;background:#0E1014;overflow-x:auto;}
+  .qa-live .overlay,.qa-live .modal{position:static !important;transform:none !important;opacity:1 !important;max-height:none !important;margin:0 auto;pointer-events:none;}
+  .qa-live .car-card,.qa-live .pilot-card{max-width:340px;pointer-events:none;}
+  .qa-sub{margin:18px 0 2px;font-size:15px;}
+  .qa-frame{width:100%;height:520px;border:1px dashed #3a414c;border-radius:12px;background:#0E1014;margin:6px 0 4px;}
+  .qa-cap{font-size:12px !important;color:#6d7583 !important;margin:2px 0 8px !important;}
+  .qa-card ol{padding-left:20px;color:var(--text-dim,#8B93A1);font-size:14px;line-height:1.55;}
   /* Cabecera desktop: sin textos de marca, menú + badge de piloto en una sola línea */
   @media (min-width:761px){
     .brand-text{display:none;}
@@ -457,6 +481,28 @@
   .rgraf-card{background:var(--panel);border:1px solid var(--hairline);border-radius:var(--radius);padding:14px 16px 8px;min-width:0;}
   .rgraf-card h4{margin:0 0 6px;font-family:'Teko',sans-serif;font-size:20px;font-weight:600;letter-spacing:.3px;}
   @media (max-width:640px){ .rgraf-grid{grid-template-columns:1fr;} }
+
+  /* Progreso de licencia (Mi garaje) */
+  .lic-panel{background:var(--panel);border:1px solid var(--hairline);border-radius:var(--radius);padding:16px 18px 18px;}
+  .lic-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+  .lic-head .arrow{color:var(--text-dim);font-size:18px;}
+  .lic-head .tit{margin-left:auto;font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.8px;}
+  .lic-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 28px;}
+  @media (max-width:640px){ .lic-grid{grid-template-columns:1fr;} }
+  .licbar-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:5px;}
+  .licbar-head .k{font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.6px;font-weight:600;}
+  .licbar-head .v{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--amber);white-space:nowrap;}
+  .licbar-head .v i{font-style:normal;margin-left:4px;}
+  .licbar.ok .licbar-head .v{color:var(--green);}
+  .licbar-track{height:9px;border-radius:99px;background:var(--panel-2);box-shadow:inset 0 0 0 1px var(--hairline);overflow:hidden;}
+  .licbar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,rgba(255,176,32,.55),var(--amber));transition:width .6s ease;}
+  .licbar.ok .licbar-fill{background:linear-gradient(90deg,rgba(0,229,199,.5),var(--green));}
+  .licbar-sub{font-size:11px;color:var(--text-dim);margin-top:4px;}
+  .lic-sub{margin:18px 0 10px;font-family:'Teko',sans-serif;font-size:18px;font-weight:600;letter-spacing:.3px;color:var(--text);}
+  .lic-aviso{margin-top:14px;padding:10px 12px;border-radius:8px;font-size:13px;line-height:1.45;border:1px solid transparent;}
+  .lic-aviso.up{background:var(--green-dim);color:var(--green);border-color:rgba(0,229,199,.35);}
+  .lic-aviso.down{background:var(--danger-dim);color:var(--danger);border-color:rgba(255,71,87,.35);}
+  .lic-aviso.warn{background:var(--amber-dim);color:var(--amber);border-color:rgba(255,176,32,.35);}
   .rcell{display:inline-flex;flex-direction:column;align-items:center;gap:3px;}
   .rdelta{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;line-height:1;}
   .rdelta.up{color:var(--green);}
@@ -1067,6 +1113,91 @@
     </div>
   </section>
 
+
+  <section class="view" id="view-qa">
+    <div class="view-head"><div><h2>Common Asked Questions</h2><p>Guía completa de la web. Todo lo que ves aquí está dibujado con el mismo código que la web real, pero con datos ficticios (QA_DEMO en el script).</p></div></div>
+    <div class="qa-wrap">
+      <div class="qa-card"><h3>Índice</h3><div class="qa-toc"><a href="#qa-menu">Menú y badge de piloto</a><a href="#qa-conc">Concesionario</a><a href="#qa-comprar">Cómo se compra un coche</a><a href="#qa-pil">Pilotos</a><a href="#qa-ficha">Ficha de piloto</a><a href="#qa-lic">Licencias</a><a href="#qa-elo">ELO y SR</a><a href="#qa-clas">Clasificación</a><a href="#qa-gar">Mi garaje</a><a href="#qa-val">Validar coche</a><a href="#qa-res">Resultados</a><a href="#qa-race">Resultado de carrera</a></div></div>
+
+      <div class="qa-card" id="qa-menu"><h3>Menú principal y badge de piloto</h3>
+        <p>El menú tiene: 01 Concesionario, 02 Pilotos, 03 Resultados, 04 Clasificación, 05 Historial y 06 Mi garaje (solo con sesión iniciada). Esta guía (Q&amp;A) está abajo del todo, a la derecha de "Iniciar sesión", y se mantiene ahí aunque inicies sesión.</p>
+        <p>Cuando inicias sesión aparece a la derecha del menú el <b>badge de piloto</b>, así:</p>
+        <div class="qa-live" data-qa="pill"></div><p class="qa-cap">Badge de piloto: avatar (casco), nombre, licencia, ELO y SR, y tus saldos.</p>
+        <ul><li><b>Avatar:</b> tu casco.</li><li><b>Licencia:</b> SIL, AMA, PAM o PRO (ver Licencias).</li><li><b>ELO y SR:</b> tus valores actuales, con su color por nivel.</li><li><b>Saldo y coins:</b> el saldo en OC sirve para comprar coches; los coins son tu economía de la comunidad.</li></ul></div>
+
+      <div class="qa-card" id="qa-conc"><h3>Concesionario: ficha de coche</h3>
+        <p>Cada coche aparece como una tarjeta. Filtra por <b>Todos / En concesionario / Agotados</b>, por una o varias categorías y busca por nombre.</p>
+        <div class="qa-live" data-qa="cochecard"></div><p class="qa-cap">Tarjeta de coche: foto, número, categoría, logo de marca, propietario/estado, precio y botón.</p>
+        <ul><li><b>Foto y número:</b> la imagen del coche y su identificador.</li><li><b>Categoría:</b> etiqueta de color (GT3, GT2, GT4, ORO, PLATA, BRONCE).</li><li><b>Marca:</b> logo y nombre del coche.</li><li><b>Estado:</b> si está disponible o ya es de un piloto.</li><li><b>Botón:</b> "Comprar coche", "Inicia sesión", "Ya tienes este coche" o "Sin stock".</li></ul></div>
+
+      <div class="qa-card" id="qa-comprar"><h3>Cómo se compra un coche</h3>
+        <p>Pincha en una tarjeta y se abre la ficha grande del coche:</p>
+        <div class="qa-live" data-qa="cochemodal"></div><p class="qa-cap">Ficha del coche: foto grande, especificaciones, tu saldo y botón de confirmar.</p>
+        <ol><li>Inicia sesión con tu piloto (si no, solo puedes mirar).</li><li>Abre la ficha y revisa las especificaciones y el precio.</li><li>Comprueba que tu saldo es suficiente (se muestra en la ficha).</li><li>Pulsa el botón de compra y confirma. El coche pasa a tu garaje y se descuenta el saldo.</li><li>Si hay varios coches en tu garaje, valida cuál es el principal (ver Validar coche).</li></ol>
+        <p>Si el mercado está cerrado o no hay stock, la ficha se puede abrir pero el botón de compra aparece desactivado.</p></div>
+
+      <div class="qa-card" id="qa-pil"><h3>Pilotos</h3>
+        <p>Dos vistas (iconos y lista) con los botones de arriba a la derecha. Filtra por categoría (varias a la vez) y busca por nombre. En la tarjeta: nombre, licencia, ELO y SR en la primera línea y tus coins en la de abajo.</p>
+        <div class="qa-live" data-qa="pilotocard"></div><p class="qa-cap">Tarjeta de piloto, vista iconos.</p></div>
+
+      <div class="qa-card" id="qa-ficha"><h3>Ficha de piloto</h3>
+        <p>Al pinchar una tarjeta se abre la ficha: avatar, nombre con licencia, ELO y SR, coins, saldo, coches del garaje, valor del garaje y estadísticas.</p>
+        <div class="qa-live" data-qa="pilotomodal"></div><p class="qa-cap">Ficha de piloto abierta.</p></div>
+
+      <div class="qa-card" id="qa-lic"><h3>Licencias</h3>
+        <p>Orden y color: <span class="qa-lic" style="background:rgba(198,205,212,.14);color:#D7DCE2">SIL</span> plata · <span class="qa-lic" style="background:rgba(201,138,74,.16);color:#E3A468">AMA</span> bronce · <span class="qa-lic" style="background:rgba(232,195,60,.16);color:#F5D34A">PAM</span> oro · <span class="qa-lic" style="background:#050607;color:#F4F6F8;border:1px solid #5A6270">PRO</span> negro.</p>
+        <p>La licencia es tu reputación en el campeonato: se revisa al final de cada fase (no tras cada carrera), sube con facilidad y baja con dificultad. Es automática: la web la calcula con tus carreras, SR, ELO y resultados. Tu progreso lo ves en <b>Mi garaje</b>, debajo de tus estadísticas.</p>
+        <h4 class="qa-sub">Requisitos para subir</h4>
+        <ul>
+          <li><b>SIL</b>: licencia de todo piloto nuevo, sin requisitos (fase de prueba).</li>
+          <li><b>SIL → AMA</b>: 3 carreras disputadas y SR de 2,0 o más. Si no los cumples, repites una fase como SIL.</li>
+          <li><b>AMA → PAM</b>: 8 carreras disputadas, SR de 3,0 o más y ELO de 1500 o más.</li>
+          <li><b>PAM → PRO</b>: 12 carreras disputadas, SR de 3,5 o más, ELO de 1600 o más y un logro: 2 podios en tus últimas 8 carreras <i>o</i> haber ganado una fase.</li>
+        </ul>
+        <h4 class="qa-sub">Cómo se mantiene y cuándo se baja</h4>
+        <ul>
+          <li><b>PRO</b>: baja a PAM si al final de 2 fases seguidas tu SR está por debajo de 3,0 o tu ELO por debajo de 1500.</li>
+          <li><b>PAM</b>: baja a AMA si al final de 2 fases seguidas tu SR está por debajo de 2,5.</li>
+          <li><b>Inactividad</b>: si no corres en 2 fases seguidas, bajas un escalón (SIL no baja).</li>
+          <li>Subir pide más que mantener (por ejemplo, PRO se consigue con SR 3,5 y se mantiene con 3,0), para que no estés subiendo y bajando cada fase.</li>
+        </ul>
+        <p>El SR pesa más en los primeros escalones (un piloto sucio no llega lejos aunque sea rápido) y el rendimiento (ELO y podios) en el último.</p></div>
+
+      <div class="qa-card" id="qa-elo"><h3>ELO y SR</h3>
+        <p><b>ELO</b> (habilidad): empieza en 1500 y cambia tras cada carrera según tu posición en tu clase frente a tus rivales (hace falta un mínimo de 3 pilotos en la clase). Si faltas a 2 carreras seguidas y tienes más de 1500, decae un 5 % hacia 1500.</p>
+        <div class="qa-shot"><div class="qa-row"><span class="rtag rtag-elo rtag-elo-1">1385</span> &lt;1450 · <span class="rtag rtag-elo rtag-elo-2">1520</span> 1450-1549 · <span class="rtag rtag-elo rtag-elo-3">1610</span> 1550-1649 · <span class="rtag rtag-elo rtag-elo-4">1700</span> desde 1650</div></div>
+        <p><b>SR</b> (limpieza): empieza en 2,50 y llega como máximo a 4,99. Sube con carreras limpias (hasta +0,25) y baja con contactos, muros, avisos y penalizaciones. No decae por ausencias. La letra indica la categoría:</p>
+        <div class="qa-shot"><div class="qa-row"><span class="rtag rtag-sr rtag-sr-A">A4,50</span> 4,00-4,99 · <span class="rtag rtag-sr rtag-sr-B">B3,20</span> 3,00-3,99 · <span class="rtag rtag-sr rtag-sr-C">C2,50</span> 2,00-2,99 · <span class="rtag rtag-sr rtag-sr-D">D1,03</span> 0-1,99</div></div></div>
+
+      <div class="qa-card" id="qa-clas"><h3>Clasificación general</h3>
+        <p>Tabla de pilotos (posición, piloto, licencia, equipo, puntos y estadísticas), tabla de equipos y, al final, la <b>Clasificación de ELO</b> y la <b>Clasificación de SR</b>, ordenadas de más a menos con el valor actual de cada piloto.</p></div>
+
+      <div class="qa-card" id="qa-gar"><h3>Mi garaje</h3>
+        <p>Tu zona personal. Arriba tu ficha con casco, licencia, ELO, SR, equipo, bandera y estadísticas. Debajo tus coches (con logo de marca, precio de venta y botón de vender), la validación del coche principal, tus últimas carreras (con el ELO/SR tras cada una y lo ganado o perdido) y las gráficas de evolución de ELO y SR. Debajo de tus estadísticas verás el <b>progreso de licencia</b>: barras con lo que te falta para subir a la siguiente (y, en PAM y PRO, lo que debes mantener).</p>
+        <div class="qa-live" data-qa="garaje"></div><p class="qa-cap">Mi garaje completo, con datos ficticios. En las gráficas, F1R1 = fase 1, ronda 1; al pasar el cursor el punto brilla y muestra carrera y valor.</p></div>
+
+      <div class="qa-card" id="qa-val"><h3>Validar el coche principal</h3>
+        <p>Si tienes varios coches, en Mi garaje aparece la barra <b>"Valida tu coche principal"</b>: eliges el coche con el desplegable y pulsas <b>Aceptar</b>. Mientras no lo hagas verás "❌ Todavía no has validado tu coche principal"; después "✅ Coche principal validado". Es el coche con el que figuras en la ficha y en las carreras. Si solo tienes uno, es el principal.</p></div>
+
+      <div class="qa-card" id="qa-res"><h3>Resultados y calendario</h3>
+        <p>En 03 Resultados ves el calendario de rondas con fecha y circuito. Pincha una ronda para abrir sus resultados rápidos y desde ahí la página completa de esa ronda.</p></div>
+
+      <div class="qa-card" id="qa-race"><h3>Resultado de carrera</h3>
+        <p>Cada ronda del calendario tiene su página de resultados. Se compone de una tarjeta de información, una barra de pestañas y, debajo, el panel de la pestaña elegida. Los ejemplos de abajo usan datos ficticios y son la propia página real en modo demostración, así que puedes interactuar con ellos.</p>
+        <h4 class="qa-sub">Cabecera y barra de pestañas</h4><p>Arriba, la tarjeta con la sesión (Carrera), el circuito, la ronda, el ganador, quién más vueltas ha liderado y la vuelta rápida con su tiempo. Debajo, las pestañas que cambian de panel.</p><iframe class="qa-frame" data-tab="cabecera" title="Ejemplo: cabecera" loading="lazy"></iframe>
+        <h4 class="qa-sub">Clasificación</h4><p>Tabla final: posición, clase, piloto, licencia, ELO y SR actuales (tags con color), equipo, marca, vehículo, tiempo, gap con el líder, penalización, mejor vuelta, pits y ΔELO / ΔSR de esa carrera (verde si sube, rojo si baja). Debajo, las clasificaciones de ELO y de SR de todos los pilotos. Si pinchas una fila se abre el detalle de vueltas de ese piloto.</p><iframe class="qa-frame" data-tab="clasificacion" title="Ejemplo: clasificacion" loading="lazy"></iframe>
+        <h4 class="qa-sub">Vueltas del piloto (ventana)</h4><p>Al pinchar un piloto de la clasificación se abre su lista de vueltas: tiempo de cada vuelta y sectores. Rojo = vuelta inválida; ámbar = vuelta rápida de la carrera.</p><iframe class="qa-frame" data-tab="vueltas" title="Ejemplo: vueltas" loading="lazy"></iframe>
+        <h4 class="qa-sub">Mejores vueltas</h4><p>Ranking de la mejor vuelta válida de cada piloto, con el gap respecto a la más rápida.</p><iframe class="qa-frame" data-tab="mejoresvueltas" title="Ejemplo: mejoresvueltas" loading="lazy"></iframe>
+        <h4 class="qa-sub">Consistencia</h4><p>Mide la regularidad: mejor vuelta dividida por la media de sus vueltas (sin contar la primera ni la última), en %. Cuanto más cerca de 100 %, más regular.</p><iframe class="qa-frame" data-tab="consistencia" title="Ejemplo: consistencia" loading="lazy"></iframe>
+        <h4 class="qa-sub">Lideradas</h4><p>Número de vueltas que cada piloto ha pasado en cabeza, contando las penalizaciones en la posición de cada vuelta.</p><iframe class="qa-frame" data-tab="lideradas" title="Ejemplo: lideradas" loading="lazy"></iframe>
+        <h4 class="qa-sub">Sectores</h4><p>Botones para elegir el sector (1, 2, 3...) y la tabla con el mejor tiempo de cada piloto en ese sector y su gap.</p><iframe class="qa-frame" data-tab="sectores" title="Ejemplo: sectores" loading="lazy"></iframe>
+        <h4 class="qa-sub">Posiciones</h4><p>Gráfica de la posición de cada piloto vuelta a vuelta. Pasa el cursor por una línea para resaltar a ese piloto.</p><iframe class="qa-frame" data-tab="posiciones" title="Ejemplo: posiciones" loading="lazy"></iframe>
+        <h4 class="qa-sub">Tiempos</h4><p>Gráfica con los tiempos de vuelta de cada piloto, para ver ritmo y errores.</p><iframe class="qa-frame" data-tab="tiempos" title="Ejemplo: tiempos" loading="lazy"></iframe>
+        <h4 class="qa-sub">Penalizaciones</h4><p>Resumen por piloto (sanciones de tiempo en segundos) y detalle: tipo (sanción de tiempo o aviso), vuelta en que se puso y motivo, por ejemplo corte de pista.</p><iframe class="qa-frame" data-tab="penalizaciones" title="Ejemplo: penalizaciones" loading="lazy"></iframe>
+      </div>
+    </div>
+  </section>
+
   <section class="view" id="view-historial">
     <div class="view-head">
       <div>
@@ -1093,6 +1224,7 @@
 <footer class="site-footer">
   <button class="login-header-btn" id="btnIrLogin" style="display:none;">Iniciar sesión</button>
   <button class="logout-btn" id="btnCerrarSesion" style="display:none;">Cerrar sesión</button>
+  <button class="login-header-btn" id="btnIrQA" type="button">Q&amp;A</button>
 </footer>
 
 <div class="overlay" id="modalComprar">
@@ -1399,6 +1531,135 @@ document.getElementById('tabs').addEventListener('click', (e)=>{
 })();
 
 const SESION_STORAGE_KEY = 'ros_sesion';
+
+
+// ============================================================
+// Q&A: maquetas con el MISMO código de la web y datos ficticios.
+// Cambia aquí nombres, fotos y valores (las fotos son marcadores de posición SVG).
+// ============================================================
+const QA_IMG = svg => 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+const QA_FOTO_COCHE = QA_IMG('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2a3140"/><stop offset="1" stop-color="#14171C"/></linearGradient></defs><rect width="640" height="360" fill="url(#g)"/><text x="320" y="190" font-family="Arial" font-size="34" fill="#8B93A1" text-anchor="middle">FOTO DEL COCHE</text></svg>');
+const QA_FOTO_PILOTO = QA_IMG('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300"><rect width="300" height="300" fill="#1c2129"/><circle cx="150" cy="150" r="90" fill="#F01C26"/><rect x="95" y="135" width="110" height="40" rx="14" fill="#0E1014"/><text x="150" y="265" font-family="Arial" font-size="22" fill="#8B93A1" text-anchor="middle">CASCO / FOTO</text></svg>');
+const QA_DEMO = {
+  piloto: { ID_Piloto:'QA01', Nombre_Piloto:'Alex Demo', Saldo_OC:12500, Coins:1250, Foto_Avatar_URL:QA_FOTO_PILOTO, Foto_Piloto:QA_FOTO_PILOTO, Licencia:'AMA', Equipo:'Demo Racing Team', Nacionalidad:'es', Player_id:'76561190000000001', Clase:'BRONCE 1', ELO:1545, SR:3.2, Coche_Principal:'Demo GT Rapido' },
+  coches: [
+    { ID_Coche:'QA01', Nombre_Coche:'Demo GT Rapido', Categoria:'ORO', Imagen_URL:QA_FOTO_COCHE, Precio_Compra_OC:25000, Precio_Venta_OC:20000, Propietario_ID:'QA01' },
+    { ID_Coche:'QA02', Nombre_Coche:'Demo Turbo Cup', Categoria:'PLATA', Imagen_URL:QA_FOTO_COCHE, Precio_Compra_OC:14000, Precio_Venta_OC:11000, Propietario_ID:'' }
+  ],
+  estadisticas: [{ SteamID:'76561190000000001', Carreras:8, Victorias:2, Podios:4, Top5:6, Poles:1, Campeonatos:0 }],
+  carreras: [
+    { SteamID:'76561190000000001', Fase:'1', Ronda:'1', Fecha:'05/09/26', Circuito:'Monza', Posicion:3, Specs:'Demo GT Rapido', Logo:'' },
+    { SteamID:'76561190000000001', Fase:'1', Ronda:'2', Fecha:'12/09/26', Circuito:'Spa', Posicion:2, Specs:'Demo GT Rapido', Logo:'' },
+    { SteamID:'76561190000000001', Fase:'1', Ronda:'3', Fecha:'19/09/26', Circuito:'Imola', Posicion:1, Specs:'Demo GT Rapido', Logo:'' },
+    { SteamID:'76561190000000001', Fase:'1', Ronda:'4', Fecha:'26/09/26', Circuito:'Brands Hatch', Posicion:2, Specs:'Demo GT Rapido', Logo:'' }
+  ],
+  vrating: [
+    { Fase:'1', Ronda:'1', ELO:1512, dELO:12, SR:2.62, dSR:0.12 },
+    { Fase:'1', Ronda:'2', ELO:1530, dELO:18, SR:2.8, dSR:0.18 },
+    { Fase:'1', Ronda:'3', ELO:1560, dELO:30, SR:3.05, dSR:0.25 },
+    { Fase:'1', Ronda:'4', ELO:1545, dELO:-15, SR:3.2, dSR:0.15 }
+  ]
+};
+// Datos ficticios basados en datos REALES del JSON estático (ya cargado en DB): casco real, Mazda MX Cup con su foto, logo y especificaciones.
+function qaConstruirDemo_(db){
+  const d = JSON.parse(JSON.stringify(QA_DEMO));
+  const pilotos = (db && db.pilotos) || [], coches = (db && db.coches) || [];
+  const p0 = pilotos.find(x => { const a = String(getVal(x,'Foto_Avatar_URL') || ''); return a && !/no_abanonado/i.test(a); }) || pilotos[0];
+  const cr = coches.find(c => /mazda/i.test(String(getVal(c,'Nombre_Coche'))) && /mx/i.test(String(getVal(c,'Nombre_Coche'))) && /cup/i.test(String(getVal(c,'Nombre_Coche'))))
+          || coches.find(c => /mazda.*mx|mx.*cup/i.test(String(getVal(c,'Nombre_Coche'))));
+  const nombreCoche = cr ? String(getVal(cr,'Nombre_Coche')) : 'Mazda MX-5 Cup';
+  if(cr){
+    d.coches = [ Object.assign({}, cr, { ID_Coche:'QA01', Propietario_ID:'QA01' }), Object.assign({}, cr, { ID_Coche:'QA02', Propietario_ID:'' }) ];
+  }else{
+    d.coches.forEach(c => { c.Nombre_Coche = nombreCoche; });
+  }
+  d.piloto = Object.assign({}, d.piloto, p0 || {}, { ID_Piloto:'QA01', Nombre_Piloto:'Max Verstappen', Player_id:'76561190000000001', Licencia:'PAM', ELO:1612, SR:3.4, Saldo_OC:12500, Coins:1250, Coche_Principal:nombreCoche });
+  d.carreras.forEach(c => { c.Specs = nombreCoche; });
+  return d;
+}
+function qaClonar_(nodo){
+  if(!nodo) return '';
+  const c = nodo.cloneNode(true);
+  c.querySelectorAll('[id]').forEach(e => e.removeAttribute('id'));
+  c.querySelectorAll('[onclick]').forEach(e => e.removeAttribute('onclick'));
+  c.removeAttribute('id');
+  return c.outerHTML;
+}
+function qaRender_(){
+  const slots = {};
+  document.querySelectorAll('#view-qa .qa-live').forEach(el => { slots[el.dataset.qa] = el; });
+  if(!Object.keys(slots).length) return;
+  const dbPrev = DB, sesPrev = Object.assign({}, sesion), mbPrev = mercadoBloqueado;
+  const prev = { cf:cocheFilter, cq:coches_query, cc:[...cocheCategoriasSel], pc:[...pilotosCategoriasSel], pq:pilotos_query, pv:pilotosVista };
+  const demo = qaConstruirDemo_(dbPrev), p = demo.piloto, sid = p.Player_id;
+  try{
+    DB = Object.assign({}, dbPrev, {
+      pilotos:[p], coches:demo.coches, historial:[], estadisticasPilotos:demo.estadisticas,
+      historialCarreras:demo.carreras,
+      vratingLog: demo.vrating.map(v => Object.assign({ SteamID:sid, Tipo:'CARRERA' }, v))
+    });
+    Object.assign(sesion, { tipo:'piloto', idPiloto:p.ID_Piloto, pin:null });
+    mercadoBloqueado = false;
+    cocheFilter = 'todos'; coches_query = ''; cocheCategoriasSel.clear();
+    pilotosCategoriasSel.clear(); pilotos_query = ''; pilotosVista = 'iconos';
+
+    actualizarPilotoHeaderPill();
+    const pill = document.getElementById('pilotoHeaderPill');
+    if(pill && slots.pill){ const c = pill.cloneNode(true); c.removeAttribute('id'); c.style.display = ''; c.querySelectorAll('[id]').forEach(e => e.removeAttribute('id')); slots.pill.innerHTML = c.outerHTML; }
+
+    renderCoches();
+    if(slots.cochecard){
+      const cards = [...document.querySelectorAll('#gridCoches .car-card')];
+      const libre = cards.find(x => /comprar/i.test(x.textContent)) || cards[0];
+      slots.cochecard.innerHTML = qaClonar_(libre);
+    }
+    abrirModalComprar('QA02');
+    if(slots.cochemodal) slots.cochemodal.innerHTML = qaClonar_(document.querySelector('#modalComprar .modal'));
+    cerrarModal('modalComprar');
+
+    renderPilotos();
+    if(slots.pilotocard) slots.pilotocard.innerHTML = qaClonar_(document.querySelector('#listaPilotos .pilot-card, #listaPilotos > *'));
+    abrirModalPiloto('QA01');
+    if(slots.pilotomodal) slots.pilotomodal.innerHTML = qaClonar_(document.querySelector('#modalPiloto .modal'));
+    cerrarModal('modalPiloto');
+
+    renderMiGaraje();
+    if(slots.garaje){
+      const cont = document.getElementById('miGarajeContenido');
+      const c = cont.cloneNode(true);
+      c.removeAttribute('id'); c.querySelectorAll('[id]').forEach(e => e.removeAttribute('id'));
+      c.querySelectorAll('[onclick]').forEach(e => e.removeAttribute('onclick'));
+      slots.garaje.innerHTML = c.outerHTML;
+    }
+  }catch(err){
+    console.error('Q&A demo:', err);
+  }finally{
+    DB = dbPrev; Object.assign(sesion, sesPrev); mercadoBloqueado = mbPrev;
+    cocheFilter = prev.cf; coches_query = prev.cq; cocheCategoriasSel.clear(); prev.cc.forEach(x => cocheCategoriasSel.add(x));
+    pilotosCategoriasSel.clear(); prev.pc.forEach(x => pilotosCategoriasSel.add(x)); pilotos_query = prev.pq; pilotosVista = prev.pv;
+    try{ renderCoches(); renderPilotos(); renderMiGaraje(); actualizarPilotoHeaderPill(); }catch(e){}
+  }
+}
+function qaCargarFrames_(){
+  document.querySelectorAll('#view-qa .qa-frame').forEach(f => {
+    if(!f.getAttribute('src')) f.setAttribute('src', 'R1.html?demo=1&tab=' + f.dataset.tab);
+  });
+}
+window.addEventListener('message', e => {
+  const d = e.data;
+  if(!d || !d.qaDemo || !d.h) return;
+  const f = document.querySelector('#view-qa .qa-frame[data-tab="' + d.qaDemo + '"]');
+  if(f) f.style.height = Math.min(Math.max(d.h + 8, 120), 1400) + 'px';
+});
+function abrirQA_(){
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-qa').classList.add('active');
+  qaRender_();
+  qaCargarFrames_();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+document.getElementById('btnIrQA').addEventListener('click', abrirQA_);
 
 let datosPromise_ = null; // petición única de datos, compartida por cargarTodo y el login
 async function cargarTodo(){
@@ -2203,6 +2464,134 @@ function ratingGraficasHtml_(piloto, carreras){
   </div>`;
 }
 
+// ------------------------------------------------------------
+// LICENCIAS: requisitos para subir y mantener (todo se calcula en la web con las
+// estadísticas, el historial y el vRating). Cambia aquí los umbrales.
+//  - Sube al cumplir TODOS los requisitos; los umbrales de subida son más altos que
+//    los de mantenimiento (así no hay vaivenes).
+//  - Baja si incumple el mantenimiento durante 2 fases cerradas seguidas, o si no
+//    corre en 2 fases seguidas (inactividad). SIL no baja.
+//  - "Podios" usa Pos_clase del vRating_Log (posición en su clase).
+// ------------------------------------------------------------
+const LIC_ORDEN_ = ['SIL','AMA','PAM','PRO'];
+const LIC_CFG = {
+  SIL: { sube:'AMA', carreras:3, sr:2.0 },
+  AMA: { sube:'PAM', carreras:8, sr:3.0, elo:1500 },
+  PAM: { sube:'PRO', carreras:12, sr:3.5, elo:1600, podios:2, ventana:8, mantener:{ sr:2.5 } },
+  PRO: { mantener:{ sr:3.0, elo:1500 } }
+};
+const LIC_FASES_SEGUIDAS = 2;   // fases seguidas incumpliendo / sin correr para bajar
+const LIC_RONDAS_FASE = 4;      // carreras por fase (una fase está "cerrada" al completarlas)
+
+// Fases del historial global (bloques seguidos con el mismo valor de Fase). La última
+// solo cuenta si ya tiene todas sus rondas.
+function licFasesCerradas_(){
+  const h = Array.isArray(DB.historialCarreras) ? DB.historialCarreras : [];
+  const bl = [];
+  h.forEach((r, i) => {
+    const f = normKey_(getVal(r, 'Fase'));
+    let b = bl[bl.length - 1];
+    if(!b || b.fase !== f){ b = { fase:f, ini:i, fin:i, rondas:new Set() }; bl.push(b); }
+    b.fin = i; b.rondas.add(normKey_(getVal(r, 'Ronda')));
+  });
+  if(bl.length && bl[bl.length - 1].rondas.size < LIC_RONDAS_FASE) bl.pop();
+  return bl;
+}
+
+// Por fase cerrada: carreras del piloto y ELO/SR tras su última carrera de esa fase.
+function licResumenFases_(p, bl){
+  const sid = steamIdDePiloto(p);
+  return bl.map(b => {
+    const filas = DB.historialCarreras.slice(b.ini, b.fin + 1).filter(r => String(getVal(r, 'SteamID')).trim() === sid);
+    let elo = NaN, sr = NaN;
+    if(filas.length){
+      const rv = vratingDeCarrera_(p, filas[filas.length - 1]);
+      if(rv){ elo = rv.ELO === '' ? NaN : Number(rv.ELO); sr = rv.SR === '' ? NaN : Number(rv.SR); }
+    }
+    return { n: filas.length, elo: elo, sr: sr };
+  });
+}
+
+// Devuelve { lic, cfg, filas, cumple, mantener, descenso } o null si la licencia no es conocida.
+function licenciaProgreso_(p, licencia, stats){
+  const lic = String(licencia || '').trim().toUpperCase();
+  const cfg = LIC_CFG[lic];
+  if(!cfg) return null;
+  const num = v => (v === '' || v === null || v === undefined || isNaN(Number(v))) ? NaN : Number(v);
+  const elo = num(getVal(p, 'ELO')), sr = num(getVal(p, 'SR'));
+  const carreras = Number((stats && stats.Carreras) || 0);
+  const camps = Number((stats && stats.Campeonatos) || 0);
+  // Podios = posición EN SU CLASE (vRating_Log, columna Pos_clase) en sus últimas carreras.
+  // Si el log no trae Pos_clase, se usa la columna Posicion del historial.
+  const ventana = cfg.ventana || 8;
+  const esPodio = n => n >= 1 && n <= 3;
+  const logP = Array.isArray(DB.vratingLog) ? DB.vratingLog.filter(v => String(getVal(v, 'SteamID')).trim() === steamIdDePiloto(p) && (!getVal(v, 'Tipo') || /carrera/i.test(String(getVal(v, 'Tipo')))) && getVal(v, 'Pos_clase') !== '') : [];
+  const podios = logP.length
+    ? logP.slice(-ventana).filter(v => esPodio(Number(getVal(v, 'Pos_clase')))).length
+    : carrerasDePiloto(p, ventana).filter(h => esPodio(Number(getVal(h, 'Posicion')))).length;
+
+  const filas = [];
+  if(cfg.sube){
+    filas.push({ k:'Carreras disputadas', v:carreras, meta:cfg.carreras, base:0, fmt:x => String(Math.round(x)) });
+    filas.push({ k:'SR (limpieza)', v:sr, meta:cfg.sr, base:0, fmt:x => isNaN(x) ? '—' : x.toFixed(2).replace('.', ',') });
+    if(cfg.elo) filas.push({ k:'ELO', v:elo, meta:cfg.elo, base:1400, fmt:x => isNaN(x) ? '—' : String(Math.round(x)) });
+    if(cfg.podios) filas.push({ k:'Logro (una de dos)', logro:true, podios:podios, metaPodios:cfg.podios, ventana:cfg.ventana, camps:camps });
+  }
+  const cumple = !!cfg.sube && filas.every(f => f.logro ? (f.podios >= f.metaPodios || f.camps >= 1) : (!isNaN(f.v) && f.v >= f.meta));
+
+  const mantener = [];
+  if(cfg.mantener){
+    if(cfg.mantener.sr) mantener.push({ k:'SR mínimo', v:sr, meta:cfg.mantener.sr, base:0, fmt:x => isNaN(x) ? '—' : x.toFixed(2).replace('.', ',') });
+    if(cfg.mantener.elo) mantener.push({ k:'ELO mínimo', v:elo, meta:cfg.mantener.elo, base:1400, fmt:x => isNaN(x) ? '—' : String(Math.round(x)) });
+  }
+
+  // Descenso: se mira en las últimas fases cerradas.
+  let descenso = null;
+  const idx = LIC_ORDEN_.indexOf(lic);
+  const bl = licFasesCerradas_();
+  if(idx > 0 && bl.length >= LIC_FASES_SEGUIDAS){
+    const f = licResumenFases_(p, bl).slice(-LIC_FASES_SEGUIDAS);
+    const baja = LIC_ORDEN_[idx - 1];
+    if(f.every(x => x.n === 0)){
+      descenso = { a:baja, motivo:'llevas ' + LIC_FASES_SEGUIDAS + ' fases sin correr' };
+    }else if(cfg.mantener && f.every(x => x.n > 0)){
+      const m = cfg.mantener;
+      const falla = x => (m.sr && !(x.sr >= m.sr)) || (m.elo && !(x.elo >= m.elo));
+      if(f.every(falla) && falla({ sr:sr, elo:elo })) descenso = { a:baja, motivo:'no has llegado al mínimo de ' + (m.elo ? 'SR ' + m.sr.toFixed(1).replace('.', ',') + ' y ELO ' + m.elo : 'SR ' + m.sr.toFixed(1).replace('.', ',')) + ' en las últimas ' + LIC_FASES_SEGUIDAS + ' fases' };
+    }
+  }
+  return { lic:lic, cfg:cfg, filas:filas, cumple:cumple, mantener:mantener, descenso:descenso };
+}
+
+function licBarraHtml_(f){
+  if(f.logro){
+    const ok = f.podios >= f.metaPodios || f.camps >= 1;
+    const pct = Math.min(100, Math.max(f.podios / f.metaPodios, Math.min(1, f.camps)) * 100);
+    return `<div class="licbar ${ok ? 'ok' : ''}"><div class="licbar-head"><span class="k">${f.k}</span><span class="v">${f.podios}/${f.metaPodios} podios<i>${ok ? '✓' : ''}</i></span></div><div class="licbar-track"><div class="licbar-fill" style="width:${pct}%"></div></div><div class="licbar-sub">Podios de clase en tus últimas ${f.ventana} carreras · o ganar una fase (campeonatos: ${f.camps})</div></div>`;
+  }
+  const ok = !isNaN(f.v) && f.v >= f.meta;
+  const pct = isNaN(f.v) ? 0 : Math.max(0, Math.min(100, (f.v - f.base) / (f.meta - f.base) * 100));
+  return `<div class="licbar ${ok ? 'ok' : ''}"><div class="licbar-head"><span class="k">${f.k}</span><span class="v">${f.fmt(f.v)} / ${f.fmt(f.meta)}<i>${ok ? '✓' : ''}</i></span></div><div class="licbar-track"><div class="licbar-fill" style="width:${pct}%"></div></div></div>`;
+}
+
+function licenciaPanelHtml_(p, licencia, stats){
+  const r = licenciaProgreso_(p, licencia, stats);
+  if(!r) return '';
+  const badge = l => `<span class="badge ${licenciaInfo_(l).badgeClass}"><span class="dot"></span>${esc(l)}</span>`;
+  const cabecera = r.cfg.sube
+    ? `${badge(r.lic)}<span class="arrow">→</span>${badge(r.cfg.sube)}`
+    : `${badge(r.lic)}<span class="tit">Licencia máxima</span>`;
+  let aviso = '';
+  if(r.descenso) aviso = `<div class="lic-aviso down">⚠ Por tus últimas fases te corresponde bajar a <b>${esc(r.descenso.a)}</b>: ${esc(r.descenso.motivo)}.</div>`;
+  else if(r.cumple) aviso = `<div class="lic-aviso up">🏁 ¡Cumples todos los requisitos! Subirás a <b>${esc(r.cfg.sube)}</b> en la próxima actualización de licencias.</div>`;
+  const mant = r.mantener.length ? `<div class="lic-sub">Para mantener tu licencia</div><div class="lic-grid">${r.mantener.map(licBarraHtml_).join('')}</div>` : '';
+  return `<div class="lic-panel">
+    <div class="lic-head">${cabecera}${r.cfg.sube ? '<span class="tit">Requisitos para subir</span>' : ''}</div>
+    ${r.filas.length ? `<div class="lic-grid">${r.filas.map(licBarraHtml_).join('')}</div>` : ''}
+    ${mant}${aviso}
+  </div>`;
+}
+
 function renderCoches(){
   const grid = document.getElementById('gridCoches');
   if (!Array.isArray(DB.coches)) return;
@@ -2864,6 +3253,11 @@ function renderMiGaraje(){
       <div class="stat-box"><span class="emoji">🎯</span><span class="val">${poles}</span><span class="lbl">Poles</span></div>
       <div class="stat-box"><span class="emoji">👑</span><span class="val">${campeonatos}</span><span class="lbl">Camp.</span></div>
     </div>
+    ${licenciaPanelHtml_(p, licencia, stats) ? `<div class="checkered-divider"></div>
+    <div class="mi-garaje-seccion">
+      <h3>Progreso de licencia</h3>
+      ${licenciaPanelHtml_(p, licencia, stats)}
+    </div>` : ''}
     <div class="checkered-divider"></div>
     <div class="mi-garaje-seccion">
       <h3>Últimas carreras</h3>
