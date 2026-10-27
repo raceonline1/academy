@@ -90,6 +90,9 @@
   .rtag-sr-C{background:rgba(0,229,199,0.12);color:#00E5C7;}
   .rtag-sr-D{background:rgba(0,229,199,0.12);color:#00E5C7;}
   .rtag-vacio{background:transparent;color:var(--text-dim);font-weight:500;padding-left:0;padding-right:0;}
+  .rank-titulo{font-size:15px;font-weight:700;margin:28px 0 10px;letter-spacing:.3px;}
+  .rank-wrap{display:inline-block;max-width:100%;}
+  .rank-wrap table{min-width:0;}
   .vr-up{color:var(--green);}
   .vr-down{color:var(--danger);}
 
@@ -181,6 +184,22 @@
           <tr><th>Pos.</th><th>Clase</th><th>Piloto</th><th>Lic.</th><th>ELO</th><th>SR</th><th>Equipo</th><th>Marca</th><th>Espec.</th><th>Tiempo</th><th>Gap</th><th>Pen.</th><th>Mejor V.</th><th>Pits</th><th>&Delta;ELO</th><th>&Delta;SR</th></tr>
         </thead>
         <tbody id="tablaClasificacion"><tr><td colspan="16" style="color:var(--text-dim);"><span class="spinner"></span>Cargando…</td></tr></tbody>
+      </table>
+    </div>
+
+    <h3 class="rank-titulo">Clasificación ELO</h3>
+    <div class="table-wrap rank-wrap">
+      <table>
+        <thead><tr><th>Pos.</th><th>Piloto</th><th>Lic.</th><th>ELO</th></tr></thead>
+        <tbody id="tablaRankElo"></tbody>
+      </table>
+    </div>
+
+    <h3 class="rank-titulo">Clasificación SR</h3>
+    <div class="table-wrap rank-wrap">
+      <table>
+        <thead><tr><th>Pos.</th><th>Piloto</th><th>Lic.</th><th>SR</th></tr></thead>
+        <tbody id="tablaRankSr"></tbody>
       </table>
     </div>
   </div>
@@ -463,6 +482,9 @@ async function iniciarDemo_(){
     const ctl = new AbortController(); const to = setTimeout(()=>ctl.abort(), 6000);
     const res = await fetch(STATIC_DATA_URL, { signal: ctl.signal }); clearTimeout(to);
     const j = await res.json();
+    // Mismo "Forzar logo blanco" que la página real (CochesLogos, columna R).
+    const dj = (j && j.data) || {};
+    LOGOS_FORZAR_BLANCO = Object.assign({}, dj.logosForzarBlancoPorUrl||{}, dj.logosForzarBlancoCarreras||{});
     const lista = ((j && j.data && j.data.pilotos) || []).filter(p => getVal(p,'Marca') && getVal(p,'Coche_Principal'));
     const vistos = {};
     lista.forEach(p => { const c = String(getVal(p,'Coche_Principal')); if(!vistos[c] && reales.length < 6){ vistos[c] = 1; reales.push(p); } });
@@ -473,6 +495,7 @@ async function iniciarDemo_(){
   RONDA_INFO = { Fecha:'20/09/26' };
   document.body.classList.add('demo');
   document.body.classList.add(DEMO_TAB === 'cabecera' ? 'demo-cab' : 'demo-solo');
+  renderRankingsRating_();
   procesarCarrera_(); renderCabecera_(); renderClasificacion_(); renderMejoresVueltas_(); renderConsistencia_(); renderLideradas_();
   renderSectorTabs_(); renderSectorTabla_(1); renderPosiciones_(); renderTiempos_(); renderPenalizaciones_();
   if(DEMO_TAB !== 'cabecera' && DEMO_TAB !== 'vueltas'){
@@ -500,6 +523,7 @@ async function iniciar(){
   }catch(err){
     toast('No se pudieron cargar los pilotos: ' + err.message, 'err');
   }
+  renderRankingsRating_();
 
   const rondaInfo = CALENDARIO.find(c => String(getVal(c,'Ronda')) === String(RONDA_NUMERO));
   RONDA_INFO = rondaInfo || null;
@@ -766,6 +790,32 @@ document.getElementById('raceTabs').addEventListener('click', e=>{
 // ------------------------------------------------------------
 // CLASIFICACIÓN
 // ------------------------------------------------------------
+// Clasificaciones por ELO y por SR actuales (todos los pilotos con dato, de más a menos)
+function renderRankingsRating_(){
+  function pintar(idTbody, campo, tipo){
+    const tb = document.getElementById(idTbody);
+    if(!tb) return;
+    const lista = PILOTOS
+      .map(p => ({ p, v: Number(getVal(p, campo)), bruto: getVal(p, campo) }))
+      .filter(x => x.bruto !== '' && x.bruto !== null && x.bruto !== undefined && !isNaN(x.v))
+      .sort((a, b) => b.v - a.v || String(getVal(a.p,'Nombre_Piloto')).localeCompare(String(getVal(b.p,'Nombre_Piloto'))));
+    if(!lista.length){ tb.innerHTML = '<tr><td colspan="4" style="color:var(--text-dim);">Sin datos todavía.</td></tr>'; return; }
+    tb.innerHTML = lista.map((x, i) => {
+      const pos = i + 1;
+      const posClass = pos===1?'p1':(pos===2?'p2':(pos===3?'p3':''));
+      const txt = tipo === 'elo' ? String(Math.round(x.v)) : srTexto_(x.v);
+      return `<tr>
+        <td><span class="pos-badge ${posClass}">${pos}</span></td>
+        <td>${esc(getVal(x.p,'Nombre_Piloto') || '')}</td>
+        <td>${licenciaBadgeHtml(getVal(x.p,'Licencia'))}</td>
+        <td><span class="rtag ${tipo==='elo'?'rtag-elo ' + eloClase_(x.v):'rtag-sr ' + srClase_(x.v)}">${txt}</span></td>
+      </tr>`;
+    }).join('');
+  }
+  pintar('tablaRankElo', 'ELO', 'elo');
+  pintar('tablaRankSr', 'SR', 'sr');
+}
+
 function renderClasificacion_(){
   const tbody = document.getElementById('tablaClasificacion');
   if(!RESULTS.length){ tbody.innerHTML = '<tr><td colspan="16" style="color:var(--text-dim);">Sin datos.</td></tr>'; return; }
