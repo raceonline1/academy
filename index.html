@@ -1442,6 +1442,21 @@ async function apiGet(){
   return json.data;
 }
 
+
+// Si el despliegue en vivo del Apps Script es una versión anterior a la copia estática, puede
+// no traer (o traer vacíos) los bloques nuevos (vRating, estadísticas...). Entonces se
+// conservan los que ya teníamos en vez de borrarlos: así las gráficas de ELO/SR y las
+// licencias no "desaparecen" tras el refresco automático.
+function fusionarDatosEnVivo_(previo, vivo){
+  const nuevo = Object.assign({}, vivo);
+  ['vratingLog', 'estadisticasPilotos', 'historialCarreras'].forEach(k => {
+    const antes = previo && previo[k];
+    const ahora = nuevo[k];
+    if(Array.isArray(antes) && antes.length && !(Array.isArray(ahora) && ahora.length)) nuevo[k] = antes;
+  });
+  return nuevo;
+}
+
 // Comprueba en segundo plano si la copia estática está al día. Si no lo está,
 // pide los datos completos en vivo y refresca la web sin que el usuario tenga
 // que hacer nada. Si la comprobación falla, simplemente se ignora (se sigue
@@ -1455,7 +1470,7 @@ function comprobarVersionEnSegundoPlano_(versionActual){
 
       return fetch(API_URL).then(r => r.json()).then(liveJson => {
         if(!liveJson || !liveJson.ok) return;
-        DB = liveJson.data;
+        DB = fusionarDatosEnVivo_(DB, liveJson.data);
         mercadoBloqueado = !!DB.mercadoBloqueado;
         actualizarEstadoMercado();
         poblarCategorias();
@@ -2238,12 +2253,37 @@ function steamIdDePiloto(piloto){
   return String(getVal(piloto, 'Player_id') || '').trim();
 }
 
-// Devuelve el objeto { Carreras, Victorias, Podios, Top5, Poles, Campeonatos } del
-// piloto, o null si no hay Steam id o no se encuentra ninguna fila que coincida.
+// Filas del vRating_Log (solo tipo CARRERA) de un piloto, en orden cronológico.
+function filasLogDePiloto_(piloto){
+  const sid = steamIdDePiloto(piloto);
+  if(!sid || !Array.isArray(DB.vratingLog)) return [];
+  return DB.vratingLog.filter(v => String(getVal(v, 'SteamID')).trim() === sid &&
+    (!getVal(v, 'Tipo') || /carrera/i.test(String(getVal(v, 'Tipo')))));
+}
+
+// Devuelve { Carreras, Victorias, Podios, Top5, Poles, Campeonatos } del piloto.
+//  - Carreras, Victorias, Podios y Top5 salen del vRating_Log: cuentan la posición EN SU
+//    CLASE (Pos_clase) y ya con las sanciones aplicadas.
+//  - Poles y Campeonatos siguen saliendo de la pestaña Estadisticas del Sheet de Resultados.
+//  - Si el piloto aún no tiene filas en el log, se usa la pestaña Estadisticas tal cual.
 function estadisticasDePiloto(piloto){
   const steamId = steamIdDePiloto(piloto);
-  if(!steamId || !Array.isArray(DB.estadisticasPilotos)) return null;
-  return DB.estadisticasPilotos.find(e => String(getVal(e, 'SteamID')).trim() === steamId) || null;
+  if(!steamId) return null;
+  const base = Array.isArray(DB.estadisticasPilotos)
+    ? (DB.estadisticasPilotos.find(e => String(getVal(e, 'SteamID')).trim() === steamId) || null)
+    : null;
+  const filas = filasLogDePiloto_(piloto);
+  if(!filas.length) return base;
+  const pos = filas.map(v => Number(getVal(v, 'Pos_clase'))).filter(n => !isNaN(n) && n > 0);
+  return Object.assign({}, base || {}, {
+    SteamID: steamId,
+    Carreras: filas.length,
+    Victorias: pos.filter(n => n === 1).length,
+    Podios: pos.filter(n => n <= 3).length,
+    Top5: pos.filter(n => n <= 5).length,
+    Poles: Number(base && base.Poles) || 0,
+    Campeonatos: Number(base && base.Campeonatos) || 0
+  });
 }
 
 // Devuelve las carreras del historial de resultados en las que aparece el piloto
@@ -2445,17 +2485,16 @@ function graficaLineaSvg_(pts, color, dec){
   return s + '</svg>';
 }
 
-// Dos gráficas (ELO y SR) con las mismas carreras que la tabla de "Últimas carreras", de más antigua a más reciente.
-function ratingGraficasHtml_(piloto, carreras){
-  const orden = carreras.slice().reverse();
+// Dos gráficas (ELO y SR) con las últimas carreras del vRating_Log del piloto, de más antigua a
+// más reciente. Se construyen directamente del log (no dependen de la tabla "Últimas carreras").
+function ratingGraficasHtml_(piloto){
+  const filas = filasLogDePiloto_(piloto).slice(-12);
   const elo = [], sr = [];
-  orden.forEach(h => {
-    const rv = vratingDeCarrera_(piloto, h);
-    if(!rv) return;
-    const etq = codigoCarrera_(h);
-    const e = Number(rv.ELO), s = Number(rv.SR);
-    if(rv.ELO !== '' && !isNaN(e)) elo.push({ etq: etq, v: e });
-    if(rv.SR !== '' && !isNaN(s)) sr.push({ etq: etq, v: s });
+  filas.forEach(v => {
+    const etq = codigoCarrera_(v);
+    const e = Number(v.ELO), r = Number(v.SR);
+    if(v.ELO !== '' && v.ELO !== null && v.ELO !== undefined && !isNaN(e)) elo.push({ etq: etq, v: e });
+    if(v.SR !== '' && v.SR !== null && v.SR !== undefined && !isNaN(r)) sr.push({ etq: etq, v: r });
   });
   if(!elo.length && !sr.length) return '';
   return `<div class="rgraf-grid">
@@ -2483,30 +2522,31 @@ const LIC_CFG = {
 const LIC_FASES_SEGUIDAS = 2;   // fases seguidas incumpliendo / sin correr para bajar
 const LIC_RONDAS_FASE = 4;      // carreras por fase (una fase está "cerrada" al completarlas)
 
-// Fases del historial global (bloques seguidos con el mismo valor de Fase). La última
-// solo cuenta si ya tiene todas sus rondas.
+// Fases cerradas, a partir del vRating_Log: una fase está cerrada cuando el log ya tiene
+// sus LIC_RONDAS_FASE rondas distintas. Van en orden cronológico (orden de aparición).
 function licFasesCerradas_(){
-  const h = Array.isArray(DB.historialCarreras) ? DB.historialCarreras : [];
-  const bl = [];
-  h.forEach((r, i) => {
-    const f = normKey_(getVal(r, 'Fase'));
-    let b = bl[bl.length - 1];
-    if(!b || b.fase !== f){ b = { fase:f, ini:i, fin:i, rondas:new Set() }; bl.push(b); }
-    b.fin = i; b.rondas.add(normKey_(getVal(r, 'Ronda')));
+  const log = Array.isArray(DB.vratingLog) ? DB.vratingLog : [];
+  const orden = [], mapa = {};
+  log.forEach(v => {
+    if(getVal(v, 'Tipo') && !/carrera/i.test(String(getVal(v, 'Tipo')))) return;
+    const f = normKey_(getVal(v, 'Fase'));
+    if(!f) return;
+    if(!mapa[f]){ mapa[f] = { fase: f, rondas: new Set() }; orden.push(mapa[f]); }
+    mapa[f].rondas.add(normKey_(getVal(v, 'Ronda')));
   });
-  if(bl.length && bl[bl.length - 1].rondas.size < LIC_RONDAS_FASE) bl.pop();
-  return bl;
+  return orden.filter(b => b.rondas.size >= LIC_RONDAS_FASE);
 }
 
 // Por fase cerrada: carreras del piloto y ELO/SR tras su última carrera de esa fase.
 function licResumenFases_(p, bl){
-  const sid = steamIdDePiloto(p);
+  const propias = filasLogDePiloto_(p);
   return bl.map(b => {
-    const filas = DB.historialCarreras.slice(b.ini, b.fin + 1).filter(r => String(getVal(r, 'SteamID')).trim() === sid);
+    const filas = propias.filter(v => normKey_(getVal(v, 'Fase')) === b.fase);
     let elo = NaN, sr = NaN;
     if(filas.length){
-      const rv = vratingDeCarrera_(p, filas[filas.length - 1]);
-      if(rv){ elo = rv.ELO === '' ? NaN : Number(rv.ELO); sr = rv.SR === '' ? NaN : Number(rv.SR); }
+      const u = filas[filas.length - 1];
+      elo = (u.ELO === '' || u.ELO === null || u.ELO === undefined) ? NaN : Number(u.ELO);
+      sr  = (u.SR === '' || u.SR === null || u.SR === undefined) ? NaN : Number(u.SR);
     }
     return { n: filas.length, elo: elo, sr: sr };
   });
@@ -2525,7 +2565,7 @@ function licenciaProgreso_(p, licencia, stats){
   // Si el log no trae Pos_clase, se usa la columna Posicion del historial.
   const ventana = cfg.ventana || 8;
   const esPodio = n => n >= 1 && n <= 3;
-  const logP = Array.isArray(DB.vratingLog) ? DB.vratingLog.filter(v => String(getVal(v, 'SteamID')).trim() === steamIdDePiloto(p) && (!getVal(v, 'Tipo') || /carrera/i.test(String(getVal(v, 'Tipo')))) && getVal(v, 'Pos_clase') !== '') : [];
+  const logP = filasLogDePiloto_(p).filter(v => getVal(v, 'Pos_clase') !== '' && getVal(v, 'Pos_clase') !== null);
   const podios = logP.length
     ? logP.slice(-ventana).filter(v => esPodio(Number(getVal(v, 'Pos_clase')))).length
     : carrerasDePiloto(p, ventana).filter(h => esPodio(Number(getVal(h, 'Posicion')))).length;
@@ -3262,7 +3302,7 @@ function renderMiGaraje(){
     <div class="mi-garaje-seccion">
       <h3>Últimas carreras</h3>
       ${ultimasCarrerasHtml}
-      ${ultimasCarreras.length ? ratingGraficasHtml_(p, ultimasCarreras) : ''}
+      ${ratingGraficasHtml_(p)}
     </div>
     <div class="checkered-divider"></div>
     <div class="mi-garaje-seccion">
