@@ -2623,7 +2623,7 @@ function licenciaPanelHtml_(p, licencia, stats){
     : `${badge(r.lic)}<span class="tit">Licencia máxima</span>`;
   let aviso = '';
   if(r.descenso) aviso = `<div class="lic-aviso down">⚠ Por tus últimas fases te corresponde bajar a <b>${esc(r.descenso.a)}</b>: ${esc(r.descenso.motivo)}.</div>`;
-  else if(r.cumple) aviso = `<div class="lic-aviso up">🏁 ¡Cumples todos los requisitos! Subirás a <b>${esc(r.cfg.sube)}</b> en la próxima actualización de licencias.</div>`;
+  else if(r.cumple) aviso = `<div class="lic-aviso up">🏁 ¡Cumples todos los requisitos! Subirás a <b>${esc(r.cfg.sube)}</b> al cerrarse la fase (tras la ronda ${LIC_RONDAS_FASE}), si sigues cumpliéndolos.</div>`;
   const mant = r.mantener.length ? `<div class="lic-sub">Para mantener tu licencia</div><div class="lic-grid">${r.mantener.map(licBarraHtml_).join('')}</div>` : '';
   return `<div class="lic-panel">
     <div class="lic-head">${cabecera}${r.cfg.sube ? '<span class="tit">Requisitos para subir</span>' : ''}</div>
