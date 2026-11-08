@@ -547,7 +547,7 @@
  ],
  "time_standings": [
   2787131,
-  2721432,
+  2726432,
   2726900,
   2729934,
   2752361,
@@ -12097,6 +12097,17 @@
       "investigation": "InvestigationType_Racecar_Cut",
       "given_lap_count": 11,
       "given_session_time_ms": "1462049",
+      "cleared_session_time_ms": "2855710"
+     },
+     {
+      "penalty_data": {
+       "type": "PenaltyType_Time_Penalty_Seconds",
+       "penalty_time_ms": 5000,
+       "laps_for_clearing": 0
+      },
+      "investigation": "InvestigationType_Racecar_Cut",
+      "given_lap_count": 23,
+      "given_session_time_ms": "2855710",
       "cleared_session_time_ms": "2855710"
      }
     ]
