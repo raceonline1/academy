@@ -2632,6 +2632,14 @@ function licenciaPanelHtml_(p, licencia, stats){
   </div>`;
 }
 
+// Saldo (OC) del piloto con sesión iniciada; null si se navega como invitado.
+function saldoPilotoSesion_(){
+  if(sesion.tipo !== 'piloto') return null;
+  const p = DB.pilotos.find(pp => String(pp.ID_Piloto) === String(sesion.idPiloto));
+  return p ? Number(p.Saldo_OC ?? p.Saldo_EC ?? 0) : 0;
+}
+
+
 function renderCoches(){
   const grid = document.getElementById('gridCoches');
   if (!Array.isArray(DB.coches)) return;
@@ -2684,6 +2692,8 @@ function renderCoches(){
       botonCompraHtml = `<button class="action ghost" disabled>Inicia sesión</button>`;
     } else if(yaLoTiene){
       botonCompraHtml = `<button class="action ghost" disabled>Ya tienes este coche</button>`;
+    } else if(saldoPilotoSesion_() < precioCompra){
+      botonCompraHtml = `<button class="action ghost" disabled>Saldo insuficiente</button>`;
     } else {
       botonCompraHtml = `<button class="action buy" onclick="event.stopPropagation(); abrirModalComprar('${esc(c.ID_Coche)}')">Comprar coche</button>`;
     }
@@ -2788,6 +2798,8 @@ function abrirModalComprar(idCoche){
     btn.disabled = true; btn.textContent = 'Inicia sesión para comprar';
   } else if(yaLoTiene){
     btn.disabled = true; btn.textContent = 'Ya tienes este coche';
+  } else if(saldoPilotoSesion_() < precioCompra){
+    btn.disabled = true; btn.textContent = 'Saldo insuficiente';
   } else {
     btn.disabled = false; btn.textContent = 'Confirmar compra';
   }
