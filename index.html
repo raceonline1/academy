@@ -457,25 +457,19 @@
   .pilotos-toolbar-right{display:flex;align-items:center;gap:10px;flex:none;}
   .pilotos-toolbar-right .search-input{width:220px;}
   .clas-rating-wrap{max-width:560px;}
-  /* Concesionario (desktop): disponibilidad + categorías (multi-selección) a la izquierda, buscar coche a la derecha, una sola línea */
+  /* Concesionario: categorías (multi-selección) a la izquierda y buscador a la derecha */
   .coches-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:18px;}
-  .coches-toolbar .pillbar{margin-bottom:0;flex:none;}
-  .coches-toolbar .coches-cats{flex:0 1 auto;margin-left:auto;min-width:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
-  .coches-sep{display:none;}
-  .coches-search-group{flex:none;margin-left:0;}
+  .coches-toolbar .coches-cats{flex:1 1 auto;min-width:0;margin-bottom:0;margin-left:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+  .coches-search-group{flex:none;}
   .coches-search-group .search-input{width:180px;max-width:180px;}
-  .coches-select-movil{display:none;}
   @media (max-width:760px){
     .pilotos-toolbar{flex-direction:column;align-items:stretch;gap:10px;}
     .pilotos-toolbar-right{width:100%;}
     .pilotos-toolbar-right .search-input{flex:1 1 0;width:auto;min-width:0;max-width:none;}
-    /* Concesionario: categoría (mitad izquierda) + buscar coche (mitad derecha), y debajo Todos / En concesionario / Agotados */
-    .coches-toolbar{flex-direction:column;align-items:stretch;gap:12px;}
-    .coches-toolbar .coches-search-group{order:-1;display:flex;gap:10px;width:100%;margin-left:0;}
-    .coches-toolbar .coches-select-movil{display:block;flex:1 1 0;width:50%;min-width:0;max-width:none;}
-    .coches-toolbar .coches-search-group .search-input{flex:1 1 0;width:50%;min-width:0;max-width:none;}
-    .coches-toolbar .coches-sep, .coches-toolbar .coches-cats{display:none;}
-    .coches-toolbar #filterCoches{flex-wrap:wrap;}
+    /* Concesionario: buscador arriba y, debajo, las categorías como botones */
+    .coches-toolbar{flex-direction:column;align-items:stretch;gap:10px;}
+    .coches-toolbar .coches-search-group{order:-1;width:100%;}
+    .coches-toolbar .coches-search-group .search-input{width:100%;max-width:none;}
   }
   .rgraf-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;}
   .rgraf-card{background:var(--panel);border:1px solid var(--hairline);border-radius:var(--radius);padding:14px 16px 8px;min-width:0;}
@@ -962,17 +956,8 @@
       </div>
     </div>
     <div class="coches-toolbar">
-      <div class="pillbar" id="filterCoches">
-        <button class="pill active" data-filter="todos">Todos</button>
-        <button class="pill" data-filter="disponibles">En concesionario</button>
-        <button class="pill" data-filter="agotados">Agotados</button>
-      </div>
-      <span class="coches-sep" aria-hidden="true"></span>
       <div class="pillbar chips-scroll coches-cats" id="filterCategoriaCochesBar"></div>
       <div class="coches-search-group">
-        <select class="select-input coches-select-movil" id="filterCategoriaCoches">
-          <option value="todas">Todas las categorías</option>
-        </select>
         <input class="search-input" id="searchCoches" placeholder="Buscar coche…">
       </div>
     </div>
@@ -1126,7 +1111,7 @@
         <ul><li><b>Avatar:</b> tu casco.</li><li><b>Licencia:</b> SIL, AMA, PAM o PRO (ver Licencias).</li><li><b>ELO y SR:</b> tus valores actuales, con su color por nivel.</li><li><b>Saldo y coins:</b> el saldo en OC sirve para comprar coches; los coins son tu economía de la comunidad.</li></ul></div>
 
       <div class="qa-card" id="qa-conc"><h3>Concesionario: ficha de coche</h3>
-        <p>Cada coche aparece como una tarjeta. Filtra por <b>Todos / En concesionario / Agotados</b>, por una o varias categorías y busca por nombre.</p>
+        <p>Cada coche aparece como una tarjeta. Filtra por una o varias categorías y busca por nombre.</p>
         <div class="qa-live" data-qa="cochecard"></div><p class="qa-cap">Tarjeta de coche: foto, número, categoría, logo de marca, propietario/estado, precio y botón.</p>
         <ul><li><b>Foto y número:</b> la imagen del coche y su identificador.</li><li><b>Categoría:</b> etiqueta de color (GT3, GT2, GT4, ORO, PLATA, BRONCE).</li><li><b>Marca:</b> logo y nombre del coche.</li><li><b>Estado:</b> si está disponible o ya es de un piloto.</li><li><b>Botón:</b> "Comprar coche", "Inicia sesión", "Ya tienes este coche" o "Sin stock".</li></ul></div>
 
@@ -2041,24 +2026,22 @@ function ordenCategoria_(cat){
   return i === -1 ? 999 : i;
 }
 
+// "PLATA 1" -> "Plata 1" (GT3, GT2, GT4 se quedan en mayúsculas)
+function catTitulo_(cat){
+  return String(cat || '').toLowerCase().split(' ')
+    .map(w => /^gt\d*$/.test(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
 function poblarCategorias(){
   if (!Array.isArray(DB.coches)) return;
   const categorias = [...new Set(DB.coches.map(c => c.Categoria).filter(Boolean))]
     .sort((a, b) => (ordenCategoria_(a) - ordenCategoria_(b)) || normCat_(a).localeCompare(normCat_(b), 'es'));
-  const opts = '<option value="todas">Todas las categorías</option>' +
-    categorias.map(cat => `<option value="${esc(cat)}">${esc(cat)}</option>`).join('');
-  const selCoches = document.getElementById('filterCategoriaCoches');
-  const barCoches = document.getElementById('filterCategoriaCochesBar');
-  barCoches.innerHTML = categorias.map(cat =>
-    `<button type="button" class="pill${cocheCategoriasSel.has(normCat_(cat)) ? ' active' : ''}" data-cat="${esc(cat)}">${esc(cat)}</button>`
+  const botones = sel => categorias.map(cat =>
+    `<button type="button" class="pill${sel.has(normCat_(cat)) ? ' active' : ''}" data-cat="${esc(cat)}">${esc(catTitulo_(cat))}</button>`
   ).join('');
-  const barPilotos = document.getElementById('filterCategoriaPilotos');
-  selCoches.innerHTML = opts;
-  barPilotos.innerHTML = categorias.map(cat =>
-    `<button type="button" class="pill${pilotosCategoriasSel.has(normCat_(cat)) ? ' active' : ''}" data-cat="${esc(cat)}">${esc(cat)}</button>`
-  ).join('');
-  // Conserva la selección actual si la web se refresca en segundo plano
-  selCoches.value = cocheCategoriaFilter;
+  document.getElementById('filterCategoriaCochesBar').innerHTML = botones(cocheCategoriasSel);
+  document.getElementById('filterCategoriaPilotos').innerHTML = botones(pilotosCategoriasSel);
 }
 
 // NUEVA LÓGICA DE FILTRADO (ROBUSTA)
@@ -2640,6 +2623,13 @@ function saldoPilotoSesion_(){
 }
 
 
+// Saldo (OC) del piloto con sesión iniciada; null si se navega como invitado.
+function saldoPilotoSesion_(){
+  if(sesion.tipo !== 'piloto') return null;
+  const p = DB.pilotos.find(pp => String(pp.ID_Piloto) === String(sesion.idPiloto));
+  return p ? Number(p.Saldo_OC ?? p.Saldo_EC ?? 0) : 0;
+}
+
 function renderCoches(){
   const grid = document.getElementById('gridCoches');
   if (!Array.isArray(DB.coches)) return;
@@ -2694,6 +2684,8 @@ function renderCoches(){
       botonCompraHtml = `<button class="action ghost" disabled>Ya tienes este coche</button>`;
     } else if(saldoPilotoSesion_() < precioCompra){
       botonCompraHtml = `<button class="action ghost" disabled>Saldo insuficiente</button>`;
+    } else if(saldoPilotoSesion_() < precioCompra){
+      botonCompraHtml = `<button class="action ghost" disabled>Saldo insuficiente</button>`;
     } else {
       botonCompraHtml = `<button class="action buy" onclick="event.stopPropagation(); abrirModalComprar('${esc(c.ID_Coche)}')">Comprar coche</button>`;
     }
@@ -2723,37 +2715,12 @@ function renderCoches(){
   }).join('');
 }
 
-document.getElementById('filterCoches').addEventListener('click', e=>{
-  const btn = e.target.closest('.pill');
-  if(!btn) return;
-  document.querySelectorAll('#filterCoches .pill').forEach(p=>p.classList.remove('active'));
-  btn.classList.add('active');
-  cocheFilter = btn.dataset.filter;
-  renderCoches();
-});
-// Móvil: desplegable (una categoría). Desktop: botones (varias a la vez). Los dos se mantienen sincronizados.
-document.getElementById('filterCategoriaCoches').addEventListener('change', e=>{
-  cocheCategoriaFilter = e.target.value;
-  cocheCategoriasSel.clear();
-  if(cocheCategoriaFilter !== 'todas') cocheCategoriasSel.add(normCat_(cocheCategoriaFilter));
-  document.querySelectorAll('#filterCategoriaCochesBar .pill').forEach(b => b.classList.toggle('active', cocheCategoriasSel.has(normCat_(b.dataset.cat))));
-  renderCoches();
-});
 document.getElementById('filterCategoriaCochesBar').addEventListener('click', e=>{
   const btn = e.target.closest('.pill');
   if(!btn) return;
   const clave = normCat_(btn.dataset.cat);
   if(cocheCategoriasSel.has(clave)){ cocheCategoriasSel.delete(clave); btn.classList.remove('active'); }
   else { cocheCategoriasSel.add(clave); btn.classList.add('active'); }
-  const sel = document.getElementById('filterCategoriaCoches');
-  if(cocheCategoriasSel.size === 1){
-    const unica = [...cocheCategoriasSel][0];
-    const op = [...sel.options].find(o => normCat_(o.value) === unica);
-    cocheCategoriaFilter = op ? op.value : 'todas';
-  } else {
-    cocheCategoriaFilter = 'todas';
-  }
-  sel.value = cocheCategoriaFilter;
   renderCoches();
 });
 document.getElementById('searchCoches').addEventListener('input', e=>{
@@ -2798,6 +2765,8 @@ function abrirModalComprar(idCoche){
     btn.disabled = true; btn.textContent = 'Inicia sesión para comprar';
   } else if(yaLoTiene){
     btn.disabled = true; btn.textContent = 'Ya tienes este coche';
+  } else if(saldoPilotoSesion_() < precioCompra){
+    btn.disabled = true; btn.textContent = 'Saldo insuficiente';
   } else if(saldoPilotoSesion_() < precioCompra){
     btn.disabled = true; btn.textContent = 'Saldo insuficiente';
   } else {
