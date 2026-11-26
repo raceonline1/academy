@@ -1135,23 +1135,25 @@
         <h4 class="qa-sub">Requisitos para subir</h4>
         <ul>
           <li><b>SIL</b>: licencia de todo piloto nuevo, sin requisitos (fase de prueba).</li>
-          <li><b>SIL → AMA</b>: 3 carreras disputadas y SR de 2,0 o más. Si no los cumples, repites una fase como SIL.</li>
+          <li><b>SIL → AMA</b>: 3 carreras disputadas y SR de 2,25 o más. Si no los cumples, repites una fase como SIL.</li>
           <li><b>AMA → PAM</b>: 8 carreras disputadas, SR de 3,0 o más y ELO de 1500 o más.</li>
-          <li><b>PAM → PRO</b>: 12 carreras disputadas, SR de 3,5 o más, ELO de 1600 o más y un logro: 2 podios en tus últimas 8 carreras <i>o</i> haber ganado una fase.</li>
+          <li><b>PAM → PRO</b>: 12 carreras disputadas, SR de 3,5 o más, ELO de 1600 o más y un logro: 3 podios en tus últimas 8 carreras <i>o</i> haber ganado una fase.</li>
         </ul>
         <h4 class="qa-sub">Cómo se mantiene y cuándo se baja</h4>
         <ul>
           <li><b>PRO</b>: baja a PAM si al final de 2 fases seguidas tu SR está por debajo de 3,0 o tu ELO por debajo de 1500.</li>
+          <li><b>AMA</b>: baja a SIL si al final de 2 fases seguidas tu SR está por debajo de 2,0.</li>
           <li><b>PAM</b>: baja a AMA si al final de 2 fases seguidas tu SR está por debajo de 2,5.</li>
           <li><b>Inactividad</b>: si no corres en 2 fases seguidas, bajas un escalón (SIL no baja).</li>
           <li>Subir pide más que mantener (por ejemplo, PRO se consigue con SR 3,5 y se mantiene con 3,0), para que no estés subiendo y bajando cada fase.</li>
         </ul>
+        <p>Los podios, victorias y Top 5 solo cuentan si en tu clase corrieron suficientes pilotos: 3 para una victoria, 4 para un podio y 6 para un Top 5.</p>
         <p>El SR pesa más en los primeros escalones (un piloto sucio no llega lejos aunque sea rápido) y el rendimiento (ELO y podios) en el último.</p></div>
 
       <div class="qa-card" id="qa-elo"><h3>ELO y SR</h3>
         <p><b>ELO</b> (habilidad): empieza en 1500 y cambia tras cada carrera según tu posición en tu clase frente a tus rivales (hace falta un mínimo de 3 pilotos en la clase). Si faltas a 2 carreras seguidas y tienes más de 1500, decae un 5 % hacia 1500.</p>
         <div class="qa-shot"><div class="qa-row"><span class="rtag rtag-elo rtag-elo-1">1385</span> &lt;1450 · <span class="rtag rtag-elo rtag-elo-2">1520</span> 1450-1549 · <span class="rtag rtag-elo rtag-elo-3">1610</span> 1550-1649 · <span class="rtag rtag-elo rtag-elo-4">1700</span> desde 1650</div></div>
-        <p><b>SR</b> (limpieza): empieza en 2,50 y llega como máximo a 4,99. Sube con carreras limpias (hasta +0,25) y baja con contactos, muros, avisos y penalizaciones. No decae por ausencias. La letra indica la categoría:</p>
+        <p><b>SR</b> (limpieza): empieza en 2,50 y llega como máximo a 4,99. Sube con carreras limpias (hasta +0,25) y baja con contactos, muros, avisos y penalizaciones. Si te golpean claramente por detrás, ese contacto te cuenta la mitad (2 puntos en vez de 4) y el que golpea suma los 4. Si no se puede saber quién golpea, los dos suman completo. No decae por ausencias. La letra indica la categoría:</p>
         <div class="qa-shot"><div class="qa-row"><span class="rtag rtag-sr rtag-sr-A">A4,50</span> 4,00-4,99 · <span class="rtag rtag-sr rtag-sr-B">B3,20</span> 3,00-3,99 · <span class="rtag rtag-sr rtag-sr-C">C2,50</span> 2,00-2,99 · <span class="rtag rtag-sr rtag-sr-D">D1,03</span> 0-1,99</div></div></div>
 
       <div class="qa-card" id="qa-clas"><h3>Clasificación general</h3>
@@ -2257,13 +2259,13 @@ function estadisticasDePiloto(piloto){
     : null;
   const filas = filasLogDePiloto_(piloto);
   if(!filas.length) return base;
-  const pos = filas.map(v => Number(getVal(v, 'Pos_clase'))).filter(n => !isNaN(n) && n > 0);
+  const pos = filas.map(v => ({ p: Number(getVal(v, 'Pos_clase')), n: Number(getVal(v, 'Pilotos_clase')) })).filter(x => !isNaN(x.p) && x.p > 0);
   return Object.assign({}, base || {}, {
     SteamID: steamId,
     Carreras: filas.length,
-    Victorias: pos.filter(n => n === 1).length,
-    Podios: pos.filter(n => n <= 3).length,
-    Top5: pos.filter(n => n <= 5).length,
+    Victorias: pos.filter(x => x.p === 1 && x.n >= MIN_PILOTOS_VICTORIA).length,
+    Podios: pos.filter(x => x.p <= 3 && x.n >= MIN_PILOTOS_PODIO).length,
+    Top5: pos.filter(x => x.p <= 5 && x.n >= MIN_PILOTOS_TOP5).length,
     Poles: Number(base && base.Poles) || 0,
     Campeonatos: Number(base && base.Campeonatos) || 0
   });
@@ -2496,10 +2498,11 @@ function ratingGraficasHtml_(piloto){
 //  - "Podios" usa Pos_clase del vRating_Log (posición en su clase).
 // ------------------------------------------------------------
 const LIC_ORDEN_ = ['SIL','AMA','PAM','PRO'];
+const MIN_PILOTOS_VICTORIA = 3, MIN_PILOTOS_PODIO = 4, MIN_PILOTOS_TOP5 = 6;
 const LIC_CFG = {
-  SIL: { sube:'AMA', carreras:3, sr:2.0 },
-  AMA: { sube:'PAM', carreras:8, sr:3.0, elo:1500 },
-  PAM: { sube:'PRO', carreras:12, sr:3.5, elo:1600, podios:2, ventana:8, mantener:{ sr:2.5 } },
+  SIL: { sube:'AMA', carreras:3, sr:2.25 },
+  AMA: { sube:'PAM', carreras:8, sr:3.0, elo:1500, mantener:{ sr:2.0 } },
+  PAM: { sube:'PRO', carreras:12, sr:3.5, elo:1600, podios:3, ventana:8, mantener:{ sr:2.5 } },
   PRO: { mantener:{ sr:3.0, elo:1500 } }
 };
 const LIC_FASES_SEGUIDAS = 2;   // fases seguidas incumpliendo / sin correr para bajar
@@ -2550,7 +2553,7 @@ function licenciaProgreso_(p, licencia, stats){
   const esPodio = n => n >= 1 && n <= 3;
   const logP = filasLogDePiloto_(p).filter(v => getVal(v, 'Pos_clase') !== '' && getVal(v, 'Pos_clase') !== null);
   const podios = logP.length
-    ? logP.slice(-ventana).filter(v => esPodio(Number(getVal(v, 'Pos_clase')))).length
+    ? logP.slice(-ventana).filter(v => esPodio(Number(getVal(v, 'Pos_clase'))) && Number(getVal(v, 'Pilotos_clase')) >= MIN_PILOTOS_PODIO).length
     : carrerasDePiloto(p, ventana).filter(h => esPodio(Number(getVal(h, 'Posicion')))).length;
 
   const filas = [];
@@ -2590,7 +2593,7 @@ function licBarraHtml_(f){
   if(f.logro){
     const ok = f.podios >= f.metaPodios || f.camps >= 1;
     const pct = Math.min(100, Math.max(f.podios / f.metaPodios, Math.min(1, f.camps)) * 100);
-    return `<div class="licbar ${ok ? 'ok' : ''}"><div class="licbar-head"><span class="k">${f.k}</span><span class="v">${f.podios}/${f.metaPodios} podios<i>${ok ? '✓' : ''}</i></span></div><div class="licbar-track"><div class="licbar-fill" style="width:${pct}%"></div></div><div class="licbar-sub">Podios de clase en tus últimas ${f.ventana} carreras · o ganar una fase (campeonatos: ${f.camps})</div></div>`;
+    return `<div class="licbar ${ok ? 'ok' : ''}"><div class="licbar-head"><span class="k">${f.k}</span><span class="v">${f.podios}/${f.metaPodios} podios<i>${ok ? '✓' : ''}</i></span></div><div class="licbar-track"><div class="licbar-fill" style="width:${pct}%"></div></div><div class="licbar-sub">Podios de clase (con ${MIN_PILOTOS_PODIO}+ pilotos) en tus últimas ${f.ventana} carreras · o ganar una fase (campeonatos: ${f.camps})</div></div>`;
   }
   const ok = !isNaN(f.v) && f.v >= f.meta;
   const pct = isNaN(f.v) ? 0 : Math.max(0, Math.min(100, (f.v - f.base) / (f.meta - f.base) * 100));
