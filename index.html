@@ -194,6 +194,19 @@
   .car-card .cat-tag.cat-bronce, .ficha-grande .cat-tag.cat-bronce, .car-card-mini .cat-tag.cat-bronce{color:#CD7F32;}
   .car-card .cat-tag.cat-oro, .ficha-grande .cat-tag.cat-oro, .car-card-mini .cat-tag.cat-oro{color:#FFD700;}
   .car-card .cat-tag.cat-plata, .ficha-grande .cat-tag.cat-plata, .car-card-mini .cat-tag.cat-plata{color:#C0C0C0;}
+  /* Licencia mínima para comprar: [licencia] [categoría] en la esquina superior derecha de la foto */
+  .car-card .tags-top, .ficha-grande .tags-top{
+    position:absolute;top:10px;right:10px;display:flex;align-items:center;gap:6px;z-index:2;
+  }
+  .car-card .tags-top .cat-tag, .ficha-grande .tags-top .cat-tag{position:static;}
+  .car-card .tags-top .lic-req, .ficha-grande .tags-top .lic-req{
+    font-size:10px;letter-spacing:1px;text-transform:uppercase;font-weight:700;
+    padding:3px 8px;border-radius:5px;border:1px solid var(--hairline);background:#000000;
+  }
+  .tags-top .lic-req.lic-SIL{background:linear-gradient(rgba(198,205,212,0.14),rgba(198,205,212,0.14)),#000000;color:#D7DCE2;}
+  .tags-top .lic-req.lic-AMA{background:linear-gradient(rgba(201,138,74,0.16),rgba(201,138,74,0.16)),#000000;color:#E3A468;}
+  .tags-top .lic-req.lic-PAM{background:linear-gradient(rgba(232,195,60,0.16),rgba(232,195,60,0.16)),#000000;color:#F5D34A;}
+  .tags-top .lic-req.lic-PRO{background:#050607;color:#F0F0F0;}
   .car-card .body, .car-card-mini .body{padding:14px 16px 16px;}
   .car-card .name, .car-card-mini .name{font-family:'Teko',sans-serif;font-size:22px;line-height:1.1;margin:0 0 2px;}
   .car-card .owner, .car-card-mini .owner{font-size:12px;color:var(--text-dim);margin:0 0 12px;}
@@ -1113,13 +1126,14 @@
       <div class="qa-card" id="qa-conc"><h3>Concesionario: ficha de coche</h3>
         <p>Cada coche aparece como una tarjeta. Filtra por una o varias categorías y busca por nombre.</p>
         <div class="qa-live" data-qa="cochecard"></div><p class="qa-cap">Tarjeta de coche: foto, número, categoría, logo de marca, propietario/estado, precio y botón.</p>
-        <ul><li><b>Foto y número:</b> la imagen del coche y su identificador.</li><li><b>Categoría:</b> etiqueta de color (GT3, GT2, GT4, ORO, PLATA, BRONCE).</li><li><b>Marca:</b> logo y nombre del coche.</li><li><b>Estado:</b> si está disponible o ya es de un piloto.</li><li><b>Botón:</b> "Comprar coche", "Inicia sesión", "Ya tienes este coche" o "Sin stock".</li></ul></div>
+        <ul><li><b>Foto y número:</b> la imagen del coche y su identificador.</li><li><b>Categoría:</b> etiqueta de color (GT3, GT2, GT4, ORO, PLATA, BRONCE).</li><li><b>Licencia mínima:</b> algunos coches (por ejemplo los PLATA) llevan a la izquierda de la categoría la licencia que necesitas para comprarlos (SIL, AMA, PAM o PRO). Si tu licencia es inferior, el botón aparece desactivado.</li><li><b>Marca:</b> logo y nombre del coche.</li><li><b>Estado:</b> si está disponible o ya es de un piloto.</li><li><b>Botón:</b> "Comprar coche", "Inicia sesión", "Ya tienes este coche", "Requiere licencia AMA" o "Sin stock".</li></ul></div>
 
       <div class="qa-card" id="qa-comprar"><h3>Cómo se compra un coche</h3>
         <p>Pincha en una tarjeta y se abre la ficha grande del coche:</p>
         <div class="qa-live" data-qa="cochemodal"></div><p class="qa-cap">Ficha del coche: foto grande, especificaciones, tu saldo y botón de confirmar.</p>
-        <ol><li>Inicia sesión con tu piloto (si no, solo puedes mirar).</li><li>Abre la ficha y revisa las especificaciones y el precio.</li><li>Comprueba que tu saldo es suficiente (se muestra en la ficha).</li><li>Pulsa el botón de compra y confirma. El coche pasa a tu garaje y se descuenta el saldo.</li><li>Si hay varios coches en tu garaje, valida cuál es el principal (ver Validar coche).</li></ol>
-        <p>Si el mercado está cerrado o no hay stock, la ficha se puede abrir pero el botón de compra aparece desactivado.</p></div>
+        <ol><li>Inicia sesión con tu piloto (si no, solo puedes mirar).</li><li>Abre la ficha y revisa las especificaciones y el precio.</li><li>Si el coche tiene licencia mínima (etiqueta junto a la categoría), comprueba que tu licencia llega a ese nivel.</li><li>Comprueba que tu saldo es suficiente (se muestra en la ficha).</li><li>Pulsa el botón de compra y confirma. El coche pasa a tu garaje y se descuenta el saldo.</li><li>Si hay varios coches en tu garaje, valida cuál es el principal (ver Validar coche).</li></ol>
+        <p>Si el mercado está cerrado o no hay stock, la ficha se puede abrir pero el botón de compra aparece desactivado.</p>
+        <p>Lo mismo pasa si el coche pide una licencia mínima que todavía no tienes: la ficha se abre, pero el botón sale desactivado con "Requiere licencia ...". La licencia cambia automáticamente al cerrarse cada fase (ver Licencias). El requisito solo cuenta al comprar: si ya tienes el coche y luego bajas de licencia, lo conservas.</p></div>
 
       <div class="qa-card" id="qa-pil"><h3>Pilotos</h3>
         <p>Dos vistas (iconos y lista) con los botones de arriba a la derecha. Filtra por categoría (varias a la vez) y busca por nombre. En la tarjeta: nombre, licencia, ELO y SR en la primera línea y tus coins en la de abajo.</p>
@@ -1148,6 +1162,7 @@
           <li>Subir pide más que mantener (por ejemplo, PRO se consigue con SR 3,5 y se mantiene con 3,0), para que no estés subiendo y bajando cada fase.</li>
         </ul>
         <p>Los podios, victorias y Top 5 solo cuentan si en tu clase corrieron suficientes pilotos: 3 para una victoria, 4 para un podio y 6 para un Top 5.</p>
+        <p>Además, algunos coches del concesionario solo se pueden comprar a partir de cierta licencia (se indica en su etiqueta).</p>
         <p>El SR pesa más en los primeros escalones (un piloto sucio no llega lejos aunque sea rápido) y el rendimiento (ELO y podios) en el último.</p></div>
 
       <div class="qa-card" id="qa-elo"><h3>ELO y SR</h3>
@@ -1571,7 +1586,7 @@ function qaConstruirDemo_(db){
           || coches.find(c => /mazda.*mx|mx.*cup/i.test(String(getVal(c,'Nombre_Coche'))));
   const nombreCoche = cr ? String(getVal(cr,'Nombre_Coche')) : 'Mazda MX-5 Cup';
   if(cr){
-    d.coches = [ Object.assign({}, cr, { ID_Coche:'QA01', Propietario_ID:'QA01' }), Object.assign({}, cr, { ID_Coche:'QA02', Propietario_ID:'' }) ];
+    d.coches = [ Object.assign({}, cr, { ID_Coche:'QA01', Propietario_ID:'QA01' }), Object.assign({}, cr, { ID_Coche:'QA02', Propietario_ID:'', Nivel_Req:'AMA' }) ];
   }else{
     d.coches.forEach(c => { c.Nombre_Coche = nombreCoche; });
   }
@@ -2090,6 +2105,41 @@ function unidadesPropias(idPiloto, idCoche){
   return total;
 }
 
+// ------------------------------------------------------------
+// NIVEL MÍNIMO DE LICENCIA PARA COMPRAR (CochesLogos!Nivel_req -> coche.Nivel_Req)
+// ------------------------------------------------------------
+const LICENCIAS_ORDEN = ['SIL', 'AMA', 'PAM', 'PRO'];
+
+// Licencia mínima del coche ('' si no tiene requisito).
+function nivelReqCoche_(c){
+  const v = String(getVal(c, 'Nivel_Req') || '').trim().toUpperCase();
+  return LICENCIAS_ORDEN.indexOf(v) !== -1 ? v : '';
+}
+
+// Licencia del piloto con sesión iniciada (SIL si está vacía o no es válida).
+function licenciaPilotoSesion_(){
+  if(sesion.tipo !== 'piloto') return '';
+  const p = DB.pilotos.find(pp => String(pp.ID_Piloto) === String(sesion.idPiloto));
+  const v = p ? String(getVal(p, 'Licencia') || '').trim().toUpperCase() : '';
+  return LICENCIAS_ORDEN.indexOf(v) !== -1 ? v : 'SIL';
+}
+
+// true si el coche no tiene requisito o la licencia del piloto es igual o superior.
+function cumpleNivelReq_(c){
+  const req = nivelReqCoche_(c);
+  if(!req) return true;
+  return LICENCIAS_ORDEN.indexOf(licenciaPilotoSesion_()) >= LICENCIAS_ORDEN.indexOf(req);
+}
+
+// Etiquetas de la esquina superior derecha de la foto: [licencia mínima] [categoría].
+// Sin requisito, devuelve solo la etiqueta de categoría de siempre.
+function etiquetasSuperioresHtml_(c){
+  const cat = `<div class="cat-tag ${catTagClass(c.Categoria)}">${esc(c.Categoria || '')}</div>`;
+  const req = nivelReqCoche_(c);
+  if(!req) return cat;
+  return `<div class="tags-top"><div class="lic-req ${licenciaInfo_(req).badgeClass}" title="Licencia mínima para comprar: ${req}">${req}</div>${cat}</div>`;
+}
+
 // Clase CSS según categoría (Bronce / Plata / Oro, preparado para futuras categorías)
 function catTagClass(categoria){
   const c = String(categoria || '').toLowerCase();
@@ -2178,7 +2228,7 @@ function fichaGrandeHtml(c){
   return `
     <div class="stripe"></div>
     <div class="number">${esc(String(c.ID_Coche || '').slice(-2))}</div>
-    <div class="cat-tag ${catTagClass(cat)}">${esc(cat)}</div>
+    ${etiquetasSuperioresHtml_(c)}
     ${logoBadgeHtml(logoUrl, forzarBlanco)}
     <div class="ficha-info">${nombreConLogoHtml(c.Nombre_Coche || '', logoUrl, forzarBlanco)}</div>
   `;
@@ -2685,6 +2735,8 @@ function renderCoches(){
       botonCompraHtml = `<button class="action ghost" disabled>Inicia sesión</button>`;
     } else if(yaLoTiene){
       botonCompraHtml = `<button class="action ghost" disabled>Ya tienes este coche</button>`;
+    } else if(!cumpleNivelReq_(c)){
+      botonCompraHtml = `<button class="action ghost" disabled>Requiere licencia ${nivelReqCoche_(c)}</button>`;
     } else if(saldoPilotoSesion_() < precioCompra){
       botonCompraHtml = `<button class="action ghost" disabled>Saldo insuficiente</button>`;
     } else if(saldoPilotoSesion_() < precioCompra){
@@ -2702,7 +2754,7 @@ function renderCoches(){
         <div class="photo" style="background-image:url('${esc(c.Imagen_URL || '')}')">
           <div class="stripe"></div>
           <div class="number">${esc(String(c.ID_Coche || '').slice(-2))}</div>
-          <div class="cat-tag ${catTagClass(c.Categoria)}">${esc(c.Categoria || '')}</div>
+          ${etiquetasSuperioresHtml_(c)}
           ${logoBadgeHtml(logoUrl, forzarBlanco)}
         </div>
         <div class="body">
@@ -2768,6 +2820,8 @@ function abrirModalComprar(idCoche){
     btn.disabled = true; btn.textContent = 'Inicia sesión para comprar';
   } else if(yaLoTiene){
     btn.disabled = true; btn.textContent = 'Ya tienes este coche';
+  } else if(!cumpleNivelReq_(coche)){
+    btn.disabled = true; btn.textContent = 'Requiere licencia ' + nivelReqCoche_(coche);
   } else if(saldoPilotoSesion_() < precioCompra){
     btn.disabled = true; btn.textContent = 'Saldo insuficiente';
   } else if(saldoPilotoSesion_() < precioCompra){
