@@ -926,6 +926,32 @@
       justify-content:center;
     }
   }
+
+  /* ===== Menú desplegable (tres rayas) ===== */
+  :root{--rs-dw:25%;--rs-banh:130px;--rs-gap:14px;--rs-rad:10px;--rs-pad:18px;--rs-ov:0.45;--rs-sp:280ms;--rs-bs:20;}
+  @media (max-width:760px){:root{--rs-dw:100%}}
+  .rs-burger{flex:none;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;width:calc(var(--rs-bs)*1px + 16px);height:calc(var(--rs-bs)*1px + 16px);background:transparent;border:1px solid transparent;border-radius:8px;cursor:pointer;padding:0}
+  nav.tabs button.rs-burger{flex:none;flex-direction:column;justify-content:center;align-items:center;gap:5px;padding:0;margin-left:4px;border:1px solid transparent;background:transparent}
+  .rs-burger span{display:block;width:calc(var(--rs-bs)*1px);height:2px;border-radius:2px;background:var(--text);transition:transform var(--rs-sp) ease,opacity .2s,background .15s}
+  .rs-burger:hover span{background:var(--cyan)}
+  .rs-burger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+  .rs-burger.open span:nth-child(2){opacity:0}
+  .rs-burger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+  .rs-overlay{position:fixed;inset:0;background:rgba(0,0,0,var(--rs-ov));opacity:0;pointer-events:none;transition:opacity var(--rs-sp) ease;z-index:900}
+  .rs-overlay.open{opacity:1;pointer-events:auto}
+  .rs-drawer{position:fixed;top:0;right:0;height:100%;width:var(--rs-dw);min-width:min(100%,270px);background:var(--asphalt);border-left:1px solid var(--hairline);box-shadow:-20px 0 40px rgba(0,0,0,.4);display:flex;flex-direction:column;z-index:910;transform:translateX(100%);visibility:hidden;transition:transform var(--rs-sp) cubic-bezier(.2,.8,.2,1),visibility 0s linear var(--rs-sp)}
+  .rs-drawer.open{transform:none;visibility:visible;transition-delay:0s}
+  .rs-top{flex:none;height:var(--rs-hh,92px);display:flex;align-items:center;justify-content:flex-end;padding:0 20px;border-bottom:1px solid var(--hairline)}
+  .rs-body{flex:1;overflow:auto;padding:var(--rs-pad);display:flex;flex-direction:column;gap:var(--rs-gap)}
+  .rs-banner{position:relative;display:block;flex:none;height:var(--rs-banh);border-radius:var(--rs-rad);overflow:hidden;border:1px solid var(--hairline)}
+  .rs-banner img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .35s ease}
+  .rs-banner:hover{border-color:var(--cyan)}
+  .rs-banner:hover img{transform:scale(1.05)}
+  .rs-cap{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:3px;padding:0 20px;background:linear-gradient(90deg,rgba(11,13,16,.85),rgba(11,13,16,.15) 75%)}
+  .rs-cap b{font:600 40px/1 'Teko',sans-serif;letter-spacing:.3px;color:#fff}
+  .rs-cap small{font:500 13px 'Inter',sans-serif;color:var(--text)}
+  @media (max-width:760px){nav.tabs button.rs-burger{grid-column:1/-1;justify-self:center;margin:2px 0 0}}
+  @media (prefers-reduced-motion:reduce){.rs-drawer,.rs-overlay,.rs-burger span{transition:none}}
 </style>
 </head>
 <body>
@@ -955,9 +981,20 @@
         <span class="rtag rtag-sr" id="pilotoHeaderSr" style="display:none;"></span>
         <span class="piloto-header-saldo" id="pilotoHeaderSaldo"></span>
       </div>
+      <button class="rs-burger" id="rsBurger" aria-label="Abrir menú" aria-expanded="false"><span></span><span></span><span></span></button>
     </nav>
   </div>
 </header>
+
+<div class="rs-overlay" id="rsOverlay"></div>
+<aside class="rs-drawer" id="rsDrawer" aria-hidden="true">
+  <div class="rs-top"><button class="rs-burger open" id="rsClose" aria-label="Cerrar menú"><span></span><span></span><span></span></button></div>
+  <div class="rs-body">
+    <a class="rs-banner" href="https://raceonline1.github.io/academy/hotlaps.html" target="_blank" rel="noopener"><img src="https://raw.githubusercontent.com/raceonline1/academy//refs/heads/main/circuitos/WEBSITE_Cota_2-1-1080x608.jpg" alt="" loading="lazy"><span class="rs-cap"><b>Hotlaps</b><small>Mejores vueltas por circuito</small></span></a>
+    <a class="rs-banner" href="https://raceonline1.github.io/academy/live.html" target="_blank" rel="noopener"><img src="https://raw.githubusercontent.com/raceonline1/academy//refs/heads/main/circuitos/SPA-23-1080x608.jpg" alt="" loading="lazy"><span class="rs-cap"><b>Live timing</b><small>Carrera en directo</small></span></a>
+    <a class="rs-banner" href="#" id="btnIrQA"><img src="https://raw.githubusercontent.com/raceonline1/academy//refs/heads/main/circuitos/FUJI-GP-6-1080x608.jpg" alt="" loading="lazy"><span class="rs-cap"><b>Q&amp;A</b><small>Guía completa de la web</small></span></a>
+  </div>
+</aside>
 
 <main>
 
@@ -1118,7 +1155,7 @@
       <div class="qa-card"><h3>Índice</h3><div class="qa-toc"><a href="#qa-menu">Menú y badge de piloto</a><a href="#qa-conc">Concesionario</a><a href="#qa-comprar">Cómo se compra un coche</a><a href="#qa-pil">Pilotos</a><a href="#qa-ficha">Ficha de piloto</a><a href="#qa-lic">Licencias</a><a href="#qa-elo">ELO y SR</a><a href="#qa-clas">Clasificación</a><a href="#qa-gar">Mi garaje</a><a href="#qa-val">Validar coche</a><a href="#qa-res">Resultados</a><a href="#qa-race">Resultado de carrera</a></div></div>
 
       <div class="qa-card" id="qa-menu"><h3>Menú principal y badge de piloto</h3>
-        <p>El menú tiene: 01 Concesionario, 02 Pilotos, 03 Resultados, 04 Clasificación, 05 Historial y 06 Mi garaje (solo con sesión iniciada). Esta guía (Q&amp;A) está abajo del todo, a la derecha de "Iniciar sesión", y se mantiene ahí aunque inicies sesión.</p>
+        <p>El menú tiene: 01 Concesionario, 02 Pilotos, 03 Resultados, 04 Clasificación, 05 Historial y 06 Mi garaje (solo con sesión iniciada). Esta guía (Q&amp;A) está en el menú de las tres rayas (arriba a la derecha), debajo de Hotlaps y Live timing.</p>
         <p>Cuando inicias sesión aparece a la derecha del menú el <b>badge de piloto</b>, así:</p>
         <div class="qa-live" data-qa="pill"></div><p class="qa-cap">Badge de piloto: avatar (casco), nombre, licencia, ELO y SR, y tus saldos.</p>
         <ul><li><b>Avatar:</b> tu casco.</li><li><b>Licencia:</b> SIL, AMA, PAM o PRO (ver Licencias).</li><li><b>ELO y SR:</b> tus valores actuales, con su color por nivel.</li><li><b>Saldo y coins:</b> el saldo en OC sirve para comprar coches; los coins son tu economía de la comunidad.</li></ul></div>
@@ -1226,7 +1263,6 @@
 <footer class="site-footer">
   <button class="login-header-btn" id="btnIrLogin" style="display:none;">Iniciar sesión</button>
   <button class="logout-btn" id="btnCerrarSesion" style="display:none;">Cerrar sesión</button>
-  <button class="login-header-btn" id="btnIrQA" type="button">Q&amp;A</button>
 </footer>
 
 <div class="overlay" id="modalComprar">
@@ -3778,5 +3814,21 @@ document.getElementById('searchHistorial').addEventListener('input', e=>{
 iniciar();
 </script>
 
+<script>
+(function rsInit(){
+  const d=document.getElementById('rsDrawer'),o=document.getElementById('rsOverlay'),b=document.getElementById('rsBurger'),x=document.getElementById('rsClose');
+  const set=on=>{
+    const h=document.querySelector('header.topbar'); if(h)d.style.setProperty('--rs-hh',h.offsetHeight+'px');
+    d.classList.toggle('open',on);o.classList.toggle('open',on);b.classList.toggle('open',on);
+    b.setAttribute('aria-expanded',on);d.setAttribute('aria-hidden',!on);
+  };
+  b.addEventListener('click',()=>set(!d.classList.contains('open')));
+  x.addEventListener('click',()=>set(false));
+  o.addEventListener('click',()=>set(false));
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')set(false)});
+  d.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>set(false)));
+  document.getElementById('btnIrQA').addEventListener('click',e=>e.preventDefault());
+})();
+</script>
 </body>
 </html>
